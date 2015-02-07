@@ -1,9 +1,12 @@
 import cmd
-#import cx_Oracle
+import cx_Oracle
 import sys
 import os
 import re
 import readline
+import subprocess as sp
+
+
 readline.parse_and_bind('tab: complete')
 
 
@@ -12,7 +15,7 @@ host='leovip148.ncsa.uiuc.edu'
 port='1521'
 name='dessci'
 kwargs = {'host': host, 'port': port, 'service_name':name}
-#dsn = cx_Oracle.makedsn(**kwargs)
+dsn = cx_Oracle.makedsn(**kwargs)
 
 
 class easy_or(cmd.Cmd,object):
@@ -22,27 +25,27 @@ class easy_or(cmd.Cmd,object):
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.table_restriction_clause  = " "
-        self.savePrompt = ">> "       
+        self.savePrompt = "DESDM >> "
         self.prompt = self.savePrompt
         self.pipe_process_handle = None 
 
 
-        #global con
-        #con=cx_Oracle.connect('mcarras2','Alnilam1',dsn=dsn)
-        #cur=con.cursor()
+        global con
+        con=cx_Oracle.connect('mcarras2','Alnilam1',dsn=dsn)
+        cur=con.cursor()
         #self.cache_completion_names()
 
 
-    def do_greet(self, line):
-        " Says hello"
-        print "hello"
-   
+    def query_and_print(self, query):
+        pass
+
+
     def do_hist(self, line):
         """Print a list of commands that have been entered"""
         print self._hist
 
     def do_shell(self, line):
-        "execute shell commands"
+        "execute shell commands, ex. shell pwd"
         os.system(line)
 
     def do_edit(self,line):
@@ -80,6 +83,16 @@ class easy_or(cmd.Cmd,object):
 
     def emptyline(self): pass
 
+    def default(self,line):
+        fend=line.find(';')
+        if fend > -1:
+            query = line[:fend]
+            print 'query = %s' % query
+        else:
+            print
+            print 'Invalid command or missing ; at the end of query.'
+            print 'Type help or ? to list commands'
+            print
 
     def do_exit(self,line):
         "exit the program"
@@ -92,6 +105,11 @@ class easy_or(cmd.Cmd,object):
         #con.commit()
         #con.close()
         sys.exit(0)
+
+    def do_clear(self,line):
+        "Clear screen"
+        tmp = sp.call('clear',shell=True)
+
 
 
 if __name__ == '__main__':
