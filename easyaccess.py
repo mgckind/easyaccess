@@ -17,8 +17,6 @@ from termcolor import colored
 import pandas as pd
 
 
-
-
 readline.parse_and_bind('tab: complete')
 
 section = "db-dessci"
@@ -30,10 +28,12 @@ dsn = cx_Oracle.makedsn(**kwargs)
 or_n = cx_Oracle.NUMBER
 or_s = cx_Oracle.STRING
 
+
+
 options_prefetch = ['show', 'set', 'default']
+options_edit     = ['show', 'set_editor']
 
-
-#pd.set_option('display.height', 1500)
+#PANDAS SET UP
 pd.set_option('display.max_rows', 1500)
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_columns', 50)
@@ -52,9 +52,8 @@ def _complete_path(line):
         else:
             filename = path
             path = './'
-
     ls = dircache.listdir(path)
-    ls = ls[:]  # for overwrite in annotate.
+    ls = ls[:]
     dircache.annotate(path, ls)
     if filename == '':
         return ls
@@ -63,6 +62,9 @@ def _complete_path(line):
 
 
 def read_buf(fbuf):
+    """
+    Read SQL files. It removes the ; at the end of the file if present
+    """
     try:
         with open(fbuf) as f:
             content = f.read()
@@ -96,8 +98,9 @@ class easy_or(cmd.Cmd, object):
         self.user='mcarras2'
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
+        self.editor = os.getenv('EDITOR','nano')
 
-
+### OVERRIDE CMD METHODS
     def print_topics(self, header, cmds, cmdlen, maxcol):
         if header is not None:
             if cmds:
@@ -108,93 +111,10 @@ class easy_or(cmd.Cmd, object):
                 self.stdout.write("\n")
 
 
-
-
-    def query_and_print(self, query):
-        t1 = time.time()
-        self.cur.execute(query)
-        if self.cur.description != None:
-            header = [columns[0] for columns in self.cur.description]
-            htypes = [columns[1] for columns in self.cur.description]
-            data=pd.DataFrame(self.cur.fetchall())
-            data.columns=header
-            data.index+=1
-            t2=time.time()
-            elapsed='%.1f seconds' % (t2-t1)
-            print
-            print colored('%d rows in %.2f seconds' %(len(data), (t2-t1)), "green")
-            print
-            print data
-        else:
-            print colored('Done!',"green")
-            self.con.commit()
-
-    def query_results(self,query):
-        self.cur.execute(query)
-        data=self.cur.fetchall()
-        return data
-
-
-
-
-    def do_prefetch(self, line):
-        line = "".join(line.split())
-        if line.find('show') > -1:
-            print '\nPrefetch value = {:}\n'.format(self.prefetch)
-        elif line.find('set') > -1:
-            val = line.split('set')[-1]
-            if val != '':
-                self.prefetch = int(val)
-                print '\nPrefetch value set to  {:}\n'.format(self.prefetch)
-        elif line.find('default') > -1:
-            self.prefetch = 5000
-            print '\nPrefetch value set to default (5000) \n'
-        else:
-            print '\nPrefetch value = {:}\n'.format(self.prefetch)
-
-    def complete_prefetch(self, text, line, start_index, end_index):
-        if text:
-            return [option for option in options_prefetch if option.startswith(text)]
-        else:
-            return options_prefetch
-
-
-    def do_hist(self, line):
-        """Print a list of commands that have been entered"""
-        print self._hist
-
-    def do_shell(self, line):
-        "execute shell commands, ex. shell pwd"
-        os.system(line)
-
-    def do_edit(self, line):
-        "Opens a buffer file to edit and the reads it"
-        os.system('nano easy.buf')
-        if os.path.exists('easy.buf'):
-            newquery = read_buf('easy.buf')
-            print
-            print newquery
-            print
-            if (raw_input('submit query? (Y/N): ') in ['Y','y','yes']): self.query_and_print(newquery)
-            print
-
-
-    def do_load(self, line):
-        "Loads a sql file with a query "
-        newq = read_buf(line)
-        print
-        print newq
-        print
-        if (raw_input('submit query? (Y/N): ') in ['Y','y','yes']): self.query_and_print(newq)
-
-
-    def complete_load(self, text, line, start_idx, end_idx):
-        return _complete_path(line)
-
-
     def preloop(self):
-        """Initialization before prompting user for commands.
-        Despite the claims in the Cmd documentaion, Cmd.preloop() is not a stub.
+        """
+        Initialization before prompting user for commands.
+        Despite the claims in the Cmd documentation, Cmd.preloop() is not a stub.
         """
         cmd.Cmd.preloop(self)  # # sets up command completion
         self._hist = []  # # No history yet
@@ -234,10 +154,6 @@ class easy_or(cmd.Cmd, object):
         self._hist += [line.strip()]
         return line
 
-    def do_EOF(self, line):
-        # exit program on ^D
-        sys.exit(0)
-
     def emptyline(self):
         pass
 
@@ -255,21 +171,131 @@ class easy_or(cmd.Cmd, object):
             print 'Type help or ? to list commands'
             print
 
-    def do_exit(self, line):
-        "exit the program"
-        try:
-            os.system('rm -f easy.buf')
-        except:
-            pass
-        try:
-            cur.close()
-        except:
-            pass
-        # con.commit()
-        # con.close()
-        sys.exit(0)
 
-    def do_quit(self, line):
+
+
+### QUERY METHODS
+    def query_and_print(self, query):
+        t1 = time.time()
+        self.cur.execute(query)
+        if self.cur.description != None:
+            header = [columns[0] for columns in self.cur.description]
+            htypes = [columns[1] for columns in self.cur.description]
+            data=pd.DataFrame(self.cur.fetchall())
+            data.columns=header
+            data.index+=1
+            t2=time.time()
+            elapsed='%.1f seconds' % (t2-t1)
+            print
+            print colored('%d rows in %.2f seconds' %(len(data), (t2-t1)), "green")
+            print
+            print data
+        else:
+            print colored('Done!',"green")
+            self.con.commit()
+
+    def query_results(self,query):
+        self.cur.execute(query)
+        data=self.cur.fetchall()
+        return data
+
+
+## DO METHODS
+    def do_prefetch(self, line):
+        """
+        Shows, sets or sets to default the number of prefetch rows from Oracle
+        The default is 5000, increasing this number uses more memory but return
+        data faster. Decreasing this number reduce memory but increases
+        communication trips with database thus slowing the process.
+
+        Usage:
+           - prefetch show         : Shows current value
+           - prefetch set <number> : Sets the prefetch to <number>
+           - prefetch default      : Sets value to 5000
+        """
+        line = "".join(line.split())
+        if line.find('show') > -1:
+            print '\nPrefetch value = {:}\n'.format(self.prefetch)
+        elif line.find('set') > -1:
+            val = line.split('set')[-1]
+            if val != '':
+                self.prefetch = int(val)
+                print '\nPrefetch value set to  {:}\n'.format(self.prefetch)
+        elif line.find('default') > -1:
+            self.prefetch = 5000
+            print '\nPrefetch value set to default (5000) \n'
+        else:
+            print '\nPrefetch value = {:}\n'.format(self.prefetch)
+
+    def complete_prefetch(self, text, line, start_index, end_index):
+        if text:
+            return [option for option in options_prefetch if option.startswith(text)]
+        else:
+            return options_prefetch
+
+
+    def do_hist(self, line):
+        """Print a list of commands that have been entered"""
+        print self._hist
+
+    def do_shell(self, line):
+        """
+        Execute shell commands, ex. shell pwd
+        You can also use !<command> like !ls, or !pwd to access the shell
+        """
+        os.system(line)
+
+    def do_edit(self, line):
+        """
+        Opens a buffer file to edit a sql statement and then it reads it
+        and executes the statement. By default it will show the current
+        statement in buffer (or empty)
+
+        Usage:
+            - edit   : opens the editor (default from $EDITOR or nano)
+            - edit set_editor <editor> : sets editor to <editor>, ex: edit set_editor vi
+        """
+
+        line = "".join(line.split())
+        if line.find('show') > -1:
+            print '\nEditor  = {:}\n'.format(self.editor)
+        elif line.find('set_editor') > -1:
+            val = line.split('set_editor')[-1]
+            if val != '':
+                self.editor = val
+        else:
+            os.system(self.editor + ' easy.buf')
+            if os.path.exists('easy.buf'):
+                newquery = read_buf('easy.buf')
+                print
+                print newquery
+                print
+                if (raw_input('submit query? (Y/N): ') in ['Y','y','yes']): self.query_and_print(newquery)
+                print
+
+    def complete_edit(self, text, line, start_index, end_index):
+        if text:
+            return [option for option in options_edit if option.startswith(text)]
+        else:
+            return options_edit
+
+    def do_load(self, line):
+        """
+        Loads a sql file with a query and ask whether it should be run
+        """
+        newq = read_buf(line)
+        print
+        print newq
+        print
+        if (raw_input('submit query? (Y/N): ') in ['Y','y','yes']): self.query_and_print(newq)
+
+    def complete_load(self, text, line, start_idx, end_idx):
+        return _complete_path(line)
+
+    def do_exit(self, line):
+        """
+        Exits the program
+        """
         try:
             os.system('rm -f easy.buf')
         except:
@@ -278,8 +304,8 @@ class easy_or(cmd.Cmd, object):
             cur.close()
         except:
             pass
-        # con.commit()
-        # con.close()
+        self.con.commit()
+        self.con.close()
         sys.exit(0)
 
     def do_clear(self, line):
@@ -289,6 +315,8 @@ class easy_or(cmd.Cmd, object):
         # TODO: platform dependent
         tmp = sp.call('clear', shell=True)
 
+
+#DO METHODS FOR DB
     def do_mytables(self, arg):
         """
         Usage: mytables
@@ -302,7 +330,7 @@ class easy_or(cmd.Cmd, object):
         """
         Usage: describe_table <table_name>
         Describes the columns in <table-name> as
-          column_name, oracel_Type, date_length, comments
+          column_name, oracle_Type, date_length, comments
 
         This tool is useful in noting the lack of documentation for the
         columns. If you don't know the full table name you can use tab
@@ -371,6 +399,16 @@ class easy_or(cmd.Cmd, object):
         self.query_and_print(q)
         return
 
+
+
+#UNDOCCUMENTED DO METHODS
+
+    def do_EOF(self, line):
+        # exit program on ^D
+        self.do_exit(line)
+
+    def do_quit(self, line):
+        self.do_exit(line)
 
 
 if __name__ == '__main__':
