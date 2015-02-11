@@ -1,11 +1,10 @@
 #TODO:
-# Find user
 # Find tables
 # Find tables with columns
 # write fiels (csv, fits, hdf5)
-# print myquota
 # history
 # history of queries
+# upload table
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -120,6 +119,7 @@ class easy_or(cmd.Cmd, object):
         self.editor = os.getenv('EDITOR','nano')
         print 'Loading metadata into cache...'
         self.cache_table_names=self.get_tables_names()
+        self.cache_usernames=self.get_userlist()
 
 ### OVERRIDE CMD METHODS
     def print_topics(self, header, cmds, cmdlen, maxcol):
@@ -265,6 +265,12 @@ class easy_or(cmd.Cmd, object):
         else:
             print 'User %s has no tables' % user.upper()
 
+    def get_userlist(self):
+        query='select distinct username from des_users order by username'
+        temp=self.cur.execute(query)
+        tnames=pd.DataFrame(temp.fetchall())
+        user_list=tnames.values.flatten().tolist()
+        return user_list
 
 
 ## DO METHODS
@@ -453,6 +459,16 @@ class easy_or(cmd.Cmd, object):
         sql_getUserDetails = "select * from des_users where username = '"+self.user+"'"
         self.query_and_print(sql_getUserDetails, print_time=False)
 
+    def do_myquota(self, arg):
+        """
+        Print information about quota status.
+
+        Usage: myquota
+        """
+        sql_getquota = "select TABLESPACE_NAME,  \
+        MBYTES_USED/1024 as GBYTES_USED, MBYTES_LEFT/1024 as GBYTES_LEFT from myquota"
+        self.query_and_print(sql_getquota, print_time=False)
+
     def do_mytables(self, arg):
         """
         Lists  table you have made in your 'mydb'
@@ -462,6 +478,25 @@ class easy_or(cmd.Cmd, object):
         query = "SELECT table_name FROM user_tables"
         self.query_and_print(query, print_time=False)
 
+    def do_find_user(self, line):
+        """
+        Finds users given 1 criteria (either first name or last name)
+
+        Usage: 
+            - find_user Doe     # Finds all users with Doe as their names
+            - find_user John%   # Finds all users with John IN their names (John, Johnson, etc...)
+            - find_user P%      # Finds all users with first or lastname starting with P
+
+        """
+        if line =="": return
+        line = " ".join(line.split())
+        keys=line.split()
+        query='select * from des_users where '
+        if len(keys) >= 1:
+                query+='upper(firstname) like upper(\''+keys[0]+'\') or upper(lastname) like upper(\''+keys[0]+'\')'
+        self.query_and_print(query, print_time=True)
+
+
     def do_user_tables(self,arg):
         """
         List tables from given user
@@ -469,6 +504,13 @@ class easy_or(cmd.Cmd, object):
         Usage: user_tables <username>
         """
         return self.get_tables_names_user(arg)
+
+    def complete_user_tables(self, text, line, start_index, end_index):
+        options_users = self.cache_usernames
+        if text:
+            return [option for option in options_users if option.startswith(text.lower())]
+        else:
+            return options_users
 
     def do_describe_table(self, arg):
         """
