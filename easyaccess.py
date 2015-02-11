@@ -1,3 +1,12 @@
+#TODO:
+# Find user
+# Find tables
+# Find tables with columns
+# write fiels (csv, fits, hdf5)
+# print myquota
+# history
+# history of queries
+
 import warnings
 warnings.filterwarnings("ignore")
 import cmd
@@ -5,7 +14,7 @@ import cx_Oracle
 import sys
 import os
 import re
-import readline
+#import readline
 import dircache
 import subprocess as sp
 import os.path as op
@@ -18,7 +27,18 @@ from termcolor import colored
 import pandas as pd
 
 
-readline.parse_and_bind('tab: complete')
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+#readline.parse_and_bind('tab: complete')
 
 #section = "db-dessci"
 #host = 'leovip148.ncsa.uiuc.edu'
@@ -88,7 +108,7 @@ class easy_or(cmd.Cmd, object):
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.table_restriction_clause = " "
-        self.savePrompt = colored("DESDM >> ", "cyan")
+        self.savePrompt = 'DESDM >> '
         self.prompt = self.savePrompt
         self.pipe_process_handle = None
         self.buff = None
@@ -102,10 +122,13 @@ class easy_or(cmd.Cmd, object):
         self.password='Alnilam1'
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
+        print 'Connecting to DB...'
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
         self.editor = os.getenv('EDITOR','nano')
+        print 'Loading metadata into cache...'
+        self.cache_table_names=self.get_tables_names()
 
 ### OVERRIDE CMD METHODS
     def print_topics(self, header, cmds, cmdlen, maxcol):
@@ -129,37 +152,39 @@ class easy_or(cmd.Cmd, object):
         self._globals = {}
 
     def precmd(self, line):
-        """ This method is called after the line has been input but before
-            it has been interpreted. If you want to modifdy the input line
-            before execution (for example, variable substitution) do it here.
-        """
+         """ This method is called after the line has been input but before
+             it has been interpreted. If you want to modifdy the input line
+             before execution (for example, variable substitution) do it here.
+         """
 
-        # handle line continuations -- line terminated with \
-        # beware of null lines.
-        line = ' '.join(line.split())
-        self.buff = line
-        while line and line[-1] == "\\":
-            self.buff = self.buff[:-1]
-            line = line[:-1]  # strip terminal \
-            temp = raw_input('...')
-            self.buff += '\n' + temp
-            line += temp
+         # handle line continuations -- line terminated with \
+         # beware of null lines.
+         line = ' '.join(line.split())
+         self.buff = line
+         while line and line[-1] == "\\":
+             self.buff = self.buff[:-1]
+             line = line[:-1]  # strip terminal \
+             temp = raw_input('...')
+             self.buff += '\n' + temp
+             line += temp
 
-        if not line: return ""  # empty line no need to go further
-        if line[0] == "@":
-            if len(line) > 1:
-                fbuf = line[1:].split()[0]
-                line = read_buf(fbuf)+';'
-                self.buff=line
-            else:
-                print '@ must be followed by a filename'
-                return ""
+         self.prompt = self.savePrompt
 
-        # support model_query Get
-        self.prompt = self.savePrompt
+         if not line: return ""  # empty line no need to go further
+         if line[0] == "@":
+             if len(line) > 1:
+                 fbuf = line[1:].split()[0]
+                 line = read_buf(fbuf)+';'
+                 self.buff=line
+             else:
+                 print '@ must be followed by a filename'
+                 return ""
 
-        self._hist += [line.strip()]
-        return line
+         # support model_query Get
+         self.prompt = self.savePrompt
+
+         self._hist += [line.strip()]
+         return line
 
     def emptyline(self):
         pass
@@ -178,7 +203,12 @@ class easy_or(cmd.Cmd, object):
             print 'Type help or ? to list commands'
             print
 
-
+    def completedefault(self, text, line, begidx, lastidx):
+        options_tables = self.cache_table_names
+        if text:
+            return [option for option in options_tables if option.startswith(text.upper())]
+        else:
+            return options_tables
 
 
 ### QUERY METHODS
@@ -220,6 +250,30 @@ class easy_or(cmd.Cmd, object):
         self.cur.execute(query)
         data=self.cur.fetchall()
         return data
+
+    def get_tables_names(self):
+        query='select distinct table_name from fgottenmetadata order by table_name'
+        temp=self.cur.execute(query)
+        tnames=pd.DataFrame(temp.fetchall())
+        table_list=tnames.values.flatten().tolist()
+        return table_list
+
+    def get_tables_names_user(self,user):
+        query="select distinct table_name from all_tables where owner=\'%s\' order by table_name" % user.upper()
+        temp=self.cur.execute(query)
+        tnames=pd.DataFrame(temp.fetchall())
+        if len(tnames) > 0:
+            print '\nTables from %s' %  user.upper()
+            print tnames
+            table_list=tnames.values.flatten().tolist()
+            for table in table_list:
+                tn=user.upper()+'.'+table.upper()
+                try : self.cache_table_names.index(tn)
+                except: self.cache_table_names.append(tn)
+            self.cache_table_names.sort()
+        else:
+            print 'User %s has no tables' % user.upper()
+
 
 
 ## DO METHODS
@@ -417,6 +471,13 @@ class easy_or(cmd.Cmd, object):
         query = "SELECT table_name FROM user_tables"
         self.query_and_print(query, print_time=False)
 
+    def do_user_tables(self,arg):
+        """
+        List tables from given user
+
+        Usage: user_tables <username>
+        """
+        return self.get_tables_names_user(arg)
 
     def do_describe_table(self, arg):
         """
@@ -491,6 +552,12 @@ class easy_or(cmd.Cmd, object):
         self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user')
         return
 
+    def complete_describe_table(self, text, line, start_index, end_index):
+        options_tables = self.cache_table_names
+        if text:
+            return [option for option in options_tables if option.startswith(text.upper())]
+        else:
+            return options_tables
 
 
 #UNDOCCUMENTED DO METHODS
