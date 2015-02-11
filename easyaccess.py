@@ -12,6 +12,7 @@ import os.path as op
 import glob as gb
 import threading
 import time
+import getpass
 import csv
 from termcolor import colored
 import pandas as pd
@@ -19,12 +20,12 @@ import pandas as pd
 
 readline.parse_and_bind('tab: complete')
 
-section = "db-dessci"
-host = 'leovip148.ncsa.uiuc.edu'
-port = '1521'
-name = 'dessci'
-kwargs = {'host': host, 'port': port, 'service_name': name}
-dsn = cx_Oracle.makedsn(**kwargs)
+#section = "db-dessci"
+#host = 'leovip148.ncsa.uiuc.edu'
+#port = '1521'
+#name = 'dessci'
+#kwargs = {'host': host, 'port': port, 'service_name': name}
+#dsn = cx_Oracle.makedsn(**kwargs)
 or_n = cx_Oracle.NUMBER
 or_s = cx_Oracle.STRING
 
@@ -94,8 +95,14 @@ class easy_or(cmd.Cmd, object):
         self.prefetch = 5000
         self.undoc_header = None
         self.doc_header = 'EasyAccess Commands (type help <command>):'
-        self.con = cx_Oracle.connect('mcarras2', 'Alnilam1', dsn=dsn)
         self.user='mcarras2'
+        self.dbhost='leovip148.ncsa.uiuc.edu'
+        self.dbname='dessci'
+        self.port='1521'
+        self.password='Alnilam1'
+        kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
+        dsn = cx_Oracle.makedsn(**kwargs)
+        self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
         self.editor = os.getenv('EDITOR','nano')
@@ -175,24 +182,39 @@ class easy_or(cmd.Cmd, object):
 
 
 ### QUERY METHODS
-    def query_and_print(self, query):
+    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!'):
         t1 = time.time()
-        self.cur.execute(query)
-        if self.cur.description != None:
-            header = [columns[0] for columns in self.cur.description]
-            htypes = [columns[1] for columns in self.cur.description]
-            data=pd.DataFrame(self.cur.fetchall())
-            data.columns=header
-            data.index+=1
-            t2=time.time()
-            elapsed='%.1f seconds' % (t2-t1)
+        try:
+            self.cur.execute(query)
+            if self.cur.description != None:
+                header = [columns[0] for columns in self.cur.description]
+                htypes = [columns[1] for columns in self.cur.description]
+                data=pd.DataFrame(self.cur.fetchall())
+                t2=time.time()
+                elapsed='%.1f seconds' % (t2-t1)
+                print
+                if print_time: print colored('%d rows in %.2f seconds' %(len(data), (t2-t1)), "green")
+                if print_time: print
+                if len(data) == 0:
+                    fline='   '
+                    for col in header : fline+= '%s  ' % col
+                    print fline
+                    print colored(err_arg,"red")
+                else:
+                    data.columns=header
+                    data.index+=1
+                    print data
+            else:
+                print colored(suc_arg,"green")
+                self.con.commit()
             print
-            print colored('%d rows in %.2f seconds' %(len(data), (t2-t1)), "green")
+        except:
+            (type, value, traceback) = sys.exc_info()
             print
-            print data
-        else:
-            print colored('Done!',"green")
-            self.con.commit()
+            print colored(type,"red")
+            print colored(value,"red")
+            print
+
 
     def query_results(self,query):
         self.cur.execute(query)
@@ -317,13 +339,83 @@ class easy_or(cmd.Cmd, object):
 
 
 #DO METHODS FOR DB
+
+    def do_set_password(self, arg):
+        """
+        Set a new password on this and all other DES instances (DESSCI, DESOPER)
+
+        Usage: set_password
+        """
+        print
+        pw1=getpass.getpass(prompt='Enter new password:')
+        if re.search('\W',pw1) :
+            print colored("\nPassword contains whitespace, not set\n", "red")
+            return
+        if not pw1:
+            print colored("\nPassword cannot be blank\n","red")
+            return
+        pw2=getpass.getpass(prompt='Re-Enter new password:')
+        print
+        if pw1 != pw2:
+            print colored("Passwords don't match, not set\n","red")
+            return
+
+        query = """alter user %s identified by "%s"  """ % (self.user, pw1)
+        confirm='Password changed in %s' % self.dbname.upper()
+        self.query_and_print(query, print_time=False, suc_arg=confirm)
+
+        dbases=['DESSCI','DESOPER']
+        for db in dbases:
+            if db == self.dbname.upper(): continue
+            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': db}
+            dsn = cx_Oracle.makedsn(**kwargs)
+            temp_con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+            temp_cur = temp_con.cursor()
+            try:
+                temp_cur.execute(query)
+                confirm='Password changed in %s\n' % db.upper()
+                print colored(confirm,"green")
+                temp_con.commit()
+                temp_cur.close()
+                temp_con.close()
+            except:
+                confirm='Password could not changed in %s\n' % db.upper()
+                print colored(confirm,"red")
+                print sys.exc_info()
+
+
+
+
+
+    def do_show_db (self, arg):
+        """
+        Shows database connection information
+        """
+        print
+        print "user: %s, host:%s, db:%s" % (self.user, self.dbhost, self.dbname)
+        print "Personal links:"
+        query = """
+           select owner, db_link, username, host, created from all_db_links where OWNER = '%s'
+        """ % (self.user.upper())
+        self.query_and_print(query, print_time=False)
+
+    def do_whoami(self, arg):
+        """
+        Print information about the user's details.
+
+        Usage: whoami
+        """
+        sql_getUserDetails = "select * from des_users where username = '"+self.user+"'"
+        self.query_and_print(sql_getUserDetails, print_time=False)
+
     def do_mytables(self, arg):
         """
+        Lists  table you have made in your 'mydb'
+
         Usage: mytables
-        lists  table you have made in your 'mydb'  ex: mytables
         """
         query = "SELECT table_name FROM user_tables"
-        self.query_and_print(query)
+        self.query_and_print(query, print_time=False)
 
 
     def do_describe_table(self, arg):
@@ -396,7 +488,7 @@ class easy_or(cmd.Cmd, object):
            acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name
            order by atc.column_id
            """ % (link, link, schema, table, schema, table)
-        self.query_and_print(q)
+        self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user')
         return
 
 
