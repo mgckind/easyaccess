@@ -99,7 +99,7 @@ class easy_or(cmd.Cmd, object):
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.table_restriction_clause = " "
-        self.savePrompt = colored('DESDM >> ','cyan')
+        self.savePrompt = colored('DESDM','cyan')+'\n   >> '
         self.prompt = self.savePrompt
         self.pipe_process_handle = None
         self.buff = None
@@ -159,7 +159,7 @@ class easy_or(cmd.Cmd, object):
              self.buff += '\n' + temp
              line += temp
 
-         self.prompt = self.savePrompt
+         #self.prompt = self.savePrompt
 
          if not line: return ""  # empty line no need to go further
          if line[0] == "@":
@@ -172,7 +172,7 @@ class easy_or(cmd.Cmd, object):
                  return ""
 
          # support model_query Get
-         self.prompt = self.savePrompt
+         #self.prompt = self.savePrompt
 
          self._hist += [line.strip()]
          return line
