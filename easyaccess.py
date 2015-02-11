@@ -1,5 +1,5 @@
 #TODO:
-# Find tables
+#Check fgottenmetadata (for tables with .)
 # Find tables with columns
 # write fiels (csv, fits, hdf5)
 # history
@@ -98,7 +98,7 @@ class easy_or(cmd.Cmd, object):
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.table_restriction_clause = " "
-        self.savePrompt = colored('DESDM','cyan')+'\n   >> '
+        self.savePrompt = colored('_________','cyan')+'\nDESDB ~> '
         self.prompt = self.savePrompt
         self.pipe_process_handle = None
         self.buff = None
@@ -195,11 +195,7 @@ class easy_or(cmd.Cmd, object):
             print
 
     def completedefault(self, text, line, begidx, lastidx):
-        options_tables = self.cache_table_names
-        if text:
-            return [option for option in options_tables if option.startswith(text.upper())]
-        else:
-            return options_tables
+        return self._complete_tables(text)
 
 
 ### QUERY METHODS
@@ -243,7 +239,11 @@ class easy_or(cmd.Cmd, object):
         return data
 
     def get_tables_names(self):
-        query='select distinct table_name from fgottenmetadata order by table_name'
+        query="""
+        select distinct table_name from fgottenmetadata 
+        union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
+        des_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('DES_ADMIN')"""
+        #where owner not in ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS','')
         temp=self.cur.execute(query)
         tnames=pd.DataFrame(temp.fetchall())
         table_list=tnames.values.flatten().tolist()
@@ -272,6 +272,12 @@ class easy_or(cmd.Cmd, object):
         user_list=tnames.values.flatten().tolist()
         return user_list
 
+    def _complete_tables(self,text):
+        options_tables = self.cache_table_names
+        if text:
+            return [option for option in options_tables if option.startswith(text.upper())]
+        else:
+            return options_tables
 
 ## DO METHODS
     def do_prefetch(self, line):
@@ -586,12 +592,59 @@ class easy_or(cmd.Cmd, object):
         return
 
     def complete_describe_table(self, text, line, start_index, end_index):
-        options_tables = self.cache_table_names
-        if text:
-            return [option for option in options_tables if option.startswith(text.upper())]
-        else:
-            return options_tables
+        return self._complete_tables(text)
 
+    def do_find_tables(self, arg):
+        """
+        Lists tables and views matching an oracle pattern  e.g %LOCA%,
+        
+        Usage : find_tables PATTERN
+        """
+        query =  "SELECT distinct table_name from fgottenmetadata  WHERE upper(table_name) LIKE '%s' "  % (arg.upper())
+        self.query_and_print(query)
+
+    def complete_find_table(self, text, line, start_index, end_index):
+        return self._complete_tables(text)
+
+
+    def do_find_tables_with_column(self, arg):
+        """                                                                                
+        Finds tables having a column name matching column-name-string                                            
+        
+        Usage: find_tables_with_column  <column-name-substring>                                                                 
+        Example: find_tables_with_column %MAG%  # hunt for columns with MAG 
+        """
+        #query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
+        query  = """
+           SELECT 
+               table_name, column_name 
+           FROM 
+                fgottenmetadata 
+           WHERE 
+             column_name LIKE '%s'  
+           UNION
+           SELECT LOWER(owner) || '.' || table_name, column_name 
+            FROM 
+                all_tab_cols
+            WHERE 
+                 column_name LIKE '%s'
+             AND
+                 owner NOT LIKE '%%SYS'
+             AND 
+                 owner not in ('XDB','SYSTEM')
+           """   % (arg.upper(), arg.upper())
+
+        self.query_and_print(query)
+        return
+
+    def complete_find_tables_with_column(self,text, line, begidx, lastidx):
+        key =  line[begidx:lastidx].upper()
+        query =  "SELECT distinct column_name from fgottenmetadata  WHERE column_name LIKE '%s%%' order by column_name "  % (text)
+        columns = complete_via_query(None, query)
+
+        if(text.islower() or text is ''): 
+            columns=[item.lower() for item in columns]
+        return columns
 
 #UNDOCCUMENTED DO METHODS
 
