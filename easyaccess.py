@@ -1,12 +1,15 @@
-#TODO:
-#Check fgottenmetadata (for tables with .)
-# Find tables with columns
+# TODO:
 # write fiels (csv, fits, hdf5)
 # history
 # history of queries
 # upload table
+# completer scope? to complete from particular table?
+# update do_help
+# refreash metadata after 24 hours or so
+# Check for meatdata table and create cache and table if it doesn't exist
 
 import warnings
+
 warnings.filterwarnings("ignore")
 import cmd
 import cx_Oracle
@@ -24,6 +27,7 @@ import getpass
 import csv
 from termcolor import colored
 import pandas as pd
+import datetime
 
 
 
@@ -39,15 +43,14 @@ import pandas as pd
 or_n = cx_Oracle.NUMBER
 or_s = cx_Oracle.STRING
 
-
-
 options_prefetch = ['show', 'set', 'default']
-options_edit     = ['show', 'set_editor']
+options_edit = ['show', 'set_editor']
 
 #PANDAS SET UP
 pd.set_option('display.max_rows', 1500)
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_columns', 50)
+
 
 def _complete_path(line):
     line = line.split()
@@ -87,41 +90,42 @@ def read_buf(fbuf):
     for line in list:
         if line[0:2] == '--': continue
         newquery += ' ' + line.split('--')[0]
-    newquery=newquery.split(';')[0]
+    newquery = newquery.split(';')[0]
     return newquery
 
 
 class easy_or(cmd.Cmd, object):
     """cx_oracle interpreter for DESDM"""
-    intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n","cyan")
+    intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n", "cyan")
 
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.table_restriction_clause = " "
-        self.savePrompt = colored('_________','cyan')+'\nDESDB ~> '
+        self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
         self.pipe_process_handle = None
         self.buff = None
         self.prefetch = 5000
         self.undoc_header = None
         self.doc_header = 'EasyAccess Commands (type help <command>):'
-        self.user='mcarras2'
-        self.dbhost='leovip148.ncsa.uiuc.edu'
-        self.dbname='dessci'
-        self.port='1521'
-        self.password='Alnilam1'
+        self.user = 'mcarras2'
+        self.dbhost = 'leovip148.ncsa.uiuc.edu'
+        self.dbname = 'dessci'
+        self.port = '1521'
+        self.password = 'Alnilam1'
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
         print 'Connecting to DB...'
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
-        self.editor = os.getenv('EDITOR','nano')
+        self.editor = os.getenv('EDITOR', 'nano')
         print 'Loading metadata into cache...'
-        self.cache_table_names=self.get_tables_names()
-        self.cache_usernames=self.get_userlist()
+        self.cache_table_names = self.get_tables_names()
+        self.cache_usernames = self.get_userlist()
+        self.cache_column_names = self.get_columnlist()
 
-### OVERRIDE CMD METHODS
+    ### OVERRIDE CMD METHODS
     def print_topics(self, header, cmds, cmdlen, maxcol):
         if header is not None:
             if cmds:
@@ -143,39 +147,39 @@ class easy_or(cmd.Cmd, object):
         self._globals = {}
 
     def precmd(self, line):
-         """ This method is called after the line has been input but before
+        """ This method is called after the line has been input but before
              it has been interpreted. If you want to modifdy the input line
              before execution (for example, variable substitution) do it here.
          """
 
-         # handle line continuations -- line terminated with \
-         # beware of null lines.
-         line = ' '.join(line.split())
-         self.buff = line
-         while line and line[-1] == "\\":
-             self.buff = self.buff[:-1]
-             line = line[:-1]  # strip terminal \
-             temp = raw_input('...')
-             self.buff += '\n' + temp
-             line += temp
+        # handle line continuations -- line terminated with \
+        # beware of null lines.
+        line = ' '.join(line.split())
+        self.buff = line
+        while line and line[-1] == "\\":
+            self.buff = self.buff[:-1]
+            line = line[:-1]  # strip terminal \
+            temp = raw_input('...')
+            self.buff += '\n' + temp
+            line += temp
 
-         #self.prompt = self.savePrompt
+        #self.prompt = self.savePrompt
 
-         if not line: return ""  # empty line no need to go further
-         if line[0] == "@":
-             if len(line) > 1:
-                 fbuf = line[1:].split()[0]
-                 line = read_buf(fbuf)+';'
-                 self.buff=line
-             else:
-                 print '@ must be followed by a filename'
-                 return ""
+        if not line: return ""  # empty line no need to go further
+        if line[0] == "@":
+            if len(line) > 1:
+                fbuf = line[1:].split()[0]
+                line = read_buf(fbuf) + ';'
+                self.buff = line
+            else:
+                print '@ must be followed by a filename'
+                return ""
 
-         # support model_query Get
-         #self.prompt = self.savePrompt
+        # support model_query Get
+        #self.prompt = self.savePrompt
 
-         self._hist += [line.strip()]
-         return line
+        self._hist += [line.strip()]
+        return line
 
     def emptyline(self):
         pass
@@ -195,10 +199,21 @@ class easy_or(cmd.Cmd, object):
             print
 
     def completedefault(self, text, line, begidx, lastidx):
-        return self._complete_tables(text)
+        if line.upper().find('SELECT') > -1:
+            #return self._complete_colnames(text)
+            if line.upper().find('FROM') == -1:
+                return self._complete_colnames(text)
+            elif line.upper().find('FROM') > -1 and line.upper().find('WHERE') == -1:
+                return self._complete_tables(text)
+            else:
+                return self._complete_colnames(text)
+        else:
+            return self._complete_tables(text)
 
 
-### QUERY METHODS
+
+        ### QUERY METHODS
+
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!'):
         t1 = time.time()
         try:
@@ -206,80 +221,96 @@ class easy_or(cmd.Cmd, object):
             if self.cur.description != None:
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
-                data=pd.DataFrame(self.cur.fetchall())
-                t2=time.time()
-                elapsed='%.1f seconds' % (t2-t1)
+                data = pd.DataFrame(self.cur.fetchall())
+                t2 = time.time()
+                elapsed = '%.1f seconds' % (t2 - t1)
                 print
-                if print_time: print colored('%d rows in %.2f seconds' %(len(data), (t2-t1)), "green")
+                if print_time: print colored('%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
                 if print_time: print
                 if len(data) == 0:
-                    fline='   '
-                    for col in header : fline+= '%s  ' % col
+                    fline = '   '
+                    for col in header: fline += '%s  ' % col
                     print fline
-                    print colored(err_arg,"red")
+                    print colored(err_arg, "red")
                 else:
-                    data.columns=header
-                    data.index+=1
+                    data.columns = header
+                    data.index += 1
                     print data
             else:
-                print colored(suc_arg,"green")
+                print colored(suc_arg, "green")
                 self.con.commit()
             print
         except:
             (type, value, traceback) = sys.exc_info()
             print
-            print colored(type,"red")
-            print colored(value,"red")
+            print colored(type, "red")
+            print colored(value, "red")
             print
 
 
-    def query_results(self,query):
+    def query_results(self, query):
         self.cur.execute(query)
-        data=self.cur.fetchall()
+        data = self.cur.fetchall()
         return data
 
     def get_tables_names(self):
-        query="""
-        select distinct table_name from fgottenmetadata 
+        query = """
+        select distinct table_name from fgottenmetadata
         union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
         des_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('DES_ADMIN')"""
         #where owner not in ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS','')
-        temp=self.cur.execute(query)
-        tnames=pd.DataFrame(temp.fetchall())
-        table_list=tnames.values.flatten().tolist()
+        temp = self.cur.execute(query)
+        tnames = pd.DataFrame(temp.fetchall())
+        table_list = tnames.values.flatten().tolist()
         return table_list
 
-    def get_tables_names_user(self,user):
-        query="select distinct table_name from all_tables where owner=\'%s\' order by table_name" % user.upper()
-        temp=self.cur.execute(query)
-        tnames=pd.DataFrame(temp.fetchall())
+    def get_tables_names_user(self, user):
+        query = "select distinct table_name from all_tables where owner=\'%s\' order by table_name" % user.upper()
+        temp = self.cur.execute(query)
+        tnames = pd.DataFrame(temp.fetchall())
         if len(tnames) > 0:
-            print '\nTables from %s' %  user.upper()
+            print '\nTables from %s' % user.upper()
             print tnames
-            table_list=tnames.values.flatten().tolist()
-            for table in table_list:
-                tn=user.upper()+'.'+table.upper()
-                try : self.cache_table_names.index(tn)
-                except: self.cache_table_names.append(tn)
-            self.cache_table_names.sort()
+            #Add tname to cache (no longer needed)
+            #table_list=tnames.values.flatten().tolist()
+            #for table in table_list:
+            #    tn=user.upper()+'.'+table.upper()
+            #    try : self.cache_table_names.index(tn)
+            #    except: self.cache_table_names.append(tn)
+            #self.cache_table_names.sort()
         else:
             print 'User %s has no tables' % user.upper()
 
     def get_userlist(self):
-        query='select distinct username from des_users order by username'
-        temp=self.cur.execute(query)
-        tnames=pd.DataFrame(temp.fetchall())
-        user_list=tnames.values.flatten().tolist()
+        query = 'select distinct username from des_users order by username'
+        temp = self.cur.execute(query)
+        tnames = pd.DataFrame(temp.fetchall())
+        user_list = tnames.values.flatten().tolist()
         return user_list
 
-    def _complete_tables(self,text):
+    def _complete_tables(self, text):
         options_tables = self.cache_table_names
         if text:
             return [option for option in options_tables if option.startswith(text.upper())]
         else:
             return options_tables
 
-## DO METHODS
+    def _complete_colnames(self, text):
+        options_colnames = self.cache_column_names
+        if text:
+            return [option for option in options_colnames if option.startswith(text.upper())]
+        else:
+            return options_colnames
+
+    def get_columnlist(self):
+        query = """SELECT distinct column_name from fgottenmetadata  order by column_name"""
+        temp = self.cur.execute(query)
+        cnames = pd.DataFrame(temp.fetchall())
+        col_list = cnames.values.flatten().tolist()
+        return col_list
+
+
+    ## DO METHODS
     def do_prefetch(self, line):
         """
         Shows, sets or sets to default the number of prefetch rows from Oracle
@@ -349,7 +380,7 @@ class easy_or(cmd.Cmd, object):
                 print
                 print newquery
                 print
-                if (raw_input('submit query? (Y/N): ') in ['Y','y','yes']): self.query_and_print(newquery)
+                if (raw_input('submit query? (Y/N): ') in ['Y', 'y', 'yes']): self.query_and_print(newquery)
                 print
 
     def complete_edit(self, text, line, start_index, end_index):
@@ -366,7 +397,7 @@ class easy_or(cmd.Cmd, object):
         print
         print newq
         print
-        if (raw_input('submit query? (Y/N): ') in ['Y','y','yes']): self.query_and_print(newq)
+        if (raw_input('submit query? (Y/N): ') in ['Y', 'y', 'yes']): self.query_and_print(newq)
 
     def complete_load(self, text, line, start_idx, end_idx):
         return _complete_path(line)
@@ -395,7 +426,7 @@ class easy_or(cmd.Cmd, object):
         tmp = sp.call('clear', shell=True)
 
 
-#DO METHODS FOR DB
+    #DO METHODS FOR DB
 
     def do_set_password(self, arg):
         """
@@ -404,24 +435,24 @@ class easy_or(cmd.Cmd, object):
         Usage: set_password
         """
         print
-        pw1=getpass.getpass(prompt='Enter new password:')
-        if re.search('\W',pw1) :
+        pw1 = getpass.getpass(prompt='Enter new password:')
+        if re.search('\W', pw1):
             print colored("\nPassword contains whitespace, not set\n", "red")
             return
         if not pw1:
-            print colored("\nPassword cannot be blank\n","red")
+            print colored("\nPassword cannot be blank\n", "red")
             return
-        pw2=getpass.getpass(prompt='Re-Enter new password:')
+        pw2 = getpass.getpass(prompt='Re-Enter new password:')
         print
         if pw1 != pw2:
-            print colored("Passwords don't match, not set\n","red")
+            print colored("Passwords don't match, not set\n", "red")
             return
 
         query = """alter user %s identified by "%s"  """ % (self.user, pw1)
-        confirm='Password changed in %s' % self.dbname.upper()
+        confirm = 'Password changed in %s' % self.dbname.upper()
         self.query_and_print(query, print_time=False, suc_arg=confirm)
 
-        dbases=['DESSCI','DESOPER']
+        dbases = ['DESSCI', 'DESOPER']
         for db in dbases:
             if db == self.dbname.upper(): continue
             kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': db}
@@ -430,21 +461,70 @@ class easy_or(cmd.Cmd, object):
             temp_cur = temp_con.cursor()
             try:
                 temp_cur.execute(query)
-                confirm='Password changed in %s\n' % db.upper()
-                print colored(confirm,"green")
+                confirm = 'Password changed in %s\n' % db.upper()
+                print colored(confirm, "green")
                 temp_con.commit()
                 temp_cur.close()
                 temp_con.close()
             except:
-                confirm='Password could not changed in %s\n' % db.upper()
-                print colored(confirm,"red")
+                confirm = 'Password could not changed in %s\n' % db.upper()
+                print colored(confirm, "red")
                 print sys.exc_info()
 
 
+    def do_refresh_metadata_cache(self, arg):
+        """ Refreshes meta data cache for auto-completion of table names and column names """
+
+        # Meta data access: With the two linked databases, accessing the
+        # "truth" via fgetmetadata has become maddenly slow.
+        # what it returns is a function of each users's permissions, and their
+        # "mydb". so yet another level of caching is needed. Ta loads a table
+        # called fgottenmetadata in the user's mydb. It refreshes on command
+        # or on timeout (checked at startup).
+
+        # drop table if it exists, then make a new one.
+        # created is the time that the cache table was created,
 
 
+        #try:
+        #    created = query_results("""
+        #    select created  from DBA_OBJECTS
+        #    where object_name = 'FGOTTENMETADATA' and owner = '%s'
+        #    """ % self.user.upper())
+        #except:
+        #    # no meta data system present for this user.
+        #    make_table = False
+        #    print "Warning Metadata not available, continuing : "
 
-    def do_show_db (self, arg):
+        #get last update
+        query_time="select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (self.user.upper())
+        try:
+            qt=self.cur.execute(query_time)
+            last=qt.fetchall()
+            now=datetime.datetime.now()
+            diff=abs(now-last[0][0]).seconds/3600.
+            print 'Updated %.2f hours ago' % diff
+        except:
+            pass
+        try:
+            query="DROP TABLE FGOTTENMETADATA"
+            print
+            self.query_and_print(query, print_time=False, suc_arg='METADATA table Dropped!')
+        except:
+            pass
+        try:
+            print '\nRe-creating metadata table ...'
+            query_2="""create table fgottenmetadata  as  select * from table (fgetmetadata)"""
+            self.query_and_print(query_2, print_time=False, suc_arg='METADATA table Created!')
+            print 'Loading metadata into cache...'
+            self.cache_table_names = self.get_tables_names()
+            self.cache_usernames = self.get_userlist()
+            self.cache_column_names = self.get_columnlist()
+        except:
+            print colored("There was an error when refreshing the cache", "red")
+
+
+    def do_show_db(self, arg):
         """
         Shows database connection information
         """
@@ -462,7 +542,7 @@ class easy_or(cmd.Cmd, object):
 
         Usage: whoami
         """
-        sql_getUserDetails = "select * from des_users where username = '"+self.user+"'"
+        sql_getUserDetails = "select * from des_users where username = '" + self.user + "'"
         self.query_and_print(sql_getUserDetails, print_time=False)
 
     def do_myquota(self, arg):
@@ -494,16 +574,24 @@ class easy_or(cmd.Cmd, object):
             - find_user P%      # Finds all users with first or lastname starting with P
 
         """
-        if line =="": return
+        if line == "": return
         line = " ".join(line.split())
-        keys=line.split()
-        query='select * from des_users where '
+        keys = line.split()
+        query = 'select * from des_users where '
         if len(keys) >= 1:
-                query+='upper(firstname) like upper(\''+keys[0]+'\') or upper(lastname) like upper(\''+keys[0]+'\')'
+            query += 'upper(firstname) like upper(\'' + keys[0] + '\') or upper(lastname) like upper(\'' + keys[
+                0] + '\')'
         self.query_and_print(query, print_time=True)
 
+    def complete_find_user(self, text, line, start_index, end_index):
+        options_users = self.cache_usernames
+        if text:
+            return [option for option in options_users if option.startswith(text.lower())]
+        else:
+            return options_users
 
-    def do_user_tables(self,arg):
+
+    def do_user_tables(self, arg):
         """
         List tables from given user
 
@@ -530,10 +618,10 @@ class easy_or(cmd.Cmd, object):
         scientists are described
         """
         tablename = arg.upper()
-        schema=self.user.upper() #default --- Mine
-        link=""                  #default no link
-        if "." in tablename : (schema, tablename) = tablename.split(".")
-        if "@" in tablename : (tablename, link)   = tablename.split("@")
+        schema = self.user.upper()  #default --- Mine
+        link = ""  #default no link
+        if "." in tablename: (schema, tablename) = tablename.split(".")
+        if "@" in tablename: (tablename, link) = tablename.split("@")
         table = tablename
 
         #
@@ -543,21 +631,21 @@ class easy_or(cmd.Cmd, object):
         # into our own schema, and rely on synonyms for a "simple" view of
         # common schema.
         #
-        while (1) :
+        while (1):
             #check for fundamental definition  e.g. schema.table@link
             q = """
             select * from all_tab_columns%s
                where OWNER = '%s' and
                TABLE_NAME = '%s'
                """ % ("@" + link if link else "", schema, table)
-            if len(self.query_results(q)) != 0 :
+            if len(self.query_results(q)) != 0:
                 #found real definition go get meta-data
                 break
 
             # check if we are indirect by  synonym of mine
             q = """select TABLE_OWNER, TABLE_NAME, DB_LINK from USER_SYNONYMS%s
                             where SYNONYM_NAME= '%s'
-            """  % ("@" + link if link else "", table)
+            """ % ("@" + link if link else "", table)
             ans = self.query_results(q)
             if len(ans) == 1:
                 #resolved one step closer to fundamental definition
@@ -567,7 +655,7 @@ class easy_or(cmd.Cmd, object):
             #check if we are indirect by a public synonym
             q = """select TABLE_OWNER, TABLE_NAME, DB_LINK from ALL_SYNONYMS%s
                              where SYNONYM_NAME = '%s' AND OWNER = 'PUBLIC'
-            """  % ("@" + link if link else "", table)
+            """ % ("@" + link if link else "", table)
             ans = self.query_results(q)
             if len(ans) == 1:
                 #resolved one step closer to fundamental definition
@@ -575,7 +663,7 @@ class easy_or(cmd.Cmd, object):
                 continue
 
             #failed to find the reference count on the query below to give a null result
-            break   # no such table accessible by user
+            break  # no such table accessible by user
 
         # schema, table and link are now valid.
         link = "@" + link if link else ""
@@ -596,14 +684,14 @@ class easy_or(cmd.Cmd, object):
 
     def do_find_tables(self, arg):
         """
-        Lists tables and views matching an oracle pattern  e.g %LOCA%,
+        Lists tables and views matching an oracle pattern  e.g %SVA%,
         
         Usage : find_tables PATTERN
         """
-        query =  "SELECT distinct table_name from fgottenmetadata  WHERE upper(table_name) LIKE '%s' "  % (arg.upper())
+        query = "SELECT distinct table_name from fgottenmetadata  WHERE upper(table_name) LIKE '%s' " % (arg.upper())
         self.query_and_print(query)
 
-    def complete_find_table(self, text, line, start_index, end_index):
+    def complete_find_tables(self, text, line, start_index, end_index):
         return self._complete_tables(text)
 
 
@@ -615,7 +703,7 @@ class easy_or(cmd.Cmd, object):
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG 
         """
         #query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
-        query  = """
+        query = """
            SELECT 
                table_name, column_name 
            FROM 
@@ -632,21 +720,44 @@ class easy_or(cmd.Cmd, object):
                  owner NOT LIKE '%%SYS'
              AND 
                  owner not in ('XDB','SYSTEM')
-           """   % (arg.upper(), arg.upper())
+           """ % (arg.upper(), arg.upper())
 
         self.query_and_print(query)
         return
 
-    def complete_find_tables_with_column(self,text, line, begidx, lastidx):
-        key =  line[begidx:lastidx].upper()
-        query =  "SELECT distinct column_name from fgottenmetadata  WHERE column_name LIKE '%s%%' order by column_name "  % (text)
-        columns = complete_via_query(None, query)
+    def complete_find_tables_with_column(self, text, line, begidx, lastidx):
+        return self._complete_colnames(text)
 
-        if(text.islower() or text is ''): 
-            columns=[item.lower() for item in columns]
-        return columns
+    def do_show_index(self, arg):
+        """
+        Describes the indices  in <table-name> as
+          column_name, oracel_Type, date_length, comments
 
-#UNDOCCUMENTED DO METHODS
+         Usage: describe_index <table_name>
+        """
+
+        # Parse tablename for simple name or owner.tablename.
+        # If owner present, then add owner where clause.
+        arg = arg.upper().strip()
+        if not arg:
+            print "table name required"
+            return
+        tablename = arg
+        query_template = """select
+             a.table_name, a.column_name, b.index_type, b.index_name, b.ityp_name from
+             all_ind_columns a, all_indexes b
+             where
+             a.table_name LIKE '%s' and a.table_name like b.table_name
+             """
+        query = query_template % (tablename)
+        nresults = self.query_and_print(query)
+        return
+
+    def complete_show_index(self, text, line, begidx, lastidx):
+        return self._complete_tables(text)
+
+
+    #UNDOCCUMENTED DO METHODS
 
     def do_EOF(self, line):
         # exit program on ^D
