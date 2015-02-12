@@ -18,7 +18,7 @@ import cx_Oracle
 import sys
 import os
 import re
-#import readline
+# import readline
 import dircache
 import subprocess as sp
 import os.path as op
@@ -50,7 +50,9 @@ or_o = cx_Oracle.OBJECT
 options_prefetch = ['show', 'set', 'default']
 options_edit = ['show', 'set_editor']
 
-options_out = ['csv','tab','fits','h5','gz']
+options_out = ['csv', 'tab', 'fits', 'h5', 'gz']
+
+options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format', 'gzipped fits format']
 
 #PANDAS SET UP
 pd.set_option('display.max_rows', 1500)
@@ -102,16 +104,24 @@ def read_buf(fbuf):
 
 def change_type(info):
     if info[0] == or_n:
-        if info[4] == 0 and info[3] >=10 : return "int64"
-        elif info[4] == 0 and info[3] >= 3: return "int32"
-        elif info[4] == 0 and info[3] >= 1: return "int8"
-        elif info[4] > 0 and info[4] <= 5: return "float32"
-        else : return "float64"
+        if info[4] == 0 and info[3] >= 10:
+            return "int64"
+        elif info[4] == 0 and info[3] >= 3:
+            return "int32"
+        elif info[4] == 0 and info[3] >= 1:
+            return "int8"
+        elif info[4] > 0 and info[4] <= 5:
+            return "float32"
+        else:
+            return "float64"
     elif info[0] == or_f:
-        if info[2] == 4: return "float32"
-        else: return "float64"
+        if info[2] == 4:
+            return "float32"
+        else:
+            return "float64"
     else:
         return ""
+
 
 class easy_or(cmd.Cmd, object):
     """cx_oracle interpreter for DESDM"""
@@ -124,7 +134,7 @@ class easy_or(cmd.Cmd, object):
         self.prompt = self.savePrompt
         self.pipe_process_handle = None
         self.buff = None
-        self.prefetch = 5000
+        self.prefetch = 10000
         self.undoc_header = None
         self.doc_header = 'EasyAccess Commands (type help <command>):'
         self.user = 'mcarras2'
@@ -209,10 +219,23 @@ class easy_or(cmd.Cmd, object):
             with open('easy.buf', 'w') as filebuf:
                 filebuf.write(self.buff)
             query = line[:fend]
-            if line[fend:].find('>'):
-                fileout=line[fend:].split('>')[1].strip().split()[0]
-                fileformat=fileout.split(',')[-1]
-            self.query_and_print(query)
+            if line[fend:].find('>') > -1:
+                try:
+                    fileout = line[fend:].split('>')[1].strip().split()[0]
+                    fileformat = fileout.split('.')[-1]
+                    if fileformat in options_out:
+                        print '\nSaving to %s ...' % fileout + '\n'
+                        self.query_and_save(query, fileout, mode=fileformat)
+                    else:
+                        print colored('\nFile format not valid.\n', 'red')
+                        print 'Supported formats:\n'
+                        for jj, ff in enumerate(options_out): print '%5s  %s' % (ff, options_def[jj])
+                except:
+                    print colored('\nMust indicate output file\n',"red")
+                    print 'Format:\n'
+                    print 'select ... from ... where ... ; > example.csv \n'
+            else:
+                self.query_and_print(query)
 
         else:
             print
@@ -234,16 +257,17 @@ class easy_or(cmd.Cmd, object):
 
 
 
-        ### QUERY METHODS
+            ### QUERY METHODS
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!'):
+        self.cur.arraysize = self.prefetch
         t1 = time.time()
         try:
             self.cur.execute(query)
             if self.cur.description != None:
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
-                info   = [rec[1:6]   for rec in self.cur.description]
+                info = [rec[1:6] for rec in self.cur.description]
                 data = pd.DataFrame(self.cur.fetchall())
                 t2 = time.time()
                 elapsed = '%.1f seconds' % (t2 - t1)
@@ -269,6 +293,48 @@ class easy_or(cmd.Cmd, object):
             print colored(type, "red")
             print colored(value, "red")
             print
+
+
+    def query_and_save(self, query, fileout, mode='csv', print_time=True):
+        self.cur.arraysize = self.prefetch
+        t1 = time.time()
+        try:
+            self.cur.execute(query)
+            if self.cur.description != None:
+                header = [columns[0] for columns in self.cur.description]
+                htypes = [columns[1] for columns in self.cur.description]
+                info = [rec[1:6] for rec in self.cur.description]
+                first = True
+                mode_write='w'
+                header_out=True
+                com_it=0
+                while True:
+                    data = pd.DataFrame(self.cur.fetchmany())
+                    com_it +=1
+                    if not data.empty:
+                        if first: data.columns = header
+                        if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.6f', sep=',', mode=mode_write, header=header_out)
+                        if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.6f', sep=' ', mode=mode_write, header=header_out)
+                        if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False, header=header_out) #, complevel=9,complib='bzip2'
+                        if first:
+                            mode_write='a'
+                            header_out=False
+                    else: break
+                t2 = time.time()
+                elapsed = '%.1f seconds' % (t2 - t1)
+                print
+                if print_time: print colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (self.cur.rowcount, fileout, (t2 - t1), com_it-1), "green")
+                if print_time: print
+            else:
+                pass
+            print
+        except:
+            (type, value, traceback) = sys.exc_info()
+            print
+            print colored(type, "red")
+            print colored(value, "red")
+            print
+
 
 
     def query_results(self, query):
@@ -337,14 +403,14 @@ class easy_or(cmd.Cmd, object):
     def do_prefetch(self, line):
         """
         Shows, sets or sets to default the number of prefetch rows from Oracle
-        The default is 5000, increasing this number uses more memory but return
+        The default is 10000, increasing this number uses more memory but return
         data faster. Decreasing this number reduce memory but increases
         communication trips with database thus slowing the process.
 
         Usage:
            - prefetch show         : Shows current value
            - prefetch set <number> : Sets the prefetch to <number>
-           - prefetch default      : Sets value to 5000
+           - prefetch default      : Sets value to 10000
         """
         line = "".join(line.split())
         if line.find('show') > -1:
@@ -355,8 +421,8 @@ class easy_or(cmd.Cmd, object):
                 self.prefetch = int(val)
                 print '\nPrefetch value set to  {:}\n'.format(self.prefetch)
         elif line.find('default') > -1:
-            self.prefetch = 5000
-            print '\nPrefetch value set to default (5000) \n'
+            self.prefetch = 10000
+            print '\nPrefetch value set to default (10000) \n'
         else:
             print '\nPrefetch value = {:}\n'.format(self.prefetch)
 
@@ -520,24 +586,25 @@ class easy_or(cmd.Cmd, object):
         #    print "Warning Metadata not available, continuing : "
 
         #get last update
-        query_time="select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (self.user.upper())
+        query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
+            self.user.upper())
         try:
-            qt=self.cur.execute(query_time)
-            last=qt.fetchall()
-            now=datetime.datetime.now()
-            diff=abs(now-last[0][0]).seconds/3600.
+            qt = self.cur.execute(query_time)
+            last = qt.fetchall()
+            now = datetime.datetime.now()
+            diff = abs(now - last[0][0]).seconds / 3600.
             print 'Updated %.2f hours ago' % diff
         except:
             pass
         try:
-            query="DROP TABLE FGOTTENMETADATA"
+            query = "DROP TABLE FGOTTENMETADATA"
             print
             self.query_and_print(query, print_time=False, suc_arg='FGOTTENMETADATA table Dropped!')
         except:
             pass
         try:
             print '\nRe-creating metadata table ...'
-            query_2="""create table fgottenmetadata  as  select * from table (fgetmetadata)"""
+            query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
             self.query_and_print(query_2, print_time=False, suc_arg='FGOTTENMETADATA table Created!')
             print 'Loading metadata into cache...'
             self.cache_table_names = self.get_tables_names()
