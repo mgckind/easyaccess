@@ -509,13 +509,13 @@ class easy_or(cmd.Cmd, object):
         try:
             query="DROP TABLE FGOTTENMETADATA"
             print
-            self.query_and_print(query, print_time=False, suc_arg='METADATA table Dropped!')
+            self.query_and_print(query, print_time=False, suc_arg='FGOTTENMETADATA table Dropped!')
         except:
             pass
         try:
             print '\nRe-creating metadata table ...'
             query_2="""create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-            self.query_and_print(query_2, print_time=False, suc_arg='METADATA table Created!')
+            self.query_and_print(query_2, print_time=False, suc_arg='FGOTTENMETADATA table Created!')
             print 'Loading metadata into cache...'
             self.cache_table_names = self.get_tables_names()
             self.cache_usernames = self.get_userlist()
