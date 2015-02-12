@@ -9,6 +9,8 @@
 # Check for meatdata table and create cache and table if it doesn't exist
 # parse connection file
 # parse arguments
+# Add timeout for just printing on screen with suggestion to run into a file
+# call from outside
 
 import warnings
 
