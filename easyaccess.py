@@ -7,6 +7,8 @@
 # update do_help
 # refreash metadata after 24 hours or so
 # Check for meatdata table and create cache and table if it doesn't exist
+# parse connection file
+# parse arguments
 
 import warnings
 
@@ -42,9 +44,13 @@ import datetime
 #dsn = cx_Oracle.makedsn(**kwargs)
 or_n = cx_Oracle.NUMBER
 or_s = cx_Oracle.STRING
+or_f = cx_Oracle.NATIVE_FLOAT
+or_o = cx_Oracle.OBJECT
 
 options_prefetch = ['show', 'set', 'default']
 options_edit = ['show', 'set_editor']
+
+options_out = ['csv','tab','fits','h5','gz']
 
 #PANDAS SET UP
 pd.set_option('display.max_rows', 1500)
@@ -93,6 +99,19 @@ def read_buf(fbuf):
     newquery = newquery.split(';')[0]
     return newquery
 
+
+def change_type(info):
+    if info[0] == or_n:
+        if info[4] == 0 and info[3] >=10 : return "int64"
+        elif info[4] == 0 and info[3] >= 3: return "int32"
+        elif info[4] == 0 and info[3] >= 1: return "int8"
+        elif info[4] > 0 and info[4] <= 5: return "float32"
+        else : return "float64"
+    elif info[0] == or_f:
+        if info[2] == 4: return "float32"
+        else: return "float64"
+    else:
+        return ""
 
 class easy_or(cmd.Cmd, object):
     """cx_oracle interpreter for DESDM"""
@@ -190,6 +209,9 @@ class easy_or(cmd.Cmd, object):
             with open('easy.buf', 'w') as filebuf:
                 filebuf.write(self.buff)
             query = line[:fend]
+            if line[fend:].find('>'):
+                fileout=line[fend:].split('>')[1].strip().split()[0]
+                fileformat=fileout.split(',')[-1]
             self.query_and_print(query)
 
         else:
@@ -221,6 +243,7 @@ class easy_or(cmd.Cmd, object):
             if self.cur.description != None:
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
+                info   = [rec[1:6]   for rec in self.cur.description]
                 data = pd.DataFrame(self.cur.fetchall())
                 t2 = time.time()
                 elapsed = '%.1f seconds' % (t2 - t1)
@@ -669,8 +692,8 @@ class easy_or(cmd.Cmd, object):
         link = "@" + link if link else ""
         q = """
         select
-          atc.owner, atc.column_name, atc.data_type,
-          atc.data_length, acc.comments
+          atc.column_name, atc.data_type,
+          atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
           From all_tab_cols%s atc , all_col_comments%s acc
            where atc.owner = '%s' and atc.table_name = '%s' and
            acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name
