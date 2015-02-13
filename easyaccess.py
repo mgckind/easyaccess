@@ -32,6 +32,7 @@ import csv
 from termcolor import colored
 import pandas as pd
 import datetime
+import pyfits as pf
 
 
 
@@ -56,6 +57,8 @@ options_out = ['csv', 'tab', 'fits', 'h5', 'gz']
 
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format', 'gzipped fits format']
 
+
+type_dict={'float64' : 'D' , 'int64' : 'K' , 'float32' : 'E' , 'int32':'J' , 'object':'200A'}
 #PANDAS SET UP
 pd.set_option('display.max_rows', 1500)
 pd.set_option('display.width', 1000)
@@ -123,6 +126,29 @@ def change_type(info):
             return "float64"
     else:
         return ""
+
+
+def write_to_fits(df,fitsfile, mode='w'):
+    if mode =='w':
+        C=pf.ColDefs([])
+        for col in df:
+            type_df=df[col].dtype.name
+            CC=pf.Column(name=col,format=type_dict[type_df], array=df[col].values)
+            C.add_col(CC)
+        SS=pf.BinTableHDU.from_columns(C)
+        SS.writeto(fitsfile,clobber=True)
+    if mode =='a':
+        Htemp=pf.open(fitsfile)
+        nrows1=Htemp[1].data.shape[0]
+        ntot = nrows1 + len(df)
+        SS=pf.BinTableHDU.from_columns(Htemp[1].columns, nrows=ntot)
+        for colname in SS[1].columns.names:
+            SS.data[colname][nrows1:]=df[colname].values
+        SS.writeto(fitsfile,clobber=True)
+
+
+
+
 
 
 class easy_or(cmd.Cmd, object):
@@ -318,6 +344,7 @@ class easy_or(cmd.Cmd, object):
                         if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.6f', sep=',', mode=mode_write, header=header_out)
                         if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.6f', sep=' ', mode=mode_write, header=header_out)
                         if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False, header=header_out) #, complevel=9,complib='bzip2'
+                        if mode == 'fits': write_to_fits(data,fileout, mode=mode_write)
                         if first:
                             mode_write='a'
                             header_out=False
