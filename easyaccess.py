@@ -1,7 +1,7 @@
 # TODO:
 # history
 # history of queries
-# upload table
+# upload table from fits
 # completer scope? to complete from particular table?
 # update do_help
 # refreash metadata after 24 hours or so
@@ -132,7 +132,6 @@ def write_to_fits(df, fitsfile, mode='w', listN=[], listT=[]):
         for col in df:
             type_df = df[col].dtype.name
             if col in listN:
-                print col
                 fmt = listT[listN.index(col)]
             else:
                 fmt = type_dict[type_df]
@@ -893,7 +892,7 @@ class easy_or(cmd.Cmd, object):
         return self._complete_tables(text)
 
 
-    def load_table(self, line):
+    def do_load_table(self, line):
         """
         Loads a table from a file (csv or fits) taking name from filename and columns from header
 
@@ -911,33 +910,43 @@ class easy_or(cmd.Cmd, object):
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
         if line == "":
-            print 'Must include table file!\n'
+            print '\nMust include table filename!\n'
+            return
+        if line.find('.') ==-1:
+            print colored('\nError in filename\n',"red")
             return
         else:
             line = "".join(line.split())
             if line.find('/') > -1:
                 filename = line.split('/')[-1]
+            else:
+                filename = line
             alls = filename.split('.')
             if len(alls) > 2:
-                print 'Do not use extra . in filename'
+                print '\nDo not use extra . in filename\n'
                 return
             else:
                 table = alls[0]
-                format = alla[1]
+                format = alls[1]
                 if format == 'csv':
                     try:
-                        DF == pd.read_csv(line, sep=',')
+                        DF = pd.read_csv(line, sep=',')
                     except:
                         print colored('\nProblems reading %s\n' % line, "red")
                         return
 
+                    #check table first
+                    self.cur.execute('select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
+                    if self.cur.fetchall()[0][0] ==1:
+                        print '\n Table already exists! Change name of file or drop table ' \
+                              '\n with:  DROP TABLE %s\n ' % table.upper()
                     qtable = 'create table %s ( ' % table
                     for col in DF:
                         if DF[col].dtype.name == 'object':
-                            qtable += col + ' ' + 'VARCHAR(' + str(max(DF['TILENAME'].str.len())) + '),'
-                        elif DF[col].dtype.name.find('int'):
+                            qtable += col + ' ' + 'VARCHAR2(' + str(max(DF[col].str.len())) + '),'
+                        elif DF[col].dtype.name.find('int') > -1:
                             qtable += col + ' INT,'
-                        elif DF[col].dtype.name.find('float'):
+                        elif DF[col].dtype.name.find('float') >-1 :
                             qtable += col + ' BINARY_DOUBLE,'
                         else:
                             qtable += col + ' NUMBER,'
@@ -970,6 +979,9 @@ class easy_or(cmd.Cmd, object):
                         print colored(value, "red")
                         print
                         return
+                    return
+                else:
+                    print '\n Format not recognized, use csv or fits as extensions\n'
                     return
 
 
