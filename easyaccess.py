@@ -1,5 +1,4 @@
 # TODO:
-# write fiels (csv, fits, hdf5)
 # history
 # history of queries
 # upload table
@@ -37,9 +36,9 @@ import pyfits as pf
 
 
 
-#readline.parse_and_bind('tab: complete')
+# readline.parse_and_bind('tab: complete')
 
-#section = "db-dessci"
+# section = "db-dessci"
 #host = 'leovip148.ncsa.uiuc.edu'
 #port = '1521'
 #name = 'dessci'
@@ -53,12 +52,11 @@ or_o = cx_Oracle.OBJECT
 options_prefetch = ['show', 'set', 'default']
 options_edit = ['show', 'set_editor']
 
-options_out = ['csv', 'tab', 'fits', 'h5', 'gz']
+options_out = ['csv', 'tab', 'fits', 'h5']
 
-options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format', 'gzipped fits format']
+options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
 
-
-type_dict={'float64' : 'D' , 'int64' : 'K' , 'float32' : 'E' , 'int32':'J' , 'object':'200A'}
+type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
 #PANDAS SET UP
 pd.set_option('display.max_rows', 1500)
 pd.set_option('display.width', 1000)
@@ -108,19 +106,19 @@ def read_buf(fbuf):
 
 
 def change_type(info):
-    if info[0] == or_n:
-        if info[4] == 0 and info[3] >= 10:
+    if info[1] == or_n:
+        if info[5] == 0 and info[4] >= 10:
             return "int64"
-        elif info[4] == 0 and info[3] >= 3:
+        elif info[5] == 0 and info[4] >= 3:
             return "int32"
-        elif info[4] == 0 and info[3] >= 1:
+        elif info[5] == 0 and info[4] >= 1:
             return "int8"
-        elif info[4] > 0 and info[4] <= 5:
+        elif info[5] > 0 and info[5] <= 5:
             return "float32"
         else:
             return "float64"
-    elif info[0] == or_f:
-        if info[2] == 4:
+    elif info[1] == or_f:
+        if info[3] == 4:
             return "float32"
         else:
             return "float64"
@@ -128,27 +126,28 @@ def change_type(info):
         return ""
 
 
-def write_to_fits(df,fitsfile, mode='w'):
-    if mode =='w':
-        C=pf.ColDefs([])
+def write_to_fits(df, fitsfile, mode='w', listN=[], listT=[]):
+    if mode == 'w':
+        C = pf.ColDefs([])
         for col in df:
-            type_df=df[col].dtype.name
-            CC=pf.Column(name=col,format=type_dict[type_df], array=df[col].values)
+            type_df = df[col].dtype.name
+            if col in listN:
+                print col
+                fmt = listT[listN.index(col)]
+            else:
+                fmt = type_dict[type_df]
+            CC = pf.Column(name=col, format=fmt, array=df[col].values)
             C.add_col(CC)
-        SS=pf.BinTableHDU.from_columns(C)
-        SS.writeto(fitsfile,clobber=True)
-    if mode =='a':
-        Htemp=pf.open(fitsfile)
-        nrows1=Htemp[1].data.shape[0]
+        SS = pf.BinTableHDU.from_columns(C)
+        SS.writeto(fitsfile, clobber=True)
+    if mode == 'a':
+        Htemp = pf.open(fitsfile)
+        nrows1 = Htemp[1].data.shape[0]
         ntot = nrows1 + len(df)
-        SS=pf.BinTableHDU.from_columns(Htemp[1].columns, nrows=ntot)
-        for colname in SS[1].columns.names:
-            SS.data[colname][nrows1:]=df[colname].values
-        SS.writeto(fitsfile,clobber=True)
-
-
-
-
+        SS = pf.BinTableHDU.from_columns(Htemp[1].columns, nrows=ntot)
+        for colname in Htemp[1].columns.names:
+            SS.data[colname][nrows1:] = df[colname].values
+        SS.writeto(fitsfile, clobber=True)
 
 
 class easy_or(cmd.Cmd, object):
@@ -252,14 +251,14 @@ class easy_or(cmd.Cmd, object):
                     fileout = line[fend:].split('>')[1].strip().split()[0]
                     fileformat = fileout.split('.')[-1]
                     if fileformat in options_out:
-                        print '\nSaving to %s ...' % fileout + '\n'
+                        print '\nFetching data and saving it to %s ...' % fileout + '\n'
                         self.query_and_save(query, fileout, mode=fileformat)
                     else:
                         print colored('\nFile format not valid.\n', 'red')
                         print 'Supported formats:\n'
                         for jj, ff in enumerate(options_out): print '%5s  %s' % (ff, options_def[jj])
                 except:
-                    print colored('\nMust indicate output file\n',"red")
+                    print colored('\nMust indicate output file\n', "red")
                     print 'Format:\n'
                     print 'select ... from ... where ... ; > example.csv \n'
             else:
@@ -331,28 +330,45 @@ class easy_or(cmd.Cmd, object):
             if self.cur.description != None:
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
-                info = [rec[1:6] for rec in self.cur.description]
+                info = [rec[0:6] for rec in self.cur.description]
                 first = True
-                mode_write='w'
-                header_out=True
-                com_it=0
+                mode_write = 'w'
+                header_out = True
+                com_it = 0
                 while True:
                     data = pd.DataFrame(self.cur.fetchmany())
-                    com_it +=1
+                    com_it += 1
+                    if first:
+                        list_names = []
+                        list_type = []
+                        for inf in info:
+                            if inf[1] == or_s:
+                                list_names.append(inf[0])
+                                list_type.append(str(inf[3]) + 'A')
                     if not data.empty:
-                        if first: data.columns = header
-                        if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.6f', sep=',', mode=mode_write, header=header_out)
-                        if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.6f', sep=' ', mode=mode_write, header=header_out)
-                        if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False, header=header_out) #, complevel=9,complib='bzip2'
-                        if mode == 'fits': write_to_fits(data,fileout, mode=mode_write)
+                        data.columns = header
+                        for jj, col in enumerate(data):
+                            nt = change_type(info[jj])
+                            if nt != "": data[col] = data[col].astype(nt)
+                        if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.6f', sep=',',
+                                                      mode=mode_write, header=header_out)
+                        if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.6f', sep=' ',
+                                                      mode=mode_write, header=header_out)
+                        if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False,
+                                                      header=header_out)  #, complevel=9,complib='bzip2'
+                        if mode == 'fits': write_to_fits(data, fileout, mode=mode_write, listN=list_names,
+                                                         listT=list_type)
                         if first:
-                            mode_write='a'
-                            header_out=False
-                    else: break
+                            mode_write = 'a'
+                            header_out = False
+                            first = False
+                    else:
+                        break
                 t2 = time.time()
                 elapsed = '%.1f seconds' % (t2 - t1)
                 print
-                if print_time: print colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (self.cur.rowcount, fileout, (t2 - t1), com_it-1), "green")
+                if print_time: print colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
+                    self.cur.rowcount, fileout, (t2 - t1), com_it - 1), "green")
                 if print_time: print
             else:
                 pass
@@ -363,7 +379,6 @@ class easy_or(cmd.Cmd, object):
             print colored(type, "red")
             print colored(value, "red")
             print
-
 
 
     def query_results(self, query):
@@ -507,9 +522,11 @@ class easy_or(cmd.Cmd, object):
         else:
             return options_edit
 
-    def do_load(self, line):
+    def do_loadsql(self, line):
         """
         Loads a sql file with a query and ask whether it should be run
+
+        Usage: loadsql <filename>   (use autocompletion)
         """
         newq = read_buf(line)
         print
@@ -517,7 +534,7 @@ class easy_or(cmd.Cmd, object):
         print
         if (raw_input('submit query? (Y/N): ') in ['Y', 'y', 'yes']): self.query_and_print(newq)
 
-    def complete_load(self, text, line, start_idx, end_idx):
+    def complete_loadsql(self, text, line, start_idx, end_idx):
         return _complete_path(line)
 
     def do_exit(self, line):
@@ -874,6 +891,90 @@ class easy_or(cmd.Cmd, object):
 
     def complete_show_index(self, text, line, begidx, lastidx):
         return self._complete_tables(text)
+
+
+    def load_table(self, line):
+        """
+        Loads a table from a file (csv or fits) taking name from filename and columns from header
+
+        Usage: load_table <filename>
+        Ex: example.csv has the following content
+             RA,DEC,MAG
+             1.23,0.13,23
+             0.13,0.01,22
+
+        This command will create a table named EXAMPLE with 3 columns RA,DEC and MAG and values taken from file
+
+        Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
+        as data (using ',' or space)
+              - For fits file header must have columns names and data types
+              - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
+        """
+        if line == "":
+            print 'Must include table file!\n'
+            return
+        else:
+            line = "".join(line.split())
+            if line.find('/') > -1:
+                filename = line.split('/')[-1]
+            alls = filename.split('.')
+            if len(alls) > 2:
+                print 'Do not use extra . in filename'
+                return
+            else:
+                table = alls[0]
+                format = alla[1]
+                if format == 'csv':
+                    try:
+                        DF == pd.read_csv(line, sep=',')
+                    except:
+                        print colored('\nProblems reading %s\n' % line, "red")
+                        return
+
+                    qtable = 'create table %s ( ' % table
+                    for col in DF:
+                        if DF[col].dtype.name == 'object':
+                            qtable += col + ' ' + 'VARCHAR(' + str(max(DF['TILENAME'].str.len())) + '),'
+                        elif DF[col].dtype.name.find('int'):
+                            qtable += col + ' INT,'
+                        elif DF[col].dtype.name.find('float'):
+                            qtable += col + ' BINARY_DOUBLE,'
+                        else:
+                            qtable += col + ' NUMBER,'
+                    qtable = qtable[:-1] + ')'
+                    try:
+                        self.cur.execute(qtable)
+                    except:
+                        (type, value, traceback) = sys.exc_info()
+                        print
+                        print colored(type, "red")
+                        print colored(value, "red")
+                        print
+                        del DF
+                        return
+
+                    cols=','.join(DF.columns.values.tolist())
+                    vals=',:'.join(DF.columns.values.tolist())
+                    vals=':'+vals
+                    qinsert='insert into %s (%s) values (%s)'%  (table.upper(), cols, vals)
+                    try:
+                        t1=time.time()
+                        self.cur.executemany(qinsert, DF.values.tolist())
+                        t2=time.time()
+                        print colored('\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (table.upper(), len(DF), len(DF.columns), t2-t1), "green")
+                        del DF
+                    except:
+                        (type, value, traceback) = sys.exc_info()
+                        print
+                        print colored(type, "red")
+                        print colored(value, "red")
+                        print
+                        return
+                    return
+
+
+    def complete_load_table(self, text, line, start_idx, end_idx):
+        return _complete_path(line)
 
 
     #UNDOCCUMENTED DO METHODS
