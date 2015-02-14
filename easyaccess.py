@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 #  TODO:
 # upload table from fits
-# refreash metadata after 24 hours or so
-# Check for meatdata table and create cache and table if it doesn't exist
 # parse connection file
-# Add timeout for just printing on screen with suggestion to run into a file
 # read/write config file for editor, prefetch, more, hist cache=1000
 
 import warnings
@@ -25,12 +22,6 @@ import datetime
 import pyfits as pf
 import argparse
 
-
-
-
-
-
-# readline.parse_and_bind('tab: complete')
 
 # section = "db-dessci"
 # host = 'leovip148.ncsa.uiuc.edu'
@@ -171,6 +162,7 @@ class easy_or(cmd.Cmd, object):
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
         self.editor = os.getenv('EDITOR', 'nano')
+        self.timeout=600
 
 
     ### OVERRIDE CMD METHODS
@@ -249,6 +241,21 @@ class easy_or(cmd.Cmd, object):
         Despite the claims in the Cmd documentation, Cmd.preloop() is not a stub.
         """
         cmd.Cmd.preloop(self)  # # sets up command completion
+        create_metadata=False
+        check='select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
+        self.cur.execute(check)
+        if self.cur.fetchall()[0][0] == 0: create_metadata = True
+        else:
+            query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (self.user.upper())
+            qt = self.cur.execute(query_time)
+            last = qt.fetchall()
+            now = datetime.datetime.now()
+            diff = abs(now - last[0][0]).seconds / (3600.)
+            if diff >= 24: create_metadata = True
+        if create_metadata:
+            query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
+            self.cur.execute(query_2)
+
         print 'Loading metadata into cache...'
         self.cache_table_names = self.get_tables_names()
         self.cache_usernames = self.get_userlist()
@@ -349,20 +356,13 @@ class easy_or(cmd.Cmd, object):
             return self._complete_tables(text)
 
 
-   # def onecmd(self, arg):
-
-        # The defaut onecmd doesn't seem to call precmd and postcmd by default.
-        # So we call them explicitly to implement the functionality
-        # where we can do things like process the commandline and parse the commands,
-        # we need this when processing initial commands and command files
-       # line = self.precmd(arg)
-        #cmd.Cmd.onecmd(self, line)
-        #return self.postcmd(True, line)
 
     ### QUERY METHODS
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!'):
         self.cur.arraysize = self.prefetch
+        tt = threading.Timer(self.timeout,self.con.cancel)
+        tt.start()
         t1 = time.time()
         try:
             self.cur.execute(query)
@@ -372,7 +372,7 @@ class easy_or(cmd.Cmd, object):
                 info = [rec[1:6] for rec in self.cur.description]
                 data = pd.DataFrame(self.cur.fetchall())
                 t2 = time.time()
-                elapsed = '%.1f seconds' % (t2 - t1)
+                tt.cancel()
                 print
                 if print_time: print colored('%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
                 if print_time: print
@@ -386,15 +386,23 @@ class easy_or(cmd.Cmd, object):
                     data.index += 1
                     print data
             else:
+                t2 = time.time()
+                tt.cancel()
                 print colored(suc_arg, "green")
                 self.con.commit()
             print
         except:
+            t2 = time.time()
             (type, value, traceback) = sys.exc_info()
             print
             print colored(type, "red")
             print colored(value, "red")
             print
+            if t2-t1 > self.timeout :
+                print '\nQuery is taking too long for printing on screen'
+                print 'Try to output the results to a file'
+                print 'Using > FILENAME after query, ex: select from ... ; > test.csv'
+                print 'To see a list of compatible format\n'
 
 
     def query_and_save(self, query, fileout, mode='csv', print_time=True):
@@ -722,21 +730,9 @@ class easy_or(cmd.Cmd, object):
         # called fgottenmetadata in the user's mydb. It refreshes on command
         # or on timeout (checked at startup).
 
-        # drop table if it exists, then make a new one.
-        # created is the time that the cache table was created,
-
-
-        #try:
-        #    created = query_results("""
-        #    select created  from DBA_OBJECTS
-        #    where object_name = 'FGOTTENMETADATA' and owner = '%s'
-        #    """ % self.user.upper())
-        #except:
-        #    # no meta data system present for this user.
-        #    make_table = False
-        #    print "Warning Metadata not available, continuing : "
-
         #get last update
+        verb = True
+        if arg == 'quiet': verb = False
         query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
             self.user.upper())
         try:
@@ -744,25 +740,26 @@ class easy_or(cmd.Cmd, object):
             last = qt.fetchall()
             now = datetime.datetime.now()
             diff = abs(now - last[0][0]).seconds / 3600.
-            print 'Updated %.2f hours ago' % diff
+            if verb: print 'Updated %.2f hours ago' % diff
         except:
             pass
         try:
             query = "DROP TABLE FGOTTENMETADATA"
-            print
-            self.query_and_print(query, print_time=False, suc_arg='FGOTTENMETADATA table Dropped!')
+            self.cur.execute(query)
         except:
             pass
         try:
-            print '\nRe-creating metadata table ...'
+            if verb:print '\nRe-creating metadata table ...'
             query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-            self.query_and_print(query_2, print_time=False, suc_arg='FGOTTENMETADATA table Created!')
-            print 'Loading metadata into cache...'
+            message = 'FGOTTENMETADATA table Created!'
+            if not verb :  message=""
+            self.query_and_print(query_2, print_time=False, suc_arg= message)
+            if verb: print 'Loading metadata into cache...'
             self.cache_table_names = self.get_tables_names()
             self.cache_usernames = self.get_userlist()
             self.cache_column_names = self.get_columnlist()
         except:
-            print colored("There was an error when refreshing the cache", "red")
+            if verb: print colored("There was an error when refreshing the cache", "red")
 
 
     def do_show_db(self, arg):
