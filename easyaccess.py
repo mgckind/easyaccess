@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 #  TODO:
 # upload table from fits
-# parse connection file
-# read/write config file for editor, prefetch, more, hist cache=1000
+# clean up, comments
+# make module
 
 import warnings
-
 warnings.filterwarnings("ignore")
 import cmd
 import cx_Oracle
@@ -25,12 +24,6 @@ import config as config_mod
 
 
 
-# section = "db-dessci"
-# host = 'leovip148.ncsa.uiuc.edu'
-#port = '1521'
-#name = 'dessci'
-#kwargs = {'host': host, 'port': port, 'service_name': name}
-#dsn = cx_Oracle.makedsn(**kwargs)
 or_n = cx_Oracle.NUMBER
 or_s = cx_Oracle.STRING
 or_f = cx_Oracle.NATIVE_FLOAT
@@ -38,11 +31,8 @@ or_o = cx_Oracle.OBJECT
 
 options_prefetch = ['show', 'set', 'default']
 options_edit = ['show', 'set_editor']
-
 options_out = ['csv', 'tab', 'fits', 'h5']
-
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
-
 type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
 
 
@@ -136,14 +126,15 @@ class easy_or(cmd.Cmd, object):
     """cx_oracle interpreter for DESDM"""
     intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n", "cyan")
 
-    def __init__(self, conf, interactive=True):
+    def __init__(self, conf , desconf, db,interactive=True):
         cmd.Cmd.__init__(self)
         self.writeconfig = False
         self.config=conf
+        self.desconfig = desconf
         self.editor = os.getenv('EDITOR', self.config.get('easyaccess','editor'))
         self.timeout=self.config.getint('easyaccess','timeout')
         self.prefetch = self.config.getint('easyaccess','prefetch')
-        self.dbname = self.config.get('easyaccess','database')
+        self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
         self.buff = None
@@ -151,10 +142,11 @@ class easy_or(cmd.Cmd, object):
         self.undoc_header = None
         self.doc_header = 'General Commands (type help <command>):'
         self.docdb_header = '\nDB Commands (type help <command>):'
-        self.user = 'mcarras2'
-        self.dbhost = 'leovip148.ncsa.uiuc.edu'
-        self.port = '1521'
-        self.password = 'Alnilam1'
+        #connect to db
+        self.user = self.desconfig.get('db-'+self.dbname,'user')
+        self.dbhost = self.desconfig.get('db-'+self.dbname,'server')
+        self.port = self.desconfig.get('db-'+self.dbname,'port')
+        self.password = self.desconfig.get('db-'+self.dbname,'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
         print 'Connecting to DB...'
@@ -339,6 +331,11 @@ class easy_or(cmd.Cmd, object):
             print
 
     def completedefault(self, text, line, begidx, lastidx):
+        qstop = line.find(';')
+        if qstop > -1:
+            if line[qstop:].find('>') > -1:
+                line = line[qstop+1:]
+                return _complete_path(line)
         if line[0]=='@':
             line='@ '+line[1:]
             return _complete_path(line)
@@ -668,7 +665,7 @@ class easy_or(cmd.Cmd, object):
         if readline_present :
             readline.write_history_file (history_file)
         if self.writeconfig:
-            config_mod.write_config('config.ini',self.config)
+            config_mod.write_config(config_file,self.config)
         sys.exit(0)
 
     def do_clear(self, line):
@@ -720,6 +717,9 @@ class easy_or(cmd.Cmd, object):
                 temp_con.commit()
                 temp_cur.close()
                 temp_con.close()
+                self.desconfig.set('db-dessci','passwd',pw1)
+                self.desconfig.set('db-desoper','passwd',pw1)
+                config_mod.write_desconfig(desfile, self.desconfig)
             except:
                 confirm = 'Password could not changed in %s\n' % db.upper()
                 print colored(confirm, "red")
@@ -1135,10 +1135,15 @@ if __name__ == '__main__':
     if not os.path.exists(ea_path):os.makedirs(ea_path)
     history_file = os.path.join(os.environ["HOME"], ".easyacess/history")
     if not os.path.exists(history_file): os.system('echo $null >> '+history_file)
-    config_file = os.path.join(os.environ["HOME"], ".easyacess/config")
+    config_file = os.path.join(os.environ["HOME"], ".easyacess/config.ini")
     if not os.path.exists(config_file): os.system('echo $null >> '+config_file)
+    desfile = os.getenv("DES_SERVICES")
+    if not desfile : desfile = os.path.join(os.getenv("HOME"),".desservices.ini")
 
-    conf=config_mod.get_config('config.ini')
+
+
+
+    conf=config_mod.get_config(config_file)
     #PANDAS DISPLAY SET UP
     pd.set_option('display.max_rows', conf.getint('display','max_rows'))
     pd.set_option('display.width', conf.getint('display','width'))
@@ -1160,23 +1165,28 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--loadsql", dest='loadsql',help="Load a sql command, execute it and exit")
     parser.add_argument("-lt", "--loadtable", dest='loadtable',help="Load a sql command, execute it and exit")
     args = parser.parse_args()
+
+    desconf=config_mod.get_desconfig(desfile)
+
+    db=conf.get('easyaccess','database')
+
     if args.command is not None:
-        cmdinterp = easy_or(conf,interactive=False)
+        cmdinterp = easy_or(conf,desconf,db,interactive=False)
         cmdinterp.onecmd(args.command)
         sys.exit(0)
     elif args.loadsql is not None:
-        cmdinterp = easy_or(conf,interactive=False)
+        cmdinterp = easy_or(conf,desconf, db,interactive=False)
         linein="loadsql "+  args.loadsql
         cmdinterp.onecmd(linein)
         sys.exit(0)
     elif args.loadtable is not None:
-        cmdinterp = easy_or(conf,interactive=False)
+        cmdinterp = easy_or(conf,desconf, db,interactive=False)
         linein="load_table "+  args.loadtable
         cmdinterp.onecmd(linein)
         sys.exit(0)
     else:
         os.system(['clear','cls'][os.name == 'nt'])
-        easy_or(conf).cmdloop()
+        easy_or(conf,desconf,db).cmdloop()
 
 
 
