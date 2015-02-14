@@ -21,6 +21,8 @@ import pandas as pd
 import datetime
 import pyfits as pf
 import argparse
+import config as config_mod
+
 
 
 # section = "db-dessci"
@@ -42,10 +44,6 @@ options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
 
 type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
-#PANDAS SET UP
-pd.set_option('display.max_rows', 1500)
-pd.set_option('display.width', 1000)
-pd.set_option('display.max_columns', 50)
 
 
 def _complete_path(line):
@@ -138,21 +136,23 @@ class easy_or(cmd.Cmd, object):
     """cx_oracle interpreter for DESDM"""
     intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n", "cyan")
 
-    def __init__(self, interactive=True):
+    def __init__(self, conf, interactive=True):
         cmd.Cmd.__init__(self)
-        self.table_restriction_clause = " "
+        self.writeconfig = False
+        self.config=conf
+        self.editor = os.getenv('EDITOR', self.config.get('easyaccess','editor'))
+        self.timeout=self.config.getint('easyaccess','timeout')
+        self.prefetch = self.config.getint('easyaccess','prefetch')
+        self.dbname = self.config.get('easyaccess','database')
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
-        self.pipe_process_handle = None
         self.buff = None
         self.interactive = interactive
-        self.prefetch = 10000
         self.undoc_header = None
         self.doc_header = 'General Commands (type help <command>):'
         self.docdb_header = '\nDB Commands (type help <command>):'
         self.user = 'mcarras2'
         self.dbhost = 'leovip148.ncsa.uiuc.edu'
-        self.dbname = 'dessci'
         self.port = '1521'
         self.password = 'Alnilam1'
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
@@ -161,8 +161,6 @@ class easy_or(cmd.Cmd, object):
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
-        self.editor = os.getenv('EDITOR', 'nano')
-        self.timeout=600
 
 
     ### OVERRIDE CMD METHODS
@@ -546,9 +544,13 @@ class easy_or(cmd.Cmd, object):
             val = line.split('set')[-1]
             if val != '':
                 self.prefetch = int(val)
+                self.config.set('easyaccess','prefetch',int(val))
+                self.writeconfig=True
                 print '\nPrefetch value set to  {:}\n'.format(self.prefetch)
         elif line.find('default') > -1:
             self.prefetch = 10000
+            self.config.set('easyaccess','prefetch',10000)
+            self.writeconfig=True
             print '\nPrefetch value set to default (10000) \n'
         else:
             print '\nPrefetch value = {:}\n'.format(self.prefetch)
@@ -609,6 +611,8 @@ class easy_or(cmd.Cmd, object):
             val = line.split('set_editor')[-1]
             if val != '':
                 self.editor = val
+                self.config.set('easyaccess','editor',val)
+                self.writeconfig=True
         else:
             os.system(self.editor + ' easy.buf')
             if os.path.exists('easy.buf'):
@@ -663,6 +667,8 @@ class easy_or(cmd.Cmd, object):
         self.con.close()
         if readline_present :
             readline.write_history_file (history_file)
+        if self.writeconfig:
+            config_mod.write_config('config.ini',self.config)
         sys.exit(0)
 
     def do_clear(self, line):
@@ -1112,6 +1118,9 @@ class easy_or(cmd.Cmd, object):
     def do_clean_history(self,line):
         if readline_present: readline.clear_history()
 
+##################################################
+##################################################
+
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
         print '\n*****************'
@@ -1129,6 +1138,12 @@ if __name__ == '__main__':
     config_file = os.path.join(os.environ["HOME"], ".easyacess/config")
     if not os.path.exists(config_file): os.system('echo $null >> '+config_file)
 
+    conf=config_mod.get_config('config.ini')
+    #PANDAS DISPLAY SET UP
+    pd.set_option('display.max_rows', conf.getint('display','max_rows'))
+    pd.set_option('display.width', conf.getint('display','width'))
+    pd.set_option('display.max_columns', conf.getint('display','max_columns'))
+
     try:
         import readline
         save = sys.stdout
@@ -1136,7 +1151,7 @@ if __name__ == '__main__':
         readline.read_history_file(history_file)
         sys.stdout = save
         readline_present = True
-        readline.set_history_length(5000)
+        readline.set_history_length(conf.getint('easyaccess','histcache'))
     except:
         readline_present = False
 
@@ -1146,42 +1161,22 @@ if __name__ == '__main__':
     parser.add_argument("-lt", "--loadtable", dest='loadtable',help="Load a sql command, execute it and exit")
     args = parser.parse_args()
     if args.command is not None:
-        cmdinterp = easy_or(interactive=False)
+        cmdinterp = easy_or(conf,interactive=False)
         cmdinterp.onecmd(args.command)
         sys.exit(0)
     elif args.loadsql is not None:
-        cmdinterp = easy_or(interactive=False)
+        cmdinterp = easy_or(conf,interactive=False)
         linein="loadsql "+  args.loadsql
         cmdinterp.onecmd(linein)
         sys.exit(0)
     elif args.loadtable is not None:
-        cmdinterp = easy_or(interactive=False)
+        cmdinterp = easy_or(conf,interactive=False)
         linein="load_table "+  args.loadtable
         cmdinterp.onecmd(linein)
         sys.exit(0)
     else:
         os.system(['clear','cls'][os.name == 'nt'])
-        easy_or().cmdloop()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        easy_or(conf).cmdloop()
 
 
 
