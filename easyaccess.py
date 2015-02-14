@@ -140,8 +140,8 @@ class easy_or(cmd.Cmd, object):
         self.buff = None
         self.interactive = interactive
         self.undoc_header = None
-        self.doc_header = 'General Commands (type help <command>):'
-        self.docdb_header = '\nDB Commands (type help <command>):'
+        self.doc_header = ' *General Commands* (type help <command>):'
+        self.docdb_header = '\n*DB Commands* (type help <command>):'
         #connect to db
         self.user = self.desconfig.get('db-'+self.dbname,'user')
         self.dbhost = self.desconfig.get('db-'+self.dbname,'server')
