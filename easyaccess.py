@@ -21,6 +21,17 @@ import datetime
 import pyfits as pf
 import argparse
 import config as config_mod
+import types
+
+#FILES
+ea_path=os.path.join(os.environ["HOME"], ".easyacess/")
+if not os.path.exists(ea_path):os.makedirs(ea_path)
+history_file = os.path.join(os.environ["HOME"], ".easyacess/history")
+if not os.path.exists(history_file): os.system('echo $null >> '+history_file)
+config_file = os.path.join(os.environ["HOME"], ".easyacess/config.ini")
+if not os.path.exists(config_file): os.system('echo $null >> '+config_file)
+desfile = os.getenv("DES_SERVICES")
+if not desfile : desfile = os.path.join(os.getenv("HOME"),".desservices.ini")
 
 
 
@@ -142,7 +153,7 @@ class easy_or(cmd.Cmd, object):
         self.undoc_header = None
         self.doc_header = ' *General Commands* (type help <command>):'
         self.docdb_header = '\n*DB Commands* (type help <command>):'
-        #connect to db
+        #connect to db  
         self.user = self.desconfig.get('db-'+self.dbname,'user')
         self.dbhost = self.desconfig.get('db-'+self.dbname,'server')
         self.port = self.desconfig.get('db-'+self.dbname,'port')
@@ -1118,7 +1129,49 @@ class easy_or(cmd.Cmd, object):
     def do_clean_history(self,line):
         if readline_present: readline.clear_history()
 
+
+
 ##################################################
+def to_pandas(cur):
+    """
+    Returns a pandas DataFrame from a executed query 
+    """
+    if cur.description != None:
+        data=pd.DataFrame(cur.fetchall(), columns=[rec[0] for rec in cur.description])
+    else: data=""
+    return data
+class connectDB():
+    def  __init__(self):
+        conf=config_mod.get_config(config_file)
+        pd.set_option('display.max_rows', conf.getint('display','max_rows'))
+        pd.set_option('display.width', conf.getint('display','width'))
+        pd.set_option('display.max_columns', conf.getint('display','max_columns'))
+        desconf=config_mod.get_desconfig(desfile)
+        db=conf.get('easyaccess','database')
+        self.prefetch = conf.getint('easyaccess','prefetch')
+        self.dbname = db
+        #connect to db  
+        self.user = desconf.get('db-'+self.dbname,'user')
+        self.dbhost = desconf.get('db-'+self.dbname,'server')
+        self.port = desconf.get('db-'+self.dbname,'port')
+        self.password = desconf.get('db-'+self.dbname,'passwd')
+        kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
+        dsn = cx_Oracle.makedsn(**kwargs)
+        print 'Connecting to DB...'
+        self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+    def ping(self):
+        try:
+            self.con.ping()
+            print 'Still connected to DB'
+        except:
+            print 'Connection with DB lost'
+    def cursor(self):
+        cursor = self.con.cursor()
+        cursor.arraysize = self.prefetch
+        return cursor
+    def close(self):
+        self.con.close()
+
 ##################################################
 
 class MyParser(argparse.ArgumentParser):
@@ -1130,18 +1183,8 @@ class MyParser(argparse.ArgumentParser):
         sys.exit(2)
 
 
+
 if __name__ == '__main__':
-    ea_path=os.path.join(os.environ["HOME"], ".easyacess/")
-    if not os.path.exists(ea_path):os.makedirs(ea_path)
-    history_file = os.path.join(os.environ["HOME"], ".easyacess/history")
-    if not os.path.exists(history_file): os.system('echo $null >> '+history_file)
-    config_file = os.path.join(os.environ["HOME"], ".easyacess/config.ini")
-    if not os.path.exists(config_file): os.system('echo $null >> '+config_file)
-    desfile = os.getenv("DES_SERVICES")
-    if not desfile : desfile = os.path.join(os.getenv("HOME"),".desservices.ini")
-
-
-
 
     conf=config_mod.get_config(config_file)
     #PANDAS DISPLAY SET UP
@@ -1187,23 +1230,5 @@ if __name__ == '__main__':
     else:
         os.system(['clear','cls'][os.name == 'nt'])
         easy_or(conf,desconf,db).cmdloop()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
