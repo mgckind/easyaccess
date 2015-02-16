@@ -15,7 +15,8 @@ import dircache
 import threading
 import time
 import getpass
-from termcolor import colored
+#from termcolor import colored
+def colored(line,color) : return line
 import pandas as pd
 import datetime
 import pyfits as pf
@@ -1194,10 +1195,10 @@ if __name__ == '__main__':
 
     try:
         import readline
-        save = sys.stdout
-        sys.stdout = open("/dev/null","w")
+        #save = sys.stdout
+        #sys.stdout = open("/dev/null","w")
         readline.read_history_file(history_file)
-        sys.stdout = save
+        #sys.stdout = save
         readline_present = True
         readline.set_history_length(conf.getint('easyaccess','histcache'))
     except:
