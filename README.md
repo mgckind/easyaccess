@@ -49,6 +49,7 @@ Format table
 RA,DEC,MAG_R
 12.34,56.78,23
 
+
         DESDB ~> load_table <filename>
 
 ### Load SQL queries
@@ -56,6 +57,7 @@ To load sql queries just run:
 
         DESDB ~> loadsql <filename.sql>
 or
+
         DESDB ~> @filename.sql
 
 The format is the same as in command line, SQL statement must end with ;
