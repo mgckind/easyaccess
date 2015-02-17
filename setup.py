@@ -1,4 +1,5 @@
 import sys
+import os
 from numpy.distutils.core import setup, Extension
 prjdir = os.path.dirname(__file__)
 
