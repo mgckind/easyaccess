@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__= '1.0.0'
-#  TODO:
-# upload table from fits
+__version__ = '1.0.0'
+# TODO:
+# add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
 # readline bug (GNU vs libedit)
 # self upgrade
 
 import warnings
+
 warnings.filterwarnings("ignore")
 import cmd
 import cx_Oracle
@@ -18,10 +19,12 @@ import dircache
 import threading
 import time
 import getpass
+
 try:
     from termcolor import colored
 except:
-    def colored(line,color) : return line
+    def colored(line, color):
+        return line
 import pandas as pd
 import datetime
 import pyfits as pf
@@ -30,16 +33,14 @@ import config as config_mod
 
 
 #FILES
-ea_path=os.path.join(os.environ["HOME"], ".easyacess/")
-if not os.path.exists(ea_path):os.makedirs(ea_path)
+ea_path = os.path.join(os.environ["HOME"], ".easyacess/")
+if not os.path.exists(ea_path): os.makedirs(ea_path)
 history_file = os.path.join(os.environ["HOME"], ".easyacess/history")
-if not os.path.exists(history_file): os.system('echo $null >> '+history_file)
+if not os.path.exists(history_file): os.system('echo $null >> ' + history_file)
 config_file = os.path.join(os.environ["HOME"], ".easyacess/config.ini")
-if not os.path.exists(config_file): os.system('echo $null >> '+config_file)
+if not os.path.exists(config_file): os.system('echo $null >> ' + config_file)
 desfile = os.getenv("DES_SERVICES")
-if not desfile : desfile = os.path.join(os.getenv("HOME"),".desservices.ini")
-
-
+if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
 
 or_n = cx_Oracle.NUMBER
 or_s = cx_Oracle.STRING
@@ -143,14 +144,14 @@ class easy_or(cmd.Cmd, object):
     """cx_oracle interpreter for DESDM"""
     intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n", "cyan")
 
-    def __init__(self, conf , desconf, db,interactive=True):
+    def __init__(self, conf, desconf, db, interactive=True):
         cmd.Cmd.__init__(self)
         self.writeconfig = False
-        self.config=conf
+        self.config = conf
         self.desconfig = desconf
-        self.editor = os.getenv('EDITOR', self.config.get('easyaccess','editor'))
-        self.timeout=self.config.getint('easyaccess','timeout')
-        self.prefetch = self.config.getint('easyaccess','prefetch')
+        self.editor = os.getenv('EDITOR', self.config.get('easyaccess', 'editor'))
+        self.timeout = self.config.getint('easyaccess', 'timeout')
+        self.prefetch = self.config.getint('easyaccess', 'prefetch')
         self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
@@ -160,10 +161,10 @@ class easy_or(cmd.Cmd, object):
         self.doc_header = ' *General Commands* (type help <command>):'
         self.docdb_header = '\n*DB Commands* (type help <command>):'
         #connect to db  
-        self.user = self.desconfig.get('db-'+self.dbname,'user')
-        self.dbhost = self.desconfig.get('db-'+self.dbname,'server')
-        self.port = self.desconfig.get('db-'+self.dbname,'port')
-        self.password = self.desconfig.get('db-'+self.dbname,'passwd')
+        self.user = self.desconfig.get('db-' + self.dbname, 'user')
+        self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
+        self.port = self.desconfig.get('db-' + self.dbname, 'port')
+        self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
         print 'Connecting to DB %s ...' % self.dbname
@@ -184,6 +185,7 @@ class easy_or(cmd.Cmd, object):
         if self.use_rawinput and self.completekey:
             try:
                 import readline
+
                 self.old_completer = readline.get_completer()
                 readline.set_completer(self.complete)
                 #readline.parse_and_bind(self.completekey+": complete")
@@ -193,17 +195,17 @@ class easy_or(cmd.Cmd, object):
                         key = '^I'
                     else:
                         key = self.completekey
-                    readline.parse_and_bind("bind %s rl_complete"%(key,))
+                    readline.parse_and_bind("bind %s rl_complete" % (key,))
                 else:
                     # readline linked to the real readline
-                    readline.parse_and_bind(self.completekey+": complete")
+                    readline.parse_and_bind(self.completekey + ": complete")
             except ImportError:
                 pass
         try:
             if intro is not None:
                 self.intro = intro
             if self.intro:
-                self.stdout.write(str(self.intro)+"\n")
+                self.stdout.write(str(self.intro) + "\n")
             stop = None
             while not stop:
                 if self.cmdqueue:
@@ -230,6 +232,7 @@ class easy_or(cmd.Cmd, object):
             if self.use_rawinput and self.completekey:
                 try:
                     import readline
+
                     readline.set_completer(self.old_completer)
                 except ImportError:
                     pass
@@ -242,15 +245,15 @@ class easy_or(cmd.Cmd, object):
                 func = getattr(self, 'help_' + arg)
             except AttributeError:
                 try:
-                    doc=getattr(self, 'do_' + arg).__doc__
+                    doc = getattr(self, 'do_' + arg).__doc__
                     if doc:
-                        doc=str(doc)
-                        if doc.find('DB:')> -1: doc=doc.replace('DB:','')
-                        self.stdout.write("%s\n"%str(doc))
+                        doc = str(doc)
+                        if doc.find('DB:') > -1: doc = doc.replace('DB:', '')
+                        self.stdout.write("%s\n" % str(doc))
                         return
                 except AttributeError:
                     pass
-                self.stdout.write("%s\n"%str(self.nohelp % (arg,)))
+                self.stdout.write("%s\n" % str(self.nohelp % (arg,)))
                 return
             func()
         else:
@@ -261,7 +264,7 @@ class easy_or(cmd.Cmd, object):
             help = {}
             for name in names:
                 if name[:5] == 'help_':
-                    help[name[5:]]=1
+                    help[name[5:]] = 1
             names.sort()
             # There can be duplicates if routines overridden
             prevname = ''
@@ -270,26 +273,27 @@ class easy_or(cmd.Cmd, object):
                     if name == prevname:
                         continue
                     prevname = name
-                    cmd=name[3:]
+                    cmd = name[3:]
                     if cmd in help:
                         cmds_doc.append(cmd)
                         del help[cmd]
                     elif getattr(self, name).__doc__:
                         doc = getattr(self, name).__doc__
-                        if doc.find('DB:') > -1: cmds_db.append(cmd)
-                        else: cmds_doc.append(cmd)
+                        if doc.find('DB:') > -1:
+                            cmds_db.append(cmd)
+                        else:
+                            cmds_doc.append(cmd)
                     else:
                         cmds_undoc.append(cmd)
-            self.stdout.write("%s\n"%str(self.doc_leader))
-            self.print_topics(self.doc_header,   cmds_doc,   15,80)
-            self.print_topics(self.docdb_header,   cmds_db,   15,80)
-            self.print_topics(self.misc_header,  help.keys(),15,80)
-            self.print_topics(self.undoc_header, cmds_undoc, 15,80)
+            self.stdout.write("%s\n" % str(self.doc_leader))
+            self.print_topics(self.doc_header, cmds_doc, 15, 80)
+            self.print_topics(self.docdb_header, cmds_db, 15, 80)
+            self.print_topics(self.misc_header, help.keys(), 15, 80)
+            self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
             print "\n* To run queries just add ; at the end of query"
             print "* To write to a file after ; append > filename"
             print "* To see supported output files format "
-
 
 
     def print_topics(self, header, cmds, cmdlen, maxcol):
@@ -308,12 +312,14 @@ class easy_or(cmd.Cmd, object):
         Despite the claims in the Cmd documentation, Cmd.preloop() is not a stub.
         """
         cmd.Cmd.preloop(self)  # # sets up command completion
-        create_metadata=False
-        check='select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
+        create_metadata = False
+        check = 'select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
         self.cur.execute(check)
-        if self.cur.fetchall()[0][0] == 0: create_metadata = True
+        if self.cur.fetchall()[0][0] == 0:
+            create_metadata = True
         else:
-            query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (self.user.upper())
+            query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
+                self.user.upper())
             qt = self.cur.execute(query_time)
             last = qt.fetchall()
             now = datetime.datetime.now()
@@ -328,11 +334,11 @@ class easy_or(cmd.Cmd, object):
         self.cache_usernames = self.get_userlist()
         self.cache_column_names = self.get_columnlist()
         #history
-        ht=open(history_file,'r')
-        Allq=ht.readlines()
+        ht = open(history_file, 'r')
+        Allq = ht.readlines()
         ht.close()
         self._hist = []
-        for lines in Allq : self._hist.append(lines.strip())
+        for lines in Allq: self._hist.append(lines.strip())
         self._locals = {}  # # Initialize execution namespace for user
         self._globals = {}
 
@@ -411,10 +417,10 @@ class easy_or(cmd.Cmd, object):
         qstop = line.find(';')
         if qstop > -1:
             if line[qstop:].find('>') > -1:
-                line = line[qstop+1:]
+                line = line[qstop + 1:]
                 return _complete_path(line)
-        if line[0]=='@':
-            line='@ '+line[1:]
+        if line[0] == '@':
+            line = '@ ' + line[1:]
             return _complete_path(line)
         if line.upper().find('SELECT') > -1:
             #return self._complete_colnames(text)
@@ -428,12 +434,11 @@ class easy_or(cmd.Cmd, object):
             return self._complete_tables(text)
 
 
-
     ### QUERY METHODS
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!'):
         self.cur.arraysize = self.prefetch
-        tt = threading.Timer(self.timeout,self.con.cancel)
+        tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
         t1 = time.time()
         try:
@@ -470,7 +475,7 @@ class easy_or(cmd.Cmd, object):
             print colored(type, "red")
             print colored(value, "red")
             print
-            if t2-t1 > self.timeout :
+            if t2 - t1 > self.timeout:
                 print '\nQuery is taking too long for printing on screen'
                 print 'Try to output the results to a file'
                 print 'Using > FILENAME after query, ex: select from ... ; > test.csv'
@@ -543,7 +548,7 @@ class easy_or(cmd.Cmd, object):
 
     def get_tables_names(self):
 
-        if self.dbname in ('dessci','desoper'):
+        if self.dbname in ('dessci', 'desoper'):
             query = """
             select distinct table_name from fgottenmetadata
             union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
@@ -576,7 +581,7 @@ class easy_or(cmd.Cmd, object):
             print 'User %s has no tables' % user.upper()
 
     def get_userlist(self):
-        if self.dbname in ('dessci','desoper'):
+        if self.dbname in ('dessci', 'desoper'):
             query = 'select distinct username from des_users order by username'
         if self.dbname in ('destest'):
             query = 'select distinct username from dba_users order by username'
@@ -627,13 +632,13 @@ class easy_or(cmd.Cmd, object):
             val = line.split('set')[-1]
             if val != '':
                 self.prefetch = int(val)
-                self.config.set('easyaccess','prefetch',int(val))
-                self.writeconfig=True
+                self.config.set('easyaccess', 'prefetch', int(val))
+                self.writeconfig = True
                 print '\nPrefetch value set to  {:}\n'.format(self.prefetch)
         elif line.find('default') > -1:
             self.prefetch = 10000
-            self.config.set('easyaccess','prefetch',10000)
-            self.writeconfig=True
+            self.config.set('easyaccess', 'prefetch', 10000)
+            self.writeconfig = True
             print '\nPrefetch value set to default (10000) \n'
         else:
             print '\nPrefetch value = {:}\n'.format(self.prefetch)
@@ -653,10 +658,10 @@ class easy_or(cmd.Cmd, object):
         Usage: history [n]
         """
         if readline_present:
-            nall  =readline.get_current_history_length()
+            nall = readline.get_current_history_length()
             firstprint = 0
-            if arg.strip() : firstprint = max(nall - int(arg), 0)
-            for index in xrange (firstprint, nall) :
+            if arg.strip(): firstprint = max(nall - int(arg), 0)
+            for index in xrange(firstprint, nall):
                 print index, readline.get_history_item(index)
 
 
@@ -694,13 +699,13 @@ class easy_or(cmd.Cmd, object):
             val = line.split('set_editor')[-1]
             if val != '':
                 self.editor = val
-                self.config.set('easyaccess','editor',val)
-                self.writeconfig=True
+                self.config.set('easyaccess', 'editor', val)
+                self.writeconfig = True
         else:
             os.system(self.editor + ' easy.buf')
             if os.path.exists('easy.buf'):
                 newquery = read_buf('easy.buf')
-                if newquery=="": return
+                if newquery == "": return
                 print
                 print newquery
                 print
@@ -722,13 +727,14 @@ class easy_or(cmd.Cmd, object):
         Usage: loadsql <filename>   (use autocompletion)
         """
         newq = read_buf(line)
-        if newq=="": return
+        if newq == "": return
         if self.interactive:
             print
             print newq
             print
             if (raw_input('submit query? (Y/N): ') in ['Y', 'y', 'yes']): self.default(newq)
-        else: self.default(newq)
+        else:
+            self.default(newq)
 
 
     def complete_loadsql(self, text, line, start_idx, end_idx):
@@ -748,10 +754,10 @@ class easy_or(cmd.Cmd, object):
             pass
         self.con.commit()
         self.con.close()
-        if readline_present :
-            readline.write_history_file (history_file)
+        if readline_present:
+            readline.write_history_file(history_file)
         if self.writeconfig:
-            config_mod.write_config(config_file,self.config)
+            config_mod.write_config(config_file, self.config)
         sys.exit(0)
 
     def do_clear(self, line):
@@ -760,7 +766,7 @@ class easy_or(cmd.Cmd, object):
         """
         # TODO: platform dependent
         #tmp = sp.call('clear', shell=True)
-        tmp=os.system(['clear','cls'][os.name == 'nt'])
+        tmp = os.system(['clear', 'cls'][os.name == 'nt'])
 
 
     #DO METHODS FOR DB
@@ -803,8 +809,8 @@ class easy_or(cmd.Cmd, object):
                 temp_con.commit()
                 temp_cur.close()
                 temp_con.close()
-                self.desconfig.set('db-dessci','passwd',pw1)
-                self.desconfig.set('db-desoper','passwd',pw1)
+                self.desconfig.set('db-dessci', 'passwd', pw1)
+                self.desconfig.set('db-desoper', 'passwd', pw1)
                 config_mod.write_desconfig(desfile, self.desconfig)
             except:
                 confirm = 'Password could not changed in %s\n' % db.upper()
@@ -841,11 +847,11 @@ class easy_or(cmd.Cmd, object):
         except:
             pass
         try:
-            if verb:print '\nRe-creating metadata table ...'
+            if verb: print '\nRe-creating metadata table ...'
             query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
             message = 'FGOTTENMETADATA table Created!'
-            if not verb :  message=""
-            self.query_and_print(query_2, print_time=False, suc_arg= message)
+            if not verb:  message = ""
+            self.query_and_print(query_2, print_time=False, suc_arg=message)
             if verb: print 'Loading metadata into cache...'
             self.cache_table_names = self.get_tables_names()
             self.cache_usernames = self.get_userlist()
@@ -872,10 +878,10 @@ class easy_or(cmd.Cmd, object):
 
         Usage: whoami
         """
-        if self.dbname in ('dessci','desoper'):
+        if self.dbname in ('dessci', 'desoper'):
             sql_getUserDetails = "select * from des_users where username = '" + self.user + "'"
         if self.dbname in ('destest'):
-            print colored('\nThis function is not implemented in destest\n','red')
+            print colored('\nThis function is not implemented in destest\n', 'red')
             sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
         self.query_and_print(sql_getUserDetails, print_time=False)
 
@@ -911,7 +917,7 @@ class easy_or(cmd.Cmd, object):
         if line == "": return
         line = " ".join(line.split())
         keys = line.split()
-        if self.dbname in ('dessci','desoper'):
+        if self.dbname in ('dessci', 'desoper'):
             query = 'select * from des_users where '
         if self.dbname in ('destest'):
             query = 'select * from dba_users where '
@@ -957,6 +963,7 @@ class easy_or(cmd.Cmd, object):
 
         """
         tablename = arg.upper()
+        tablename = tablename.replace(';', '')
         schema = self.user.upper()  #default --- Mine
         link = ""  #default no link
         if "." in tablename: (schema, tablename) = tablename.split(".")
@@ -1027,6 +1034,7 @@ class easy_or(cmd.Cmd, object):
         
         Usage : find_tables PATTERN
         """
+        arg = arg.replace(';', '')
         query = "SELECT distinct table_name from fgottenmetadata  WHERE upper(table_name) LIKE '%s' " % (arg.upper())
         self.query_and_print(query)
 
@@ -1113,6 +1121,7 @@ class easy_or(cmd.Cmd, object):
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
+        line=line.replace(';','')
         if line == "":
             print '\nMust include table filename!\n'
             return
@@ -1132,9 +1141,11 @@ class easy_or(cmd.Cmd, object):
             else:
                 table = alls[0]
                 format = alls[1]
-                if format == 'csv':
+                if format in ('csv','tab'):
+                    if format == 'csv' : sepa=','
+                    if format == 'tab' : sepa = None
                     try:
-                        DF = pd.read_csv(line, sep=',')
+                        DF = pd.read_csv(line, sep=sepa)
                     except:
                         print colored('\nProblems reading %s\n' % line, "red")
                         return
@@ -1189,8 +1200,74 @@ class easy_or(cmd.Cmd, object):
                         print
                         return
                     return
+                elif format =='fits':
+                    try:
+                        DF = pf.open(line)
+                    except:
+                        print colored('\nProblems reading %s\n' % line, "red")
+                        return
+                    #check table first
+                    self.cur.execute(
+                        'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
+                    if self.cur.fetchall()[0][0] == 1:
+                        print '\n Table already exists! Change name of file or drop table ' \
+                              '\n with:  DROP TABLE %s\n ' % table.upper()
+                    qtable = 'create table %s ( ' % table
+                    col_n=[]
+                    for col in DF[1].columns:
+                        col_n.append(col.name)
+                        if col.format.find('A') > -1:
+                            qtable += col.name + ' ' + 'VARCHAR2(' + str(int(col.format.replace('A',''))) + '),'
+                        elif col.format == 'I':
+                            qtable += col.name + ' NUMBER(6,0),'
+                        elif col.format == 'J':
+                            qtable += col.name + ' NUMBER(11,0),'
+                        elif col.format == 'K':
+                            qtable += col.name + ' NUMBER,'
+                        elif col.format == 'E':
+                            qtable += col.name + ' BINARY_FLOAT,'
+                        elif col.format == 'D':
+                            qtable += col.name + ' BINARY_DOUBLE,'
+                        else:
+                            qtable += col.name + ' NUMBER,'
+                    qtable = qtable[:-1] + ')'
+                    try:
+                        self.cur.execute(qtable)
+                        self.con.commit()
+                    except:
+                        (type, value, traceback) = sys.exc_info()
+                        print
+                        print colored(type, "red")
+                        print colored(value, "red")
+                        print
+                        DF.close()
+                        del DF
+                        return
+
+                    cols = ','.join(col_n)
+                    vals = ',:'.join(col_n)
+                    vals = ':' + vals
+                    qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
+                    try:
+                        t1 = time.time()
+                        self.cur.executemany(qinsert, DF[1].data.tolist())
+                        t2 = time.time()
+                        self.con.commit()
+                        print colored(
+                            '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
+                                table.upper(), len(DF[1].data), len(cols), t2 - t1), "green")
+                        DF.close()
+                        del DF
+                    except:
+                        (type, value, traceback) = sys.exc_info()
+                        print
+                        print colored(type, "red")
+                        print colored(value, "red")
+                        print
+                        return
+                    return
                 else:
-                    print '\n Format not recognized, use csv  as extensions\n'
+                    print '\n Format not recognized, use csv  or fits as extensions\n'
                     return
 
 
@@ -1208,9 +1285,8 @@ class easy_or(cmd.Cmd, object):
         self.do_exit(line)
 
 
-    def do_clean_history(self,line):
+    def do_clean_history(self, line):
         if readline_present: readline.clear_history()
-
 
 
 ##################################################
@@ -1219,40 +1295,47 @@ def to_pandas(cur):
     Returns a pandas DataFrame from a executed query 
     """
     if cur.description != None:
-        data=pd.DataFrame(cur.fetchall(), columns=[rec[0] for rec in cur.description])
-    else: data=""
+        data = pd.DataFrame(cur.fetchall(), columns=[rec[0] for rec in cur.description])
+    else:
+        data = ""
     return data
+
+
 class connect():
-    def  __init__(self):
-        conf=config_mod.get_config(config_file)
-        pd.set_option('display.max_rows', conf.getint('display','max_rows'))
-        pd.set_option('display.width', conf.getint('display','width'))
-        pd.set_option('display.max_columns', conf.getint('display','max_columns'))
-        desconf=config_mod.get_desconfig(desfile)
-        db=conf.get('easyaccess','database')
-        self.prefetch = conf.getint('easyaccess','prefetch')
+    def __init__(self):
+        conf = config_mod.get_config(config_file)
+        pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
+        pd.set_option('display.width', conf.getint('display', 'width'))
+        pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
+        desconf = config_mod.get_desconfig(desfile)
+        db = conf.get('easyaccess', 'database')
+        self.prefetch = conf.getint('easyaccess', 'prefetch')
         self.dbname = db
         #connect to db  
-        self.user = desconf.get('db-'+self.dbname,'user')
-        self.dbhost = desconf.get('db-'+self.dbname,'server')
-        self.port = desconf.get('db-'+self.dbname,'port')
-        self.password = desconf.get('db-'+self.dbname,'passwd')
+        self.user = desconf.get('db-' + self.dbname, 'user')
+        self.dbhost = desconf.get('db-' + self.dbname, 'server')
+        self.port = desconf.get('db-' + self.dbname, 'port')
+        self.password = desconf.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
         print 'Connecting to DB...'
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+
     def ping(self):
         try:
             self.con.ping()
             print 'Still connected to DB'
         except:
             print 'Connection with DB lost'
+
     def cursor(self):
         cursor = self.con.cursor()
         cursor.arraysize = self.prefetch
         return cursor
+
     def close(self):
         self.con.close()
+
 
 ##################################################
 
@@ -1265,14 +1348,13 @@ class MyParser(argparse.ArgumentParser):
         sys.exit(2)
 
 
-
 if __name__ == '__main__':
 
-    conf=config_mod.get_config(config_file)
+    conf = config_mod.get_config(config_file)
     #PANDAS DISPLAY SET UP
-    pd.set_option('display.max_rows', conf.getint('display','max_rows'))
-    pd.set_option('display.width', conf.getint('display','width'))
-    pd.set_option('display.max_columns', conf.getint('display','max_columns'))
+    pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
+    pd.set_option('display.width', conf.getint('display', 'width'))
+    pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
 
     try:
         import readline
@@ -1281,42 +1363,42 @@ if __name__ == '__main__':
         readline.read_history_file(history_file)
         #sys.stdout = save
         readline_present = True
-        readline.set_history_length(conf.getint('easyaccess','histcache'))
+        readline.set_history_length(conf.getint('easyaccess', 'histcache'))
     except:
         print sys.exc_info()
         readline_present = False
 
-    parser = MyParser(description='Easy Access', version="version: %s" % __version__ )
-    parser.add_argument("-c", "--command",  dest='command', help="Executes command and exit")
-    parser.add_argument("-l", "--loadsql", dest='loadsql',help="Loads a sql command, execute it and exit")
-    parser.add_argument("-lt", "--loadtable", dest='loadtable',help="Loads a table directly into DB, using \
+    parser = MyParser(description='Easy Access', version="version: %s" % __version__)
+    parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
+    parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
+    parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
     csv format and getting name from filename")
-    parser.add_argument("-s", "--db", dest='db',help="bypass database name, [dessci, desoper or destest]")
+    parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
     args = parser.parse_args()
 
-    desconf=config_mod.get_desconfig(desfile)
+    desconf = config_mod.get_desconfig(desfile)
 
     if args.db is not None:
-        db=args.db
+        db = args.db
     else:
-        db=conf.get('easyaccess','database')
+        db = conf.get('easyaccess', 'database')
 
     if args.command is not None:
-        cmdinterp = easy_or(conf,desconf,db,interactive=False)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False)
         cmdinterp.onecmd(args.command)
         sys.exit(0)
     elif args.loadsql is not None:
-        cmdinterp = easy_or(conf,desconf, db,interactive=False)
-        linein="loadsql "+  args.loadsql
+        cmdinterp = easy_or(conf, desconf, db, interactive=False)
+        linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
         sys.exit(0)
     elif args.loadtable is not None:
-        cmdinterp = easy_or(conf,desconf, db,interactive=False)
-        linein="load_table "+  args.loadtable
+        cmdinterp = easy_or(conf, desconf, db, interactive=False)
+        linein = "load_table " + args.loadtable
         cmdinterp.onecmd(linein)
         sys.exit(0)
     else:
-        os.system(['clear','cls'][os.name == 'nt'])
-        easy_or(conf,desconf,db).cmdloop()
+        os.system(['clear', 'cls'][os.name == 'nt'])
+        easy_or(conf, desconf, db).cmdloop()
 
 

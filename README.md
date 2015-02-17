@@ -16,7 +16,7 @@ using cx_Oracle
 ## Some *nice* features
 - Smart tab completion for commands, table names, column names and file paths accordingly
 - write output results to csv, tab, fits files or HDF5 files
-- load tables from csv directly into DB
+- load tables from csv or fits directly into DB
 - intrinsic db commands to describe tables, own schema, quota and more
 - It can be imported as module
 - Can run command directly from command line
