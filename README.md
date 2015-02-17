@@ -38,4 +38,26 @@ To save the results into a table add ">" after the end of the query (after ";") 
 
         DESDB ~> select ... from ... where ... ; > test.fits
 
+The files supported so far are (.csv, .tab, .fits, .h5) any other extension is ignored
+
+### Load tables
+To load a table it needs to be in a csv format with columns names in the first row
+the name of the table is taken from filename
+
+Format table
+
+RA,DEC,MAG_R
+12.34,56.78,23
+
+        DESDB ~> load_table <filename>
+
+### Load SQL queries
+To load sql queries just run:
+
+        DESDB ~> loadsql <filename.sql>
+or
+        DESDB ~> @filename.sql
+
+The format is the same as in command line, SQL statement must end with ;
+and to write output files it must be followed by > <output file>
 
