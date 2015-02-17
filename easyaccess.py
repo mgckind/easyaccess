@@ -15,8 +15,10 @@ import dircache
 import threading
 import time
 import getpass
-from termcolor import colored
-#def colored(line,color) : return line
+try:
+    from termcolor import colored
+except:
+    def colored(line,color) : return line
 import pandas as pd
 import datetime
 import pyfits as pf
