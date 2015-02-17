@@ -16,7 +16,7 @@ setup(
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['easyA'],
-    py_modules=['easyaccess'],
+    py_modules=['easyaccess','config'],
     license='NCSA',
     description='Easy Access to access DES DB',
     long_description=read('README.md'),
