@@ -1372,7 +1372,7 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
-    csv format and getting name from filename")
+    csv or fits format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
     args = parser.parse_args()
 
