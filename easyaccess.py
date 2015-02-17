@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+__author__ = 'Matias Carrasco Kind'
+__version__= '1.0.0'
 #  TODO:
 # upload table from fits
 # clean up, comments
@@ -1267,15 +1269,19 @@ if __name__ == '__main__':
         print sys.exc_info()
         readline_present = False
 
-    parser = MyParser(description='Easy Access', version="version: 1.0.0")
+    parser = MyParser(description='Easy Access', version="version: %s" % __version__ )
     parser.add_argument("-c", "--command",  dest='command', help="Execute command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql',help="Load a sql command, execute it and exit")
     parser.add_argument("-lt", "--loadtable", dest='loadtable',help="Load a sql command, execute it and exit")
+    parser.add_argument("-s", "--db", dest='db',help="bypass database name, [dessci, desoper or destest]")
     args = parser.parse_args()
 
     desconf=config_mod.get_desconfig(desfile)
 
-    db=conf.get('easyaccess','database')
+    if args.db is not None:
+        db=args.db
+    else:
+        db=conf.get('easyaccess','database')
 
     if args.command is not None:
         cmdinterp = easy_or(conf,desconf,db,interactive=False)
