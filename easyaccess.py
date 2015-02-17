@@ -27,7 +27,7 @@ import datetime
 import pyfits as pf
 import argparse
 import config as config_mod
-import types
+
 
 #FILES
 ea_path=os.path.join(os.environ["HOME"], ".easyacess/")
@@ -166,7 +166,7 @@ class easy_or(cmd.Cmd, object):
         self.password = self.desconfig.get('db-'+self.dbname,'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
-        print 'Connecting to DB...'
+        print 'Connecting to DB %s ...' % self.dbname
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
@@ -542,11 +542,17 @@ class easy_or(cmd.Cmd, object):
         return data
 
     def get_tables_names(self):
-        query = """
-        select distinct table_name from fgottenmetadata
-        union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-        des_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('DES_ADMIN')"""
-        #where owner not in ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS','')
+
+        if self.dbname in ('dessci','desoper'):
+            query = """
+            select distinct table_name from fgottenmetadata
+            union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
+            des_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('DES_ADMIN')"""
+        if self.dbname in ('destest'):
+            query = """
+            select distinct table_name from fgottenmetadata
+            union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
+            dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         table_list = tnames.values.flatten().tolist()
@@ -570,7 +576,10 @@ class easy_or(cmd.Cmd, object):
             print 'User %s has no tables' % user.upper()
 
     def get_userlist(self):
-        query = 'select distinct username from des_users order by username'
+        if self.dbname in ('dessci','desoper'):
+            query = 'select distinct username from des_users order by username'
+        if self.dbname in ('destest'):
+            query = 'select distinct username from dba_users order by username'
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         user_list = tnames.values.flatten().tolist()
@@ -863,7 +872,11 @@ class easy_or(cmd.Cmd, object):
 
         Usage: whoami
         """
-        sql_getUserDetails = "select * from des_users where username = '" + self.user + "'"
+        if self.dbname in ('dessci','desoper'):
+            sql_getUserDetails = "select * from des_users where username = '" + self.user + "'"
+        if self.dbname in ('destest'):
+            print colored('\nThis function is not implemented in destest\n','red')
+            sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
         self.query_and_print(sql_getUserDetails, print_time=False)
 
     def do_myquota(self, arg):
@@ -898,7 +911,10 @@ class easy_or(cmd.Cmd, object):
         if line == "": return
         line = " ".join(line.split())
         keys = line.split()
-        query = 'select * from des_users where '
+        if self.dbname in ('dessci','desoper'):
+            query = 'select * from des_users where '
+        if self.dbname in ('destest'):
+            query = 'select * from dba_users where '
         if len(keys) >= 1:
             query += 'upper(firstname) like upper(\'' + keys[0] + '\') or upper(lastname) like upper(\'' + keys[
                 0] + '\')'
@@ -1174,7 +1190,7 @@ class easy_or(cmd.Cmd, object):
                         return
                     return
                 else:
-                    print '\n Format not recognized, use csv or fits as extensions\n'
+                    print '\n Format not recognized, use csv  as extensions\n'
                     return
 
 
