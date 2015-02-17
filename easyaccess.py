@@ -5,6 +5,7 @@ __version__= '1.0.0'
 # upload table from fits
 # clean up, comments
 # readline bug (GNU vs libedit)
+# self upgrade
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -1205,7 +1206,7 @@ def to_pandas(cur):
         data=pd.DataFrame(cur.fetchall(), columns=[rec[0] for rec in cur.description])
     else: data=""
     return data
-class connectDB():
+class connect():
     def  __init__(self):
         conf=config_mod.get_config(config_file)
         pd.set_option('display.max_rows', conf.getint('display','max_rows'))
@@ -1270,9 +1271,10 @@ if __name__ == '__main__':
         readline_present = False
 
     parser = MyParser(description='Easy Access', version="version: %s" % __version__ )
-    parser.add_argument("-c", "--command",  dest='command', help="Execute command and exit")
-    parser.add_argument("-l", "--loadsql", dest='loadsql',help="Load a sql command, execute it and exit")
-    parser.add_argument("-lt", "--loadtable", dest='loadtable',help="Load a sql command, execute it and exit")
+    parser.add_argument("-c", "--command",  dest='command', help="Executes command and exit")
+    parser.add_argument("-l", "--loadsql", dest='loadsql',help="Loads a sql command, execute it and exit")
+    parser.add_argument("-lt", "--loadtable", dest='loadtable',help="Loads a table directly into DB, using \
+    csv format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db',help="bypass database name, [dessci, desoper or destest]")
     args = parser.parse_args()
 
