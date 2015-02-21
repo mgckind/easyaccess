@@ -1,6 +1,9 @@
 import sys
 import os
-from numpy.distutils.core import setup, Extension
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 prjdir = os.path.dirname(__file__)
 
 def read(filename):
@@ -12,7 +15,7 @@ library_dirs = []
 include_dirs = []
 setup(
     name='easyaccess',
-    version='1.0.0',
+    version='1.0.1',
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['easyaccess'],
@@ -21,5 +24,5 @@ setup(
     description='Easy Access to access DES DB',
     long_description=read('README.md'),
     url='https://github.com/mgckind/easyaccess',
-    install_requires=['pandas','termcolor','pyfits','cx_Oracle'],
+    install_requires=['pandas','termcolor','pyfits >= 3.3','cx_Oracle'],
 )

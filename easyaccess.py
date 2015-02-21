@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
-# readline bug (GNU vs libedit)
+# readline bug (GNU vs libedit) for history
 # self upgrade
 
 import warnings
@@ -167,7 +167,7 @@ class easy_or(cmd.Cmd, object):
         self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
-        print 'Connecting to DB %s ...' % self.dbname
+        print 'Connecting to DB ** %s ** ...' % self.dbname
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
@@ -749,16 +749,19 @@ class easy_or(cmd.Cmd, object):
         except:
             pass
         try:
-            cur.close()
+            self.cur.close()
         except:
             pass
-        self.con.commit()
-        self.con.close()
+        try:
+            self.con.commit()
+            self.con.close()
+        except:
+            pass
         if readline_present:
             readline.write_history_file(history_file)
         if self.writeconfig:
             config_mod.write_config(config_file, self.config)
-        sys.exit(0)
+        os._exit(0)
 
     def do_clear(self, line):
         """
@@ -1302,23 +1305,26 @@ def to_pandas(cur):
 
 
 class connect():
-    def __init__(self):
+    def __init__(self, section = ''):
         conf = config_mod.get_config(config_file)
         pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
         pd.set_option('display.width', conf.getint('display', 'width'))
         pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
-        desconf = config_mod.get_desconfig(desfile)
-        db = conf.get('easyaccess', 'database')
+        if section == '':
+            db = conf.get('easyaccess', 'database')
+        else:
+            db = section
         self.prefetch = conf.getint('easyaccess', 'prefetch')
         self.dbname = db
         #connect to db  
+        desconf = config_mod.get_desconfig(desfile, self.dbname)
         self.user = desconf.get('db-' + self.dbname, 'user')
         self.dbhost = desconf.get('db-' + self.dbname, 'server')
         self.port = desconf.get('db-' + self.dbname, 'port')
         self.password = desconf.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
-        print 'Connecting to DB...'
+        print 'Connecting to DB ** %s ** ...' % self.dbname
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
 
     def ping(self):
@@ -1358,15 +1364,16 @@ if __name__ == '__main__':
 
     try:
         import readline
-        #save = sys.stdout
-        #sys.stdout = open("/dev/null","w")
-        readline.read_history_file(history_file)
-        #sys.stdout = save
         readline_present = True
-        readline.set_history_length(conf.getint('easyaccess', 'histcache'))
     except:
-        print sys.exc_info()
         readline_present = False
+
+    if readline_present == True:
+        try:
+            readline.read_history_file(history_file)
+            readline.set_history_length(conf.getint('easyaccess', 'histcache'))
+        except:
+            'Print readline might give problems accesing the history of commands'
 
     parser = MyParser(description='Easy Access', version="version: %s" % __version__)
     parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
@@ -1376,27 +1383,29 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
     args = parser.parse_args()
 
-    desconf = config_mod.get_desconfig(desfile)
 
     if args.db is not None:
         db = args.db
+        if db[:3] == 'db-' : db=db[3:]
     else:
         db = conf.get('easyaccess', 'database')
 
+    desconf = config_mod.get_desconfig(desfile,db)
+    
     if args.command is not None:
         cmdinterp = easy_or(conf, desconf, db, interactive=False)
         cmdinterp.onecmd(args.command)
-        sys.exit(0)
+        os._exit(0)
     elif args.loadsql is not None:
         cmdinterp = easy_or(conf, desconf, db, interactive=False)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
-        sys.exit(0)
+        os._exit(0)
     elif args.loadtable is not None:
         cmdinterp = easy_or(conf, desconf, db, interactive=False)
         linein = "load_table " + args.loadtable
         cmdinterp.onecmd(linein)
-        sys.exit(0)
+        os._exit(0)
     else:
         os.system(['clear', 'cls'][os.name == 'nt'])
         easy_or(conf, desconf, db).cmdloop()
