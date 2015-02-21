@@ -1,4 +1,5 @@
 v1.0.0, 2015-FEB-17 -- release
 v1.0.1, 2015-FEB-20 -- Fix a bug at exit after error 
-                    -- Added a checker of DES_SERVICES files and prompt password
+                    -- Added a checker of DES_SERVICES files and prompt user/password
+                       when file doesn't exist
                     -- Minor bugs
