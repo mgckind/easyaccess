@@ -1,6 +1,9 @@
 #Config file
 import ConfigParser
 import getpass
+import time
+import sys
+import cx_Oracle
 
 configcomment="""#
 # Easyaccess default parameters
@@ -31,7 +34,7 @@ def get_config(configfile):
     check=config.read(configfile)
     if check == []:
         configwrite= True
-        print '\nError in config file, creating a new one...\n'
+        print '\nCreating a configuration file... at %s\n' %configfile
 
     if not config.has_section('easyaccess'):
         configwrite = True
@@ -73,37 +76,60 @@ def write_config(configfile, config_ob):
         return False
 
 
-def get_desconfig(desfile):
+def get_desconfig(desfile,db):
     """
     Loads des config file or create one if not
-    Returns a configParser object
+
     """
+    server_n='leovip148.ncsa.uiuc.edu'
+    port_n='1521'
+
+    if not db[:3] == 'db-': db='db-'+db
     config = ConfigParser.ConfigParser()
     configwrite = False
     check=config.read(desfile)
     if check == []:
         configwrite= True
-        print '\nError in des config file, creating a new one...'
+        print '\nError in DES_SERVICES config file, creating a new one...'
         print 'File might not exists or is not configured'
         print 
-        user=raw_input('Enter username : ')
-        pw1=getpass.getpass(prompt='Enter password : ')
-        print 
-        print 'By default the same password is the same for all databases'
-        print 'If you change your password to some of the DB please modify'
-        print 'the configuration file %s' % desfile
 
-    databases = ['db-desoper','db-dessci','db-destest']
+    databases = ['db-desoper','db-dessci','db-destest'] #most used ones anyways
 
-    for db in databases:
-        if not config.has_section(db):
-            configwrite = True
-            config.add_section(db)
-        if not config.has_option(db,'user'): configwrite = True ;config.set(db,'user',user)
-        if not config.has_option(db,'passwd'): configwrite = True ;config.set(db,'passwd',pw1)
-        if not config.has_option(db,'name'): configwrite = True ;config.set(db,'name',db[3:])
-        if not config.has_option(db,'server'): configwrite = True ;config.set(db,'server','leovip148.ncsa.uiuc.edu')
-        if not config.has_option(db,'port'): configwrite = True ;config.set(db,'port','1521')
+    if db not in databases and not config.has_section(db):
+        check_db=raw_input('\nDB entered not dessci, desoper or destest or in DES_SERVICE file, continue anyway [y]/n\n')
+        if check_db in ('n','N','no','No','NO'): sys.exit(0)
+
+    if not config.has_section(db):
+        print '\nAdding section %s to des_service file\n' % db 
+        configwrite = True
+        kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
+        dsn = cx_Oracle.makedsn(**kwargs)
+        good=False
+        for i in range(3):
+            try:
+                user=raw_input('Enter username : ')
+                pw1=getpass.getpass(prompt='Enter password : ')
+                ctemp=cx_Oracle.connect(user,pw1,dsn=dsn)
+                good = True
+                break
+            except:
+                (type, value, traceback) = sys.exc_info()
+                print value
+                if value.message.code == 1017: pass    
+                else: sys.exit(0)
+        if good: 
+            ctemp.close()
+        else:
+            print '\n Check your credentials and/or database access\n'
+            sys.exit(0)
+        config.add_section(db)
+        
+    if not config.has_option(db,'user'): configwrite = True ;config.set(db,'user',user)
+    if not config.has_option(db,'passwd'): configwrite = True ;config.set(db,'passwd',pw1)
+    if not config.has_option(db,'name'): configwrite = True ;config.set(db,'name',db[3:])
+    if not config.has_option(db,'server'): configwrite = True ;config.set(db,'server',server_n)
+    if not config.has_option(db,'port'): configwrite = True ;config.set(db,'port',port_n)
 
     
     check = True

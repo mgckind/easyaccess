@@ -8,8 +8,8 @@ using cx_Oracle
 
 - Oracle Client > 11g.2
 - cx_Oracle
-- pyfits
-- pandas
+- pyfits > 3.3
+- pandas > 0.14
 - termcolor
 - PyTables (for hdf5 output)
 
@@ -58,3 +58,7 @@ or
 The format is the same as in command line, SQL statement must end with ;
 and to write output files it must be followed by > <output file>
 
+### TODO
+    - There is a bug with some versions of readline
+    - Other small changes when loading tables
+    - Self-upgrade
