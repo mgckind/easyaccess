@@ -8,8 +8,8 @@ using cx_Oracle
 
 - Oracle Client > 11g.2
 - cx_Oracle
-- pyfits > 3.3
-- pandas > 0.14
+- pyfits >= 3.3
+- pandas >= 0.14
 - termcolor
 - PyTables (for hdf5 output)
 
