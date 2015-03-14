@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
@@ -19,6 +19,7 @@ import dircache
 import threading
 import time
 import getpass
+import itertools
 
 try:
     from termcolor import colored
@@ -30,7 +31,8 @@ import datetime
 import pyfits as pf
 import argparse
 import config as config_mod
-
+import utils.des_logo as dl
+from multiprocessing import Pool,Process
 
 #FILES
 ea_path = os.path.join(os.environ["HOME"], ".easyacess/")
@@ -41,6 +43,29 @@ config_file = os.path.join(os.environ["HOME"], ".easyacess/config.ini")
 if not os.path.exists(config_file): os.system('echo $null >> ' + config_file)
 desfile = os.getenv("DES_SERVICES")
 if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
+
+
+def loading():
+    print
+    #sys.stdout.write('    '+u"\u231B"+' ')
+    sys.stdout.write('    ')
+    cc=0
+    spinner = itertools.cycle([0,1,2,3,4,5,6,7,8,9,10,11,12,13,12,11,10,9,8,7,6,5,4,3,2,1])
+    line='|              |'
+    line2="  Press Ctrl-C to abort"
+    try:
+        while True:
+            line=list('|              |')
+            time.sleep(0.1)
+            idx=int(spinner.next())
+            line[1+idx]=u"\u2606"
+            sys.stdout.write("".join(line))
+            sys.stdout.write(line2)
+            sys.stdout.flush()
+            sys.stdout.write('\b'*len(line)+'\b'*len(line2))
+    except:
+        pass
+
 
 or_n = cx_Oracle.NUMBER
 or_s = cx_Oracle.STRING
@@ -158,8 +183,8 @@ class easy_or(cmd.Cmd, object):
         self.buff = None
         self.interactive = interactive
         self.undoc_header = None
-        self.doc_header = ' *General Commands* (type help <command>):'
-        self.docdb_header = '\n*DB Commands* (type help <command>):'
+        self.doc_header = colored(' *General Commands*',"cyan")+' (type help <command>):'
+        self.docdb_header = colored('\n *DB Commands*',"cyan")+' (type help <command>):'
         #connect to db  
         self.user = self.desconfig.get('db-' + self.dbname, 'user')
         self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
@@ -205,6 +230,8 @@ class easy_or(cmd.Cmd, object):
             if intro is not None:
                 self.intro = intro
             if self.intro:
+                self.do_clear(None)
+                dl.print_deslogo()
                 self.stdout.write(str(self.intro) + "\n")
             stop = None
             while not stop:
@@ -257,6 +284,8 @@ class easy_or(cmd.Cmd, object):
                 return
             func()
         else:
+            self.do_clear(None)
+            dl.print_deslogo()
             names = self.get_names()
             cmds_doc = []
             cmds_undoc = []
@@ -400,12 +429,22 @@ class easy_or(cmd.Cmd, object):
                         print colored('\nFile format not valid.\n', 'red')
                         print 'Supported formats:\n'
                         for jj, ff in enumerate(options_out): print '%5s  %s' % (ff, options_def[jj])
-                except:
+                except KeyboardInterrupt or EOFError:
+                    print colored('\n\nAborted \n', "red")
+                except :
                     print colored('\nMust indicate output file\n', "red")
                     print 'Format:\n'
                     print 'select ... from ... where ... ; > example.csv \n'
             else:
-                self.query_and_print(query)
+                try:
+                    self.query_and_print(query)
+                except:
+                    try:
+                        self.con.cancel()
+                    except:
+                        pass
+                    print colored('\n\nAborted \n', "red")
+                    
 
         else:
             print
@@ -441,6 +480,8 @@ class easy_or(cmd.Cmd, object):
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
         t1 = time.time()
+        pload=Process(target=loading)
+        pload.start()
         try:
             self.cur.execute(query)
             if self.cur.description != None:
@@ -450,8 +491,9 @@ class easy_or(cmd.Cmd, object):
                 data = pd.DataFrame(self.cur.fetchall())
                 t2 = time.time()
                 tt.cancel()
+                pload.terminate()
                 print
-                if print_time: print colored('%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
+                if print_time: print colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
                 if print_time: print
                 if len(data) == 0:
                     fline = '   '
@@ -465,12 +507,15 @@ class easy_or(cmd.Cmd, object):
             else:
                 t2 = time.time()
                 tt.cancel()
+                pload.terminate()
                 print colored(suc_arg, "green")
                 self.con.commit()
             print
         except:
-            t2 = time.time()
             (type, value, traceback) = sys.exc_info()
+            self.con.cancel()
+            t2 = time.time()
+            pload.terminate()
             print
             print colored(type, "red")
             print colored(value, "red")
@@ -485,6 +530,8 @@ class easy_or(cmd.Cmd, object):
     def query_and_save(self, query, fileout, mode='csv', print_time=True):
         self.cur.arraysize = self.prefetch
         t1 = time.time()
+        pload=Process(target=loading)
+        pload.start()
         try:
             self.cur.execute(query)
             if self.cur.description != None:
@@ -525,6 +572,7 @@ class easy_or(cmd.Cmd, object):
                     else:
                         break
                 t2 = time.time()
+                pload.terminate()
                 elapsed = '%.1f seconds' % (t2 - t1)
                 print
                 if print_time: print colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
@@ -535,6 +583,7 @@ class easy_or(cmd.Cmd, object):
             print
         except:
             (type, value, traceback) = sys.exc_info()
+            pload.terminate()
             print
             print colored(type, "red")
             print colored(value, "red")
@@ -1258,7 +1307,7 @@ class easy_or(cmd.Cmd, object):
                         self.con.commit()
                         print colored(
                             '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
-                                table.upper(), len(DF[1].data), len(cols), t2 - t1), "green")
+                                table.upper(), len(DF[1].data), len(col_n), t2 - t1), "green")
                         DF.close()
                         del DF
                     except:
