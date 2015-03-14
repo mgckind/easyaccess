@@ -4,6 +4,7 @@ import getpass
 import time
 import sys
 import cx_Oracle
+import os
 
 configcomment="""#
 # Easyaccess default parameters
@@ -150,6 +151,7 @@ def write_desconfig(configfile, config_ob):
         config_ob.write(F)
         F.flush()
         F.close()
+        os.chmod(configfile,2**8+2**7) #rw-------  
         return True
     except:
         print "Problems writing the configuration  file %s" % configfile

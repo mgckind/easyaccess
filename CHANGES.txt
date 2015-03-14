@@ -3,3 +3,8 @@ v1.0.1, 2015-FEB-20 -- Fix a bug at exit after error
                     -- Added a checker of DES_SERVICES files and prompt user/password
                        when file doesn't exist
                     -- Minor bugs
+v1.0.2, 2015-XXX-XX -- Added DES Logo
+                    -- Loading bar
+                    -- Check whether des service file is read/write only by user,
+                       otherwise it change access mode
+                    -- Fix issues

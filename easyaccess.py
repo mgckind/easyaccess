@@ -14,6 +14,7 @@ import cmd
 import cx_Oracle
 import sys
 import os
+import stat
 import re
 import dircache
 import threading
@@ -43,7 +44,11 @@ config_file = os.path.join(os.environ["HOME"], ".easyacess/config.ini")
 if not os.path.exists(config_file): os.system('echo $null >> ' + config_file)
 desfile = os.getenv("DES_SERVICES")
 if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
-
+if os.path.exists(desfile):
+    amode=stat.S_IMODE(os.stat(desfile).st_mode)
+    if amode != 2**8+2**7 :
+        print 'Changing permissions to des_service file to read/write only by user'
+        os.chmod(desfile,2**8+2**7)
 
 def loading():
     print
