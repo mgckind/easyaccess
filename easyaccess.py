@@ -492,6 +492,7 @@ class easy_or(cmd.Cmd, object):
                 t2 = time.time()
                 tt.cancel()
                 pload.terminate()
+                self.do_clear(None)
                 print
                 if print_time: print colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
                 if print_time: print
@@ -508,6 +509,7 @@ class easy_or(cmd.Cmd, object):
                 t2 = time.time()
                 tt.cancel()
                 pload.terminate()
+                self.do_clear(None)
                 print colored(suc_arg, "green")
                 self.con.commit()
             print
@@ -1336,6 +1338,11 @@ class easy_or(cmd.Cmd, object):
     def do_quit(self, line):
         self.do_exit(line)
 
+    def do_select(self, line):
+        self.default('select '+line)
+    
+    def do_SELECT(self, line):
+        self.default('SELECT '+line)
 
     def do_clean_history(self, line):
         if readline_present: readline.clear_history()
