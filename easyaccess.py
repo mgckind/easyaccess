@@ -327,7 +327,7 @@ class easy_or(cmd.Cmd, object):
 
             print "\n* To run queries just add ; at the end of query"
             print "* To write to a file after ; append > filename"
-            print "* To see supported output files format "
+            print "* Supported file formats (.csv, .tab., .fits, .h5) "
 
 
     def print_topics(self, header, cmds, cmdlen, maxcol):
