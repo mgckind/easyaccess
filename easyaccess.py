@@ -480,7 +480,7 @@ class easy_or(cmd.Cmd, object):
 
     ### QUERY METHODS
 
-    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!'):
+    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!' ,extra=""):
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
@@ -504,11 +504,15 @@ class easy_or(cmd.Cmd, object):
                 if len(data) == 0:
                     fline = '   '
                     for col in header: fline += '%s  ' % col
+                    if extra !="":
+                        print colored(extra+'\n',"cyan")
                     print fline
                     print colored(err_arg, "red")
                 else:
                     data.columns = header
                     data.index += 1
+                    if extra !="":
+                        print colored(extra+'\n',"cyan")
                     print data
             else:
                 t2 = time.time()
@@ -620,11 +624,13 @@ class easy_or(cmd.Cmd, object):
         return table_list
 
     def get_tables_names_user(self, user):
+        user=user.replace(";","")
         query = "select distinct table_name from all_tables where owner=\'%s\' order by table_name" % user.upper()
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
+        self.do_clear(None)
         if len(tnames) > 0:
-            print '\nTables from %s' % user.upper()
+            print colored('\nPublic tables from %s' % user.upper(), "cyan")
             print tnames
             #Add tname to cache (no longer needed)
             #table_list=tnames.values.flatten().tolist()
@@ -777,7 +783,7 @@ class easy_or(cmd.Cmd, object):
 
     def do_loadsql(self, line):
         """
-        Loads a sql file with a query and ask whether it should be run
+        DB:Loads a sql file with a query and ask whether it should be run
         There is a shortcut using @, ex : @test.sql
 
         Usage: loadsql <filename>   (use autocompletion)
@@ -923,13 +929,12 @@ class easy_or(cmd.Cmd, object):
         """
         DB:Shows database connection information
         """
-        print
-        print "user: %s, host:%s, db:%s" % (self.user, self.dbhost, self.dbname)
-        print "Personal links:"
+        lines="user: %s\ndb  : %s\nhost: %s\n" % (self.user.upper(), self.dbname.upper(), self.dbhost.upper())
+        lines=lines+"\nPersonal links:" 
         query = """
            select owner, db_link, username, host, created from all_db_links where OWNER = '%s'
         """ % (self.user.upper())
-        self.query_and_print(query, print_time=False)
+        self.query_and_print(query, print_time=False, extra=lines)
 
     def do_whoami(self, arg):
         """
@@ -961,16 +966,16 @@ class easy_or(cmd.Cmd, object):
         Usage: mytables
         """
         query = "SELECT table_name FROM user_tables"
-        self.query_and_print(query, print_time=False)
+        self.query_and_print(query, print_time=False, extra="List of my tables")
 
     def do_find_user(self, line):
         """
         DB:Finds users given 1 criteria (either first name or last name)
 
         Usage: 
-            - find_user Doe     # Finds all users with Doe as their names
+            - find_user Doe     # Finds all users with Doe in their names
             - find_user John%   # Finds all users with John IN their names (John, Johnson, etc...)
-            - find_user P%      # Finds all users with first or lastname starting with P
+            - find_user P%      # Finds all users with first, lastname or username starting with P
 
         """
         if line == "": return
@@ -982,7 +987,7 @@ class easy_or(cmd.Cmd, object):
             query = 'select * from dba_users where '
         if len(keys) >= 1:
             query += 'upper(firstname) like upper(\'' + keys[0] + '\') or upper(lastname) like upper(\'' + keys[
-                0] + '\')'
+                0] + '\') or upper(username) like upper (\'' + keys[0] + '\')'
         self.query_and_print(query, print_time=True)
 
     def complete_find_user(self, text, line, start_index, end_index):
@@ -1072,6 +1077,13 @@ class easy_or(cmd.Cmd, object):
 
         # schema, table and link are now valid.
         link = "@" + link if link else ""
+        qcom=""" select comments from all_tab_comments%s atc where atc.table_name = '%s'""" % (link,table)
+        comment_table=self.query_results(qcom)
+        if len(comment_table) ==0:
+            comment_table="No comments on table"
+        else:
+            comment_table=comment_table[0][0]
+        comm="""Description of %s commented as: '%s'""" % (table, comment_table) 
         q = """
         select
           atc.column_name, atc.data_type,
@@ -1081,7 +1093,7 @@ class easy_or(cmd.Cmd, object):
            acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name
            order by atc.column_id
            """ % (link, link, schema, table, schema, table)
-        self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user')
+        self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user', extra=comm)
         return
 
     def complete_describe_table(self, text, line, start_index, end_index):

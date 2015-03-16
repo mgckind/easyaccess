@@ -7,4 +7,5 @@ v1.0.2, 2015-XXX-XX -- Added DES Logo
                     -- Loading bar
                     -- Check whether des service file is read/write only by user,
                        otherwise it change access mode
-                    -- Fix issues
+                    -- Added comments from table to describe_table
+                    -- Fix minor issues
