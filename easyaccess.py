@@ -34,6 +34,7 @@ import argparse
 import config as config_mod
 import utils.des_logo as dl
 from multiprocessing import Pool, Process
+import webbrowser
 
 # FILES
 ea_path = os.path.join(os.environ["HOME"], ".easyacess/")
@@ -330,6 +331,8 @@ class easy_or(cmd.Cmd, object):
             print "\n* To run queries just add ; at the end of query"
             print "* To write to a file after ; append > filename"
             print "* Supported file formats (.csv, .tab., .fits, .h5) "
+            print 
+            print "* To access an online tutorial type: online_tutorial "
 
 
     def print_topics(self, header, cmds, cmdlen, maxcol):
@@ -1464,6 +1467,10 @@ class easy_or(cmd.Cmd, object):
 
     def do_clean_history(self, line):
         if readline_present: readline.clear_history()
+
+    def do_online_tutorial(self,line):
+        tut=webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/DESDM.html')   
+
 
 
 ##################################################
