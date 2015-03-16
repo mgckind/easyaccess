@@ -6,7 +6,7 @@ using cx_Oracle
 
 ## Requirements
 
-- Oracle Client > 11g.2
+- Oracle Client > 11g.2 (External library, no python)
 - cx_Oracle
 - pyfits >= 3.3
 - pandas >= 0.14
@@ -21,11 +21,6 @@ using cx_Oracle
 - It can be imported as module
 - Can run command directly from command line
 - Load sql query from file and/or from editor
-
-## To do
-
-- load tables from fits file and hdf5 files
-- command for self upgrade
 
 ## Basic use
 
