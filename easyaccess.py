@@ -1080,7 +1080,7 @@ class easy_or(cmd.Cmd, object):
         qcom=""" select comments from all_tab_comments%s atc where atc.table_name = '%s'""" % (link,table)
         comment_table=self.query_results(qcom)
         if len(comment_table) ==0:
-            comment_table="No comments on table"
+            comment_table="Table does not exist"
         else:
             comment_table=comment_table[0][0]
         comm="""Description of %s commented as: '%s'""" % (table, comment_table) 
@@ -1344,6 +1344,41 @@ class easy_or(cmd.Cmd, object):
 
     def complete_load_table(self, text, line, start_idx, end_idx):
         return _complete_path(line)
+
+
+    def do_add_comment(self, line):
+        line = " ".join(line.split())
+        keys = line.split()
+        oneline = "".join(keys)
+        if oneline.find('table') > -1:
+            if len(keys) == 1:
+                print colored('\nMissing table name\n',"red")
+                return
+            table = keys[1]
+            if len(keys) == 2:
+                print colored('\nMissing comment for table %s\n' % table,"red")
+                return
+            comm  = " ".join(keys[2:])
+            if comm[0] == "'": comm=comm[1:-1]
+            qcom="""comment on table %s is '%s'""" % (table,comm)
+            message="Comment added to table: %s" % table
+            self.query_and_print(qcom, print_time=False, suc_arg=message)
+        elif oneline.find('column') > -1:
+            if len(keys) == 1:
+                print colored('\nMissing column name (TABLE.COLUMN)\n',"red")
+                return
+            col = keys[1]
+            if len(keys) == 2:
+                print colored('\nMissing comment for column %s\n' % col,"red")
+                return
+            comm  = " ".join(keys[2:]) 
+            if comm[0] == "'": comm=comm[1:-1]
+            qcom="""comment on column  %s is '%s'""" % (col,comm)
+            message="Comment added to column: %s in table %s" % (col.split('.')[1],col.split('.')[0])
+            self.query_and_print(qcom, print_time=False, suc_arg=message)
+        else:
+            pass
+
 
 
     #UNDOCCUMENTED DO METHODS
