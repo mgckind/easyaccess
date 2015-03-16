@@ -33,9 +33,9 @@ import pyfits as pf
 import argparse
 import config as config_mod
 import utils.des_logo as dl
-from multiprocessing import Pool,Process
+from multiprocessing import Pool, Process
 
-#FILES
+# FILES
 ea_path = os.path.join(os.environ["HOME"], ".easyacess/")
 if not os.path.exists(ea_path): os.makedirs(ea_path)
 history_file = os.path.join(os.environ["HOME"], ".easyacess/history")
@@ -45,29 +45,30 @@ if not os.path.exists(config_file): os.system('echo $null >> ' + config_file)
 desfile = os.getenv("DES_SERVICES")
 if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
 if os.path.exists(desfile):
-    amode=stat.S_IMODE(os.stat(desfile).st_mode)
-    if amode != 2**8+2**7 :
+    amode = stat.S_IMODE(os.stat(desfile).st_mode)
+    if amode != 2 ** 8 + 2 ** 7:
         print 'Changing permissions to des_service file to read/write only by user'
-        os.chmod(desfile,2**8+2**7)
+        os.chmod(desfile, 2 ** 8 + 2 ** 7)
+
 
 def loading():
     print
     #sys.stdout.write('    '+u"\u231B"+' ')
     sys.stdout.write('    ')
-    cc=0
-    spinner = itertools.cycle([0,1,2,3,4,5,6,7,8,9,10,11,12,13,12,11,10,9,8,7,6,5,4,3,2,1])
-    line='|              |'
-    line2="  Press Ctrl-C to abort"
+    cc = 0
+    spinner = itertools.cycle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
+    line = '|              |'
+    line2 = "  Press Ctrl-C to abort"
     try:
         while True:
-            line=list('|              |')
+            line = list('|              |')
             time.sleep(0.1)
-            idx=int(spinner.next())
-            line[1+idx]=u"\u2606"
+            idx = int(spinner.next())
+            line[1 + idx] = u"\u2606"
             sys.stdout.write("".join(line))
             sys.stdout.write(line2)
             sys.stdout.flush()
-            sys.stdout.write('\b'*len(line)+'\b'*len(line2))
+            sys.stdout.write('\b' * len(line) + '\b' * len(line2))
     except:
         pass
 
@@ -78,6 +79,7 @@ or_f = cx_Oracle.NATIVE_FLOAT
 or_o = cx_Oracle.OBJECT
 
 options_prefetch = ['show', 'set', 'default']
+options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
 options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
@@ -188,8 +190,8 @@ class easy_or(cmd.Cmd, object):
         self.buff = None
         self.interactive = interactive
         self.undoc_header = None
-        self.doc_header = colored(' *General Commands*',"cyan")+' (type help <command>):'
-        self.docdb_header = colored('\n *DB Commands*',"cyan")+' (type help <command>):'
+        self.doc_header = colored(' *General Commands*', "cyan") + ' (type help <command>):'
+        self.docdb_header = colored('\n *DB Commands*', "cyan") + ' (type help <command>):'
         #connect to db  
         self.user = self.desconfig.get('db-' + self.dbname, 'user')
         self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
@@ -436,7 +438,7 @@ class easy_or(cmd.Cmd, object):
                         for jj, ff in enumerate(options_out): print '%5s  %s' % (ff, options_def[jj])
                 except KeyboardInterrupt or EOFError:
                     print colored('\n\nAborted \n', "red")
-                except :
+                except:
                     print colored('\nMust indicate output file\n', "red")
                     print 'Format:\n'
                     print 'select ... from ... where ... ; > example.csv \n'
@@ -449,7 +451,7 @@ class easy_or(cmd.Cmd, object):
                     except:
                         pass
                     print colored('\n\nAborted \n', "red")
-                    
+
 
         else:
             print
@@ -480,12 +482,12 @@ class easy_or(cmd.Cmd, object):
 
     ### QUERY METHODS
 
-    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!' ,extra=""):
+    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra=""):
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
         t1 = time.time()
-        pload=Process(target=loading)
+        pload = Process(target=loading)
         pload.start()
         try:
             self.cur.execute(query)
@@ -504,15 +506,15 @@ class easy_or(cmd.Cmd, object):
                 if len(data) == 0:
                     fline = '   '
                     for col in header: fline += '%s  ' % col
-                    if extra !="":
-                        print colored(extra+'\n',"cyan")
+                    if extra != "":
+                        print colored(extra + '\n', "cyan")
                     print fline
                     print colored(err_arg, "red")
                 else:
                     data.columns = header
                     data.index += 1
-                    if extra !="":
-                        print colored(extra+'\n',"cyan")
+                    if extra != "":
+                        print colored(extra + '\n', "cyan")
                     print data
             else:
                 t2 = time.time()
@@ -541,7 +543,7 @@ class easy_or(cmd.Cmd, object):
     def query_and_save(self, query, fileout, mode='csv', print_time=True):
         self.cur.arraysize = self.prefetch
         t1 = time.time()
-        pload=Process(target=loading)
+        pload = Process(target=loading)
         pload.start()
         try:
             self.cur.execute(query)
@@ -624,7 +626,8 @@ class easy_or(cmd.Cmd, object):
         return table_list
 
     def get_tables_names_user(self, user):
-        user=user.replace(";","")
+        if user == "": return self.do_help('tables_names_user')
+        user = user.replace(";", "")
         query = "select distinct table_name from all_tables where owner=\'%s\' order by table_name" % user.upper()
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
@@ -640,7 +643,16 @@ class easy_or(cmd.Cmd, object):
             #    except: self.cache_table_names.append(tn)
             #self.cache_table_names.sort()
         else:
-            print 'User %s has no tables' % user.upper()
+            if self.dbname in ('dessci', 'desoper'):
+                query = """select count(username) as cc  from des_users where upper(username) = upper('%s')""" % user
+            if self.dbname in ('destest'):
+                query = """select count(username) as cc from dba_users where upper(username) = upper('%s')""" % user
+            temp = self.cur.execute(query)
+            tnames = temp.fetchall()
+            if tnames[0][0] == 0:
+                print colored('User %s does not exist in DB' % user.upper(), 'red')
+            else:
+                print colored('User %s has no tables' % user.upper(), 'cyan')
 
     def get_userlist(self):
         if self.dbname in ('dessci', 'desoper'):
@@ -668,6 +680,14 @@ class easy_or(cmd.Cmd, object):
 
     def get_columnlist(self):
         query = """SELECT distinct column_name from fgottenmetadata  order by column_name"""
+        temp = self.cur.execute(query)
+        cnames = pd.DataFrame(temp.fetchall())
+        col_list = cnames.values.flatten().tolist()
+        return col_list
+
+    def get_columnlist_table(self, tablename):
+        query = """SELECT distinct column_name from fgottenmetadata where table_name = %s order by column_name""" % (
+            tablename)
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
@@ -929,8 +949,8 @@ class easy_or(cmd.Cmd, object):
         """
         DB:Shows database connection information
         """
-        lines="user: %s\ndb  : %s\nhost: %s\n" % (self.user.upper(), self.dbname.upper(), self.dbhost.upper())
-        lines=lines+"\nPersonal links:" 
+        lines = "user: %s\ndb  : %s\nhost: %s\n" % (self.user.upper(), self.dbname.upper(), self.dbhost.upper())
+        lines = lines + "\nPersonal links:"
         query = """
            select owner, db_link, username, host, created from all_db_links where OWNER = '%s'
         """ % (self.user.upper())
@@ -978,7 +998,7 @@ class easy_or(cmd.Cmd, object):
             - find_user P%      # Finds all users with first, lastname or username starting with P
 
         """
-        if line == "": return
+        if line == '': return self.do_help('find_user')
         line = " ".join(line.split())
         keys = line.split()
         if self.dbname in ('dessci', 'desoper'):
@@ -1004,6 +1024,7 @@ class easy_or(cmd.Cmd, object):
 
         Usage: user_tables <username>
         """
+        if arg == "": return self.do_help('user_tables')
         return self.get_tables_names_user(arg)
 
     def complete_user_tables(self, text, line, start_index, end_index):
@@ -1026,6 +1047,8 @@ class easy_or(cmd.Cmd, object):
 
 
         """
+        if arg == '':
+            return self.do_help('describe_table')
         tablename = arg.upper()
         tablename = tablename.replace(';', '')
         schema = self.user.upper()  #default --- Mine
@@ -1077,13 +1100,13 @@ class easy_or(cmd.Cmd, object):
 
         # schema, table and link are now valid.
         link = "@" + link if link else ""
-        qcom=""" select comments from all_tab_comments%s atc where atc.table_name = '%s'""" % (link,table)
-        comment_table=self.query_results(qcom)
-        if len(comment_table) ==0:
-            comment_table="Table does not exist"
+        qcom = """ select comments from all_tab_comments%s atc where atc.table_name = '%s'""" % (link, table)
+        comment_table = self.query_results(qcom)
+        if len(comment_table) == 0:
+            comment_table = "Table does not exist"
         else:
-            comment_table=comment_table[0][0]
-        comm="""Description of %s commented as: '%s'""" % (table, comment_table) 
+            comment_table = comment_table[0][0]
+        comm = """Description of %s commented as: '%s'""" % (table, comment_table)
         q = """
         select
           atc.column_name, atc.data_type,
@@ -1093,7 +1116,8 @@ class easy_or(cmd.Cmd, object):
            acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name
            order by atc.column_id
            """ % (link, link, schema, table, schema, table)
-        self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user', extra=comm)
+        self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user',
+                             extra=comm)
         return
 
     def complete_describe_table(self, text, line, start_index, end_index):
@@ -1105,6 +1129,7 @@ class easy_or(cmd.Cmd, object):
         
         Usage : find_tables PATTERN
         """
+        if arg == '': return self.do_help('find_tables')
         arg = arg.replace(';', '')
         query = "SELECT distinct table_name from fgottenmetadata  WHERE upper(table_name) LIKE '%s' " % (arg.upper())
         self.query_and_print(query)
@@ -1121,6 +1146,7 @@ class easy_or(cmd.Cmd, object):
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG 
         """
         #query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
+        if arg == '': return self.do_help('find_tables_with_column')
         query = """
            SELECT 
                table_name, column_name 
@@ -1192,7 +1218,7 @@ class easy_or(cmd.Cmd, object):
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
-        line=line.replace(';','')
+        line = line.replace(';', '')
         if line == "":
             print '\nMust include table filename!\n'
             return
@@ -1212,9 +1238,9 @@ class easy_or(cmd.Cmd, object):
             else:
                 table = alls[0]
                 format = alls[1]
-                if format in ('csv','tab'):
-                    if format == 'csv' : sepa=','
-                    if format == 'tab' : sepa = None
+                if format in ('csv', 'tab'):
+                    if format == 'csv': sepa = ','
+                    if format == 'tab': sepa = None
                     try:
                         DF = pd.read_csv(line, sep=sepa)
                     except:
@@ -1262,6 +1288,9 @@ class easy_or(cmd.Cmd, object):
                         print colored(
                             '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
                                 table.upper(), len(DF), len(DF.columns), t2 - t1), "green")
+                        print colored(
+                            '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
+                            "cyan")
                         del DF
                     except:
                         (type, value, traceback) = sys.exc_info()
@@ -1271,7 +1300,7 @@ class easy_or(cmd.Cmd, object):
                         print
                         return
                     return
-                elif format =='fits':
+                elif format == 'fits':
                     try:
                         DF = pf.open(line)
                     except:
@@ -1284,11 +1313,11 @@ class easy_or(cmd.Cmd, object):
                         print '\n Table already exists! Change name of file or drop table ' \
                               '\n with:  DROP TABLE %s\n ' % table.upper()
                     qtable = 'create table %s ( ' % table
-                    col_n=[]
+                    col_n = []
                     for col in DF[1].columns:
                         col_n.append(col.name)
                         if col.format.find('A') > -1:
-                            qtable += col.name + ' ' + 'VARCHAR2(' + str(int(col.format.replace('A',''))) + '),'
+                            qtable += col.name + ' ' + 'VARCHAR2(' + str(int(col.format.replace('A', ''))) + '),'
                         elif col.format == 'I':
                             qtable += col.name + ' NUMBER(6,0),'
                         elif col.format == 'J':
@@ -1327,6 +1356,9 @@ class easy_or(cmd.Cmd, object):
                         print colored(
                             '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
                                 table.upper(), len(DF[1].data), len(col_n), t2 - t1), "green")
+                        print colored(
+                            '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
+                            "cyan")
                         DF.close()
                         del DF
                     except:
@@ -1347,38 +1379,72 @@ class easy_or(cmd.Cmd, object):
 
 
     def do_add_comment(self, line):
+        """
+        DB:Add comments to table and/or columns inside tables
+
+        Usage: 
+            - add_comment table <TABLE> 'Comments on table"
+            - add_comment column <TABLE.COLUMN> 'Comments on columns"
+
+        Ex:  add_comment table MY_TABLE 'This table contains info"
+             add_comment columns MY_TABLE.ID 'Id for my objects"
+
+        This command support smart-autocompletion
+
+        """
+
         line = " ".join(line.split())
         keys = line.split()
         oneline = "".join(keys)
         if oneline.find('table') > -1:
             if len(keys) == 1:
-                print colored('\nMissing table name\n',"red")
+                print colored('\nMissing table name\n', "red")
                 return
             table = keys[1]
             if len(keys) == 2:
-                print colored('\nMissing comment for table %s\n' % table,"red")
+                print colored('\nMissing comment for table %s\n' % table, "red")
                 return
-            comm  = " ".join(keys[2:])
-            if comm[0] == "'": comm=comm[1:-1]
-            qcom="""comment on table %s is '%s'""" % (table,comm)
-            message="Comment added to table: %s" % table
+            comm = " ".join(keys[2:])
+            if comm[0] == "'": comm = comm[1:-1]
+            qcom = """comment on table %s is '%s'""" % (table, comm)
+            message = "Comment added to table: %s" % table
             self.query_and_print(qcom, print_time=False, suc_arg=message)
         elif oneline.find('column') > -1:
             if len(keys) == 1:
-                print colored('\nMissing column name (TABLE.COLUMN)\n',"red")
+                print colored('\nMissing column name (TABLE.COLUMN)\n', "red")
                 return
             col = keys[1]
             if len(keys) == 2:
-                print colored('\nMissing comment for column %s\n' % col,"red")
+                print colored('\nMissing comment for column %s\n' % col, "red")
                 return
-            comm  = " ".join(keys[2:]) 
-            if comm[0] == "'": comm=comm[1:-1]
-            qcom="""comment on column  %s is '%s'""" % (col,comm)
-            message="Comment added to column: %s in table %s" % (col.split('.')[1],col.split('.')[0])
+            if len(keys) > 2 and col.find('.') == -1:
+                print colored('\nMissing column name for table %s\n', "red") % col
+                return
+            comm = " ".join(keys[2:])
+            if comm[0] == "'": comm = comm[1:-1]
+            qcom = """comment on column  %s is '%s'""" % (col, comm)
+            message = "Comment added to column: %s in table %s" % (col.split('.')[1], col.split('.')[0])
             self.query_and_print(qcom, print_time=False, suc_arg=message)
         else:
-            pass
+            print colored('\nMissing arguments\n', "red")
+            self.do_help('add_comment')
 
+    def complete_add_comment(self, text, line, begidx, lastidx):
+        if line:
+            oneline = "".join(line.strip())
+            if oneline.find('table') > -1:
+                return self._complete_tables(text)
+            elif oneline.find('column') > -1:
+                if oneline.find('.') > -1:
+                    colname = text.split('.')[-1]
+                    tablename = text.split('.')[0]
+                    return [tablename + '.' + cn for cn in self._complete_colnames(colname) if cn.startswith(colname)]
+                else:
+                    return self._complete_tables(text)
+            else:
+                return [option for option in options_add_comment if option.startswith(text)]
+        else:
+            return options_add_comment
 
 
     #UNDOCCUMENTED DO METHODS
@@ -1391,10 +1457,10 @@ class easy_or(cmd.Cmd, object):
         self.do_exit(line)
 
     def do_select(self, line):
-        self.default('select '+line)
-    
+        self.default('select ' + line)
+
     def do_SELECT(self, line):
-        self.default('SELECT '+line)
+        self.default('SELECT ' + line)
 
     def do_clean_history(self, line):
         if readline_present: readline.clear_history()
@@ -1413,7 +1479,7 @@ def to_pandas(cur):
 
 
 class connect():
-    def __init__(self, section = ''):
+    def __init__(self, section=''):
         conf = config_mod.get_config(config_file)
         pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
         pd.set_option('display.width', conf.getint('display', 'width'))
@@ -1472,6 +1538,7 @@ if __name__ == '__main__':
 
     try:
         import readline
+
         readline_present = True
     except:
         readline_present = False
@@ -1491,15 +1558,14 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
     args = parser.parse_args()
 
-
     if args.db is not None:
         db = args.db
-        if db[:3] == 'db-' : db=db[3:]
+        if db[:3] == 'db-': db = db[3:]
     else:
         db = conf.get('easyaccess', 'database')
 
-    desconf = config_mod.get_desconfig(desfile,db)
-    
+    desconf = config_mod.get_desconfig(desfile, db)
+
     if args.command is not None:
         cmdinterp = easy_or(conf, desconf, db, interactive=False)
         cmdinterp.onecmd(args.command)
