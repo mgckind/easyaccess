@@ -19,10 +19,10 @@ setup(
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['easyaccess'],
-    py_modules=['easyaccess','config'],
+    py_modules=['easyaccess','config','utils'],
     license='NCSA',
     description='Easy Access to access DES DB',
     long_description=read('README.md'),
     url='https://github.com/mgckind/easyaccess',
-    install_requires=['pandas','termcolor','pyfits >= 3.3','cx_Oracle'],
+    install_requires=['numpy','pandas >= 0.14','termcolor','pyfits >= 3.3','cx_Oracle'],
 )
