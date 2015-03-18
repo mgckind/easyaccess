@@ -10,6 +10,7 @@ For a short tutorial chek [here](http://deslogin.cosmology.illinois.edu/~mcarras
 ## Requirements
 
 - Oracle Client > 11g.2 (External library, no python)
+  Check [here](https://deswiki.cosmology.illinois.edu/confluence/display/CMBT/Instructions+for+installing+Oracle+client+and+easyaccess+without+EUPS) for instructions on how to install these libraries
 - cx_Oracle
 - pyfits >= 3.3
 - pandas >= 0.14
