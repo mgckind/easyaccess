@@ -1,12 +1,3 @@
-     \‾‾‾‾‾‾\
-  // / .    .\
- // /   .    _\
-// /  .     / //
-\\ \     . / //
- \\ \_____/ //
-  \\_______//    DARK ENERGY SURVEY
-   `‾‾‾‾‾‾‾`     DATA MANAGEMENT
-
 # easyaccess
 refactored version of trivialAccess for accessing the DB
 
