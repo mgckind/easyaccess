@@ -1,8 +1,20 @@
+     \‾‾‾‾‾‾\
+  // / .    .\
+ // /   .    _\
+// /  .     / //
+\\ \     . / //
+ \\ \_____/ //
+  \\_______//    DARK ENERGY SURVEY
+   `‾‾‾‾‾‾‾`     DATA MANAGEMENT
+
 # easyaccess
-refactored version of trivialAccess
+refactored version of trivialAccess for accessing the DB
 
 Python Command Line Interpreter to access Oracle DES DB
 using cx_Oracle 
+
+For a short tutorial chek [here](http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html)
+(Using des credentials)
 
 ## Requirements
 
@@ -21,6 +33,7 @@ using cx_Oracle
 - It can be imported as module
 - Can run command directly from command line
 - Load sql query from file and/or from editor
+- Many more
 
 ## Basic use
 
