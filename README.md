@@ -1,3 +1,6 @@
+a
+a
+a
 # easyaccess
 refactored version of trivialAccess for accessing the DB
 
