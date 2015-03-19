@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
@@ -175,10 +175,10 @@ def write_to_fits(df, fitsfile, mode='w', listN=[], listT=[]):
 
 class easy_or(cmd.Cmd, object):
     """cx_oracle interpreter for DESDM"""
-    intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n", "cyan")
 
     def __init__(self, conf, desconf, db, interactive=True):
         cmd.Cmd.__init__(self)
+        self.intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n", "cyan")
         self.writeconfig = False
         self.config = conf
         self.desconfig = desconf
@@ -239,7 +239,7 @@ class easy_or(cmd.Cmd, object):
                 self.intro = intro
             if self.intro:
                 self.do_clear(None)
-                dl.print_deslogo()
+                dl.print_deslogo(color_term)
                 self.stdout.write(str(self.intro) + "\n")
             stop = None
             while not stop:
@@ -293,7 +293,7 @@ class easy_or(cmd.Cmd, object):
             func()
         else:
             self.do_clear(None)
-            dl.print_deslogo()
+            dl.print_deslogo(color_term)
             names = self.get_names()
             cmds_doc = []
             cmds_undoc = []
@@ -412,6 +412,11 @@ class easy_or(cmd.Cmd, object):
             else:
                 print '@ must be followed by a filename'
                 return ""
+        if line[0] == '.':
+            if len(line) ==1:
+                self.do_clear(None)
+                return ""
+
 
         # support model_query Get
         #self.prompt = self.savePrompt
@@ -1452,6 +1457,7 @@ class easy_or(cmd.Cmd, object):
 
     #UNDOCCUMENTED DO METHODS
 
+
     def do_EOF(self, line):
         # exit program on ^D
         self.do_exit(line)
@@ -1543,6 +1549,12 @@ if __name__ == '__main__':
     pd.set_option('display.width', conf.getint('display', 'width'))
     pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
 
+
+    color_term=True
+    if not conf.getboolean('display','color_terminal'):
+        def colored(line,color):
+            return line
+        color_term=False
     try:
         import readline
 
@@ -1557,7 +1569,7 @@ if __name__ == '__main__':
         except:
             'Print readline might give problems accesing the history of commands'
 
-    parser = MyParser(description='Easy Access', version="version: %s" % __version__)
+    parser = MyParser(description='Easy Access to the DES DB. There is configuration file located in %s for more customizable options' % config_file, version="version: %s" % __version__)
     parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \

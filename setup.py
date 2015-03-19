@@ -15,11 +15,12 @@ library_dirs = []
 include_dirs = []
 setup(
     name='easyaccess',
-    version='1.0.3',
+    version='1.0.4',
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['easyaccess'],
     py_modules=['easyaccess','config','utils.des_logo'],
+    packages==['utils'],
     license='NCSA',
     description='Easy Access to access DES DB',
     long_description=read('README.md'),
