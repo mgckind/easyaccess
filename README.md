@@ -15,7 +15,7 @@ For a short tutorial chek [here](http://deslogin.cosmology.illinois.edu/~mcarras
 - pyfits >= 3.3
 - pandas >= 0.14
 - termcolor
-- PyTables (for hdf5 output)
+- PyTables (optional, for hdf5 output)
 
 ## Some *nice* features
 - Smart tab completion for commands, table names, column names and file paths accordingly

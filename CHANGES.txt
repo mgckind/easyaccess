@@ -10,3 +10,4 @@ v1.0.2, 2015-MAR-18 -- Added DES Logo
                     -- Added comments from table to describe_table
                     -- Added command to add comments to tables and columns
                     -- Fix minor issues and improve formatting
+v1.0.3, 2015-MAR-18 -- Fix an installation bug
