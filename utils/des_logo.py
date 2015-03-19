@@ -13,7 +13,7 @@ def print_deslogo():
     L.append(c("\\\\","red")+" \     . / "+c("//","red")+"  ")
     L.append(c(" \\\\","red")+" \_____/ "+c("//","red")+"   ")
     L.append(c("  \\\\_______//","red")+"    DARK ENERGY SURVEY")
-    last=c("""   `"""+u"\u203E"*7+"""`    ""","red") +" DATA MANAGEMENT"
+    last=c("""   `"""+u"\u203E"*7+u"\u00B4","red") +"     DATA MANAGEMENT"
     L.append(last)
 
     print 
