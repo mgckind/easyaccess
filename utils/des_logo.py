@@ -1,3 +1,4 @@
+__author__ = 'Matias Carrasco Kind'
 try:
     from termcolor import colored as c
 except:

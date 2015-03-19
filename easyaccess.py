@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
