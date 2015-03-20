@@ -32,7 +32,7 @@ import datetime
 import pyfits as pf
 import argparse
 import config as config_mod
-import utils.des_logo as dl
+import eautils.des_logo as dl
 from multiprocessing import Pool, Process
 import webbrowser
 
