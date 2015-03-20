@@ -1,7 +1,7 @@
 import sys
 import os
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
 except ImportError:
     from distutils.core import setup
 prjdir = os.path.dirname(__file__)
@@ -15,12 +15,12 @@ library_dirs = []
 include_dirs = []
 setup(
     name='easyaccess',
-    version='1.0.4',
+    version='1.0.5',
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['easyaccess'],
-    py_modules=['easyaccess','config','utils.des_logo'],
-    packages=['utils'],
+    py_modules=['easyaccess','config','eautils.des_logo'],
+    packages=find_packages(),
     license='NCSA',
     description='Easy Access to access DES DB',
     long_description=read('README.md'),

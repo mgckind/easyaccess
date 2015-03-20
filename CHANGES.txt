@@ -11,6 +11,7 @@ v1.0.2, 2015-MAR-18 -- Added DES Logo
                     -- Added command to add comments to tables and columns (add_comment)
                     -- Fix minor issues and improve formatting
 v1.0.3, 2015-MAR-18 -- Fix an installation bug
-v1.0.4, 2015-MAR-20 -- Added optional color in config file
+v1.0.5, 2015-MAR-20 -- version 1.0.4 was skipped to be in sync with pip
+                    -- Added optional color in config file
                     -- Added quiet option for initialization
                     -- command to open an online tutorial (online_tutorial)
