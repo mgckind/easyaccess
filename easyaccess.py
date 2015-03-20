@@ -1571,7 +1571,7 @@ if __name__ == '__main__':
         except:
             'Print readline might give problems accesing the history of commands'
 
-    parser = MyParser(description='Easy Access to the DES DB. There is configuration file located in %s for more customizable options' % config_file, version="version: %s" % __version__)
+    parser = MyParser(description='Easy Access to the DES DB. There is a configuration file located in %s for more customizable options' % config_file, version="version: %s" % __version__)
     parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \

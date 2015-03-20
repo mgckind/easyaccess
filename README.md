@@ -1,5 +1,6 @@
-![help_screen](help_screen.png)
 # easyaccess
+![help_screen](help_screen.png)
+
 Refactored version of trivialAccess for accessing the DES DB
 
 Python Command Line Interpreter to access Oracle DES DB
