@@ -1,12 +1,15 @@
 ![help_screen](help_screen.png)
 # easyaccess
-refactored version of trivialAccess for accessing the DB
+Refactored version of trivialAccess for accessing the DES DB
 
 Python Command Line Interpreter to access Oracle DES DB
 using cx_Oracle 
 
 For a short tutorial chek [here](http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html)
 (Using des credentials)
+
+
+current version = 1.0.5
 
 ## Requirements
 
