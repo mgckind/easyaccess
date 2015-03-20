@@ -176,11 +176,12 @@ def write_to_fits(df, fitsfile, mode='w', listN=[], listT=[]):
 class easy_or(cmd.Cmd, object):
     """cx_oracle interpreter for DESDM"""
 
-    def __init__(self, conf, desconf, db, interactive=True):
+    def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
         self.intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n", "cyan")
         self.writeconfig = False
         self.config = conf
+        self.quiet = quiet
         self.desconfig = desconf
         self.editor = os.getenv('EDITOR', self.config.get('easyaccess', 'editor'))
         self.timeout = self.config.getint('easyaccess', 'timeout')
@@ -200,7 +201,7 @@ class easy_or(cmd.Cmd, object):
         self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
-        print 'Connecting to DB ** %s ** ...' % self.dbname
+        if not self.quiet: print 'Connecting to DB ** %s ** ...' % self.dbname
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
@@ -238,9 +239,10 @@ class easy_or(cmd.Cmd, object):
             if intro is not None:
                 self.intro = intro
             if self.intro:
-                self.do_clear(None)
-                dl.print_deslogo(color_term)
-                self.stdout.write(str(self.intro) + "\n")
+                if not self.quiet:
+                    self.do_clear(None)
+                    dl.print_deslogo(color_term)
+                    self.stdout.write(str(self.intro) + "\n")
             stop = None
             while not stop:
                 if self.cmdqueue:
@@ -368,7 +370,7 @@ class easy_or(cmd.Cmd, object):
             query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
             self.cur.execute(query_2)
 
-        print 'Loading metadata into cache...'
+        if not self.quiet : print 'Loading metadata into cache...'
         self.cache_table_names = self.get_tables_names()
         self.cache_usernames = self.get_userlist()
         self.cache_column_names = self.get_columnlist()
@@ -1492,7 +1494,7 @@ def to_pandas(cur):
 
 
 class connect():
-    def __init__(self, section=''):
+    def __init__(self, section='', quiet=False):
         conf = config_mod.get_config(config_file)
         pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
         pd.set_option('display.width', conf.getint('display', 'width'))
@@ -1511,15 +1513,15 @@ class connect():
         self.password = desconf.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
-        print 'Connecting to DB ** %s ** ...' % self.dbname
+        if not quiet : print 'Connecting to DB ** %s ** ...' % self.dbname
         self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
 
     def ping(self):
         try:
             self.con.ping()
-            print 'Still connected to DB'
+            if not quiet :print 'Still connected to DB'
         except:
-            print 'Connection with DB lost'
+            if not quiet :print 'Connection with DB lost'
 
     def cursor(self):
         cursor = self.con.cursor()
@@ -1575,6 +1577,7 @@ if __name__ == '__main__':
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
     csv or fits format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
+    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet inizialization")
     args = parser.parse_args()
 
     if args.db is not None:
@@ -1586,21 +1589,23 @@ if __name__ == '__main__':
     desconf = config_mod.get_desconfig(desfile, db)
 
     if args.command is not None:
-        cmdinterp = easy_or(conf, desconf, db, interactive=False)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         cmdinterp.onecmd(args.command)
         os._exit(0)
     elif args.loadsql is not None:
-        cmdinterp = easy_or(conf, desconf, db, interactive=False)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.loadtable is not None:
-        cmdinterp = easy_or(conf, desconf, db, interactive=False)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "load_table " + args.loadtable
         cmdinterp.onecmd(linein)
         os._exit(0)
     else:
-        os.system(['clear', 'cls'][os.name == 'nt'])
-        easy_or(conf, desconf, db).cmdloop()
+
+        if not args.quiet:
+            os.system(['clear', 'cls'][os.name == 'nt'])
+        easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
 
 
