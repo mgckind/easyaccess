@@ -1,3 +1,4 @@
+![help_screen](help_screen.png)
 # easyaccess
 refactored version of trivialAccess for accessing the DB
 
