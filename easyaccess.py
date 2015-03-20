@@ -1477,7 +1477,7 @@ class easy_or(cmd.Cmd, object):
         if readline_present: readline.clear_history()
 
     def do_online_tutorial(self,line):
-        tut=webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/DESDM.html')   
+        tut=webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')   
 
 
 
