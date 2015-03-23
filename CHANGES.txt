@@ -15,3 +15,5 @@ v1.0.5, 2015-MAR-20 -- version 1.0.4 was skipped to be in sync with pip
                     -- Added optional color in config file
                     -- Added quiet option for initialization
                     -- command to open an online tutorial (online_tutorial)
+v1.0.6, 2015-XXX-XX -- Background with Ctrl-Z and fg 
+                    -- TODO: optional loading bar
