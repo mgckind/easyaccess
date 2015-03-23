@@ -182,7 +182,7 @@ class easy_or(cmd.Cmd, object):
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
-        self.intro = colored("\nThe DESDM Database shell.  Type help or ? to list commands.\n", "cyan")
+        self.intro = colored("\neasyaccess  %s. The DESDM Database shell. \n* Type help or ? to list commands. *\n" % __version__, "cyan")
         self.writeconfig = False
         self.config = conf
         self.quiet = quiet
