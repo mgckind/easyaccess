@@ -190,6 +190,7 @@ class easy_or(cmd.Cmd, object):
         self.editor = os.getenv('EDITOR', self.config.get('easyaccess', 'editor'))
         self.timeout = self.config.getint('easyaccess', 'timeout')
         self.prefetch = self.config.getint('easyaccess', 'prefetch')
+        self.loading_bar = self.config.getboolean('display', 'loading_bar')
         self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
@@ -213,10 +214,15 @@ class easy_or(cmd.Cmd, object):
 
     def handler(self,signum, frame):
         print 'Ctrl+Z pressed'
-        print 'Job = ', pid
+        print 'Job = %d Stopped' % pid
+        print colored(' * Type bg to send this job to the backgroud *', 'cyan')
+        print colored(' * Type fg to bring this job to the foreground *', 'cyan')
+        print
         os.kill(pid,signal.SIGSTOP)
         try:
-            if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
+            if self.loading_bar:
+                if self.pload.pid != None: 
+                    os.kill(self.pload.pid,signal.SIGKILL)
         except AttributeError:
             pass
     
@@ -512,8 +518,8 @@ class easy_or(cmd.Cmd, object):
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
         t1 = time.time()
-        self.pload = Process(target=loading)
-        self.pload.start()
+        if self.loading_bar: self.pload = Process(target=loading)
+        if self.loading_bar: self.pload.start()
         try:
             self.cur.execute(query)
             if self.cur.description != None:
@@ -523,7 +529,7 @@ class easy_or(cmd.Cmd, object):
                 data = pd.DataFrame(self.cur.fetchall())
                 t2 = time.time()
                 tt.cancel()
-                self.pload.terminate()
+                if self.loading_bar: self.pload.terminate()
                 self.do_clear(None)
                 print
                 if print_time: print colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
@@ -544,7 +550,7 @@ class easy_or(cmd.Cmd, object):
             else:
                 t2 = time.time()
                 tt.cancel()
-                self.pload.terminate()
+                if self.loading_bar: self.pload.terminate()
                 self.do_clear(None)
                 print colored(suc_arg, "green")
                 self.con.commit()
@@ -553,7 +559,7 @@ class easy_or(cmd.Cmd, object):
             (type, value, traceback) = sys.exc_info()
             self.con.cancel()
             t2 = time.time()
-            self.pload.terminate()
+            if self.loading_bar: self.pload.terminate()
             print
             print colored(type, "red")
             print colored(value, "red")
@@ -568,8 +574,8 @@ class easy_or(cmd.Cmd, object):
     def query_and_save(self, query, fileout, mode='csv', print_time=True):
         self.cur.arraysize = self.prefetch
         t1 = time.time()
-        self.pload = Process(target=loading)
-        self.pload.start()
+        if self.loading_bar: self.pload = Process(target=loading)
+        if self.loading_bar: self.pload.start()
         try:
             self.cur.execute(query)
             if self.cur.description != None:
@@ -610,7 +616,7 @@ class easy_or(cmd.Cmd, object):
                     else:
                         break
                 t2 = time.time()
-                self.pload.terminate()
+                if self.loading_bar: self.pload.terminate()
                 elapsed = '%.1f seconds' % (t2 - t1)
                 print
                 if print_time: print colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
@@ -621,7 +627,7 @@ class easy_or(cmd.Cmd, object):
             print
         except:
             (type, value, traceback) = sys.exc_info()
-            self.pload.terminate()
+            if self.loading_bar:  self.pload.terminate()
             print
             print colored(type, "red")
             print colored(value, "red")

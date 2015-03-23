@@ -50,6 +50,7 @@ def get_config(configfile):
         configwrite=True
         config.add_section('display')
     if not config.has_option('display','color_terminal'): configwrite = True ;config.set('display','color_terminal','yes')
+    if not config.has_option('display','loading_bar'): configwrite = True ;config.set('display','loading_bar','yes')
     if not config.has_option('display','max_rows'): configwrite = True ;config.set('display','max_rows',1500)
     if not config.has_option('display','width'): configwrite = True ;config.set('display','width',1000)
     if not config.has_option('display','max_columns'): configwrite = True ;config.set('display','max_columns',50)
