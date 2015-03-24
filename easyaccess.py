@@ -86,7 +86,9 @@ options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
 options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
-options_config = ['database', 'editor', 'prefetch', 'histcache','timeout','max_rows','max_columns','width','color_terminal','loading_bar']
+options_config = ['all','database', 'editor', 'prefetch', 'histcache','timeout','max_rows','max_columns','width','color_terminal','loading_bar']
+options_config2 = ['show', 'set']
+
 type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
 
 
@@ -906,13 +908,36 @@ class easy_or(cmd.Cmd, object):
         """
         Change parameters from config file (config.ini)
         """
-        pass 
+        if line == '': return self.do_help('config')
+        oneline = "".join(line.split())
+        if oneline.find('show') > -1:
+            key = oneline.split('show')[0]
+            for section in (self.config.sections()):
+                if key == 'all' :
+                    for key0,val in self.config.items(section):
+                        print '\nCurrent value for %s = %s ' % (key0, val)
+                else:
+                    if self.config.has_option(section,key):
+                        print '\nCurrent value for %s = %s ' % (key, self.config.get(section,key))
+                        break
+            print
+        else:
+            return self.do_help('config')
 
     def complete_config(self, text, line, start_index, end_index):
+        line2=' '.join(line.split())
+        args=line2.split()
         if text:
-            return [option for option in options_config if option.startswith(text)]
+            if  args[1] in options_config:
+                return [option for option in options_config2 if option.startswith(text)]
+            else:
+                return [option for option in options_config if option.startswith(text)]
         else:
-            return options_config
+            if  args[1] in options_config:
+                return options_config2
+            else:
+                return options_config
+
 
 
     #DO METHODS FOR DB
