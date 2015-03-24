@@ -56,6 +56,21 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
 
+class cmdParseException(Exception):
+   "class for any file-content, + null fle name"
+   def __init__(self,txt):
+       Exception.__init__(self)
+       self.txt = txt
+   def __str__(self):
+       return self.txt
+
+class cmdParse(optparse.OptionParser):
+    def __init__(self, *args, **kwargs):
+        optparse.OptionParser.__init__(self,*args, **kwargs)
+    def exit(self, status=0, msg=""):
+        raise cmdParseException(msg)
+
+
 def loading():
     print
     cc = 0
@@ -85,6 +100,7 @@ options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
 options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
+options_config = ['database', 'editor', 'prefetch', 'histcache','timeout','max_rows','max_columns','width','color_terminal','loading_bar']
 type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
 
 
@@ -898,6 +914,19 @@ class easy_or(cmd.Cmd, object):
         # TODO: platform dependent
         #tmp = sp.call('clear', shell=True)
         tmp = os.system(['clear', 'cls'][os.name == 'nt'])
+
+
+    def do_config(self, line):
+        """
+        Change parameters from config file (config.ini)
+        """
+        pass 
+
+    def complete_config(self, text, line, start_index, end_index):
+        if text:
+            return [option for option in options_config if option.startswith(text)]
+        else:
+            return options_config
 
 
     #DO METHODS FOR DB
