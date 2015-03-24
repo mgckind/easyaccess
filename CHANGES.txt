@@ -18,3 +18,4 @@ v1.0.5, 2015-MAR-20 -- version 1.0.4 was skipped to be in sync with pip
 v1.0.6, 2015-XXX-XX -- Background with Ctrl-Z, bg and fg 
                     -- optional loading bar from config.ini file (default = yes)
                     -- print version at startup
+                    -- Number of rows received when running queries into a file

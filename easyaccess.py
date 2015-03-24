@@ -58,18 +58,15 @@ if os.path.exists(desfile):
 
 def loading():
     print
-    #sys.stdout.write('    '+u"\u231B"+' ')
-    sys.stdout.write('    ')
     cc = 0
-    spinner = itertools.cycle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
-    line = '|              |'
+    spinner = itertools.cycle(range(13)+range(1,14,1)[::-1])
     line2 = "  Press Ctrl-C to abort"
     try:
         while True:
-            line = list('|              |')
+            line = list('    |              |')
             time.sleep(0.1)
             idx = int(spinner.next())
-            line[1 + idx] = u"\u2606"
+            line[5 + idx] = u"\u2606"
             sys.stdout.write("".join(line))
             sys.stdout.write(line2)
             sys.stdout.flush()
@@ -526,7 +523,20 @@ class easy_or(cmd.Cmd, object):
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[1:6] for rec in self.cur.description]
-                data = pd.DataFrame(self.cur.fetchall())
+                #data = pd.DataFrame(self.cur.fetchall())
+                data = pd.DataFrame(self.cur.fetchmany())
+                while True:
+                    if data.empty : break
+                    rowline= '   Rows : %d, Avg time (rows/sec): %.1f '  % (self.cur.rowcount, self.cur.rowcount*1./(time.time()-t1))
+                    if self.loading_bar: sys.stdout.write(colored(rowline,'yellow'))
+                    if self.loading_bar: sys.stdout.flush()
+                    if self.loading_bar: sys.stdout.write('\b'*len(rowline)) 
+                    if self.loading_bar:sys.stdout.flush()
+                    temp = pd.DataFrame(self.cur.fetchmany())
+                    if not temp.empty:
+                        data=data.append(temp, ignore_index=True)
+                    else:
+                        break
                 t2 = time.time()
                 tt.cancel()
                 if self.loading_bar: self.pload.terminate()
@@ -588,6 +598,11 @@ class easy_or(cmd.Cmd, object):
                 com_it = 0
                 while True:
                     data = pd.DataFrame(self.cur.fetchmany())
+                    rowline= '   Rows : %d, Avg time (rows/sec): %.1f '  % (self.cur.rowcount, self.cur.rowcount*1./(time.time()-t1))
+                    if self.loading_bar: sys.stdout.write(colored(rowline,'yellow'))
+                    if self.loading_bar: sys.stdout.flush()
+                    if self.loading_bar: sys.stdout.write('\b'*len(rowline)) 
+                    if self.loading_bar:sys.stdout.flush()
                     com_it += 1
                     if first:
                         list_names = []
