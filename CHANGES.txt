@@ -19,3 +19,5 @@ v1.0.6, 2015-XXX-XX -- Background with Ctrl-Z, bg and fg
                     -- optional loading bar from config.ini file (default = yes)
                     -- print version at startup
                     -- Number of rows received when running queries into a file
+                    -- Added command to change parameters from config.ini file from inside
+                       easyaccess (config)
