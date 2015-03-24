@@ -86,7 +86,8 @@ options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
 options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
-options_config = ['all','database', 'editor', 'prefetch', 'histcache','timeout','max_rows','max_columns','width','color_terminal','loading_bar']
+options_config = ['all','database', 'editor', 'prefetch', 'histcache','timeout','max_rows','max_columns',
+                'width','color_terminal','loading_bar','filepath']
 options_config2 = ['show', 'set']
 
 type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
@@ -764,7 +765,7 @@ class easy_or(cmd.Cmd, object):
             val = line.split('set')[-1]
             if val != '':
                 self.prefetch = int(val)
-                self.config.set('easyaccess', 'prefetch', int(val))
+                self.config.set('easyaccess', 'prefetch', val)
                 self.writeconfig = True
                 print '\nPrefetch value set to  {:}\n'.format(self.prefetch)
         elif line.find('default') > -1:
@@ -906,7 +907,26 @@ class easy_or(cmd.Cmd, object):
 
     def do_config(self, line):
         """
-        Change parameters from config file (config.ini)
+        Change parameters from config file (config.ini). Smart autocompletion enable
+
+        Usage:
+            - config <parameter> show : Shows current value for parameter in config file
+                e.j.
+            - config <parameter> set <value> : Sets parameter to given value
+            - config all show: Shows all parameters and their values
+            - config filepath: Prints the path to the config file
+
+        Parameters:
+            database       : Default DB to connect to
+            editor         : Editor for editing sql queries, see --> help edit
+            prefetch       : Number of rows prefetched by Oracle, see --> help prefetch 
+            histcache      : Length of the history of commands
+            timeout        : Timeout for a query to be printed on the screen. Doesn't apply to output files
+            max_rows       : Max number of rows to display on the screen. Doesn't apply to output files
+            width          : Width of the output format on the screen
+            max_columns    : Max number of columsn to display on the screen. Doesn't apply to output files
+            color_terminal : yes/no toggles the color for terminal std output. Need to restart easyaccess
+            loading_bar    : yes/no toggles the loading bar. Useful for background jobs  
         """
         if line == '': return self.do_help('config')
         oneline = "".join(line.split())
@@ -915,12 +935,38 @@ class easy_or(cmd.Cmd, object):
             for section in (self.config.sections()):
                 if key == 'all' :
                     for key0,val in self.config.items(section):
-                        print '\nCurrent value for %s = %s ' % (key0, val)
+                        strr='Current value for %s' % key0
+                        strr=strr.ljust(32)
+                        print '\n%s = %s ' % (strr, val)
+                elif key == 'filepath':
+                    print '\n config file path = %s\n' % config_file
+                    return
                 else:
                     if self.config.has_option(section,key):
                         print '\nCurrent value for %s = %s ' % (key, self.config.get(section,key))
                         break
             print
+        elif oneline.find('filepath') > -1:
+            print '\n config file path = %s\n' % config_file
+        elif oneline.find('set') > -1:
+            if oneline.find('all') > -1:
+                return self.do_help('config')
+            key = oneline.split('set')[0]
+            val = oneline.split('set')[1]
+            if val =='': return self.do_help('config')
+            int_keys=['prefetch','histcache','timeout','max_rows','width','max_columns']
+            #if key in int_keys: val=int(val) 
+            for section in (self.config.sections()):
+                if self.config.has_option(section,key):
+                    self.config.set(section, key, val)
+                    self.writeconfig = True
+                    break
+            config_mod.write_config(config_file, self.config)
+            if key == 'editor': self.editor = self.config.get('easyaccess', 'editor')
+            if key == 'timeout': self.timeout = self.config.getint('easyaccess', 'timeout')
+            if key == 'prefetch': self.prefetch = self.config.get('easyaccess', 'prefetch')
+            if key == 'loading_bar': self.loading_bar = self.config.getboolean('display', 'loading_bar')
+            return 
         else:
             return self.do_help('config')
 
@@ -928,12 +974,12 @@ class easy_or(cmd.Cmd, object):
         line2=' '.join(line.split())
         args=line2.split()
         if text:
-            if  args[1] in options_config:
+            if  len(args) > 2:
                 return [option for option in options_config2 if option.startswith(text)]
             else:
                 return [option for option in options_config if option.startswith(text)]
         else:
-            if  args[1] in options_config:
+            if  len(args) > 1:
                 return options_config2
             else:
                 return options_config
