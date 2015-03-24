@@ -56,20 +56,6 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
 
-class cmdParseException(Exception):
-   "class for any file-content, + null fle name"
-   def __init__(self,txt):
-       Exception.__init__(self)
-       self.txt = txt
-   def __str__(self):
-       return self.txt
-
-class cmdParse(optparse.OptionParser):
-    def __init__(self, *args, **kwargs):
-        optparse.OptionParser.__init__(self,*args, **kwargs)
-    def exit(self, status=0, msg=""):
-        raise cmdParseException(msg)
-
 
 def loading():
     print
