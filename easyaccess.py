@@ -1183,8 +1183,7 @@ class easy_or(cmd.Cmd, object):
         """
         DB:This tool is useful in noting the lack of documentation for the
         columns. If you don't know the full table name you can use tab
-        completion on the table name. Tables of ususal interest to
-        scientists are described
+        completion on the table name. Tables of usual interest are described
 
         Usage: describe_table <table_name>
         Describes the columns in <table-name> as
@@ -1212,11 +1211,12 @@ class easy_or(cmd.Cmd, object):
         while (1):
             #check for fundamental definition  e.g. schema.table@link
             q = """
-            select * from all_tab_columns%s
+            select count(*) from all_tab_columns%s
                where OWNER = '%s' and
                TABLE_NAME = '%s'
                """ % ("@" + link if link else "", schema, table)
-            if len(self.query_results(q)) != 0:
+            ans = self.query_results(q)
+            if ans[0][0] > 0:
                 #found real definition go get meta-data
                 break
 
