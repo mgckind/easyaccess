@@ -10,7 +10,7 @@ For a short tutorial chek [here](http://deslogin.cosmology.illinois.edu/~mcarras
 (Using des credentials)
 
 
-:Current version: **1.0.5**
+|Current version| **1.0.5**|
 
 ## Requirements
 
