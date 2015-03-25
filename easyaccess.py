@@ -86,7 +86,7 @@ options_edit = ['show', 'set_editor']
 options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
 options_config = ['all','database', 'editor', 'prefetch', 'histcache','timeout','max_rows','max_columns',
-                'width','color_terminal','loading_bar','filepath']
+                'width','color_terminal','loading_bar','filepath','nullvalue']
 options_config2 = ['show', 'set']
 
 type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
