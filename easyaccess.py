@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.0.6'
+__version__ = '1.0.7a'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
@@ -192,6 +192,7 @@ class easy_or(cmd.Cmd, object):
         self.timeout = self.config.getint('easyaccess', 'timeout')
         self.prefetch = self.config.getint('easyaccess', 'prefetch')
         self.loading_bar = self.config.getboolean('display', 'loading_bar')
+        self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
         self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
@@ -573,6 +574,7 @@ class easy_or(cmd.Cmd, object):
                     data.index += 1
                     if extra != "":
                         print colored(extra + '\n', "cyan")
+                    data.fillna('Null',inplace=True)
                     print data
             else:
                 t2 = time.time()
@@ -630,6 +632,7 @@ class easy_or(cmd.Cmd, object):
                                 list_type.append(str(inf[3]) + 'A')
                     if not data.empty:
                         data.columns = header
+                        data.fillna(self.nullvalue,inplace=True)
                         for jj, col in enumerate(data):
                             nt = change_type(info[jj])
                             if nt != "": data[col] = data[col].astype(nt)

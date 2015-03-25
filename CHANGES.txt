@@ -23,3 +23,5 @@ v1.0.6, 2015-MAR-25 -- Background with Ctrl-Z, bg and fg
                     -- Added command to change parameters from config.ini file from inside
                        easyaccess (config)
                     -- Fix issue with describe_table in latest DB schemas
+v1.0.7, 2015-XXX-XX -- Null and NaN values fixed and customizable (config nullvalue set -999)
+                       It will print 'Null' on the screen but nullvalue on the files
