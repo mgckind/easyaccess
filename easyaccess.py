@@ -910,7 +910,7 @@ class easy_or(cmd.Cmd, object):
 
     def do_clear(self, line):
         """
-        Clear screen
+        Clear screen. There is a shortcut by typing . on the interpreter
         """
         # TODO: platform dependent
         #tmp = sp.call('clear', shell=True)
