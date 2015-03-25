@@ -36,7 +36,6 @@ import eautils.des_logo as dl
 from multiprocessing import Pool, Process
 import webbrowser
 import signal
-import psutil
 
 pid=os.getpid()
 
