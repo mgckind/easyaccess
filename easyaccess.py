@@ -209,7 +209,20 @@ class easy_or(cmd.Cmd, object):
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
         if not self.quiet: print 'Connecting to DB ** %s ** ...' % self.dbname
-        self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+        connected = False
+        for tries in range(3):
+            try:
+                self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+                connected = True
+                break
+            except Exception as e:
+                lasterr = str(e).strip()
+                print colored("Error when trying to connect to database: %s" % lasterr, "red")
+                print "\n   Retrying...\n"
+                time.sleep(8)
+        if not connected:
+            print '\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n'
+            os._exit(0)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
 
@@ -1636,7 +1649,20 @@ class connect():
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
         if not quiet : print 'Connecting to DB ** %s ** ...' % self.dbname
-        self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+        connected = False
+        for tries in range(3):
+            try:
+                self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+                connected = True
+                break
+            except Exception as e:
+                lasterr = str(e).strip()
+                print "Error when trying to connect to database: %s" % lasterr
+                print "\n   Retrying...\n"
+                time.sleep(8)
+        if not connected:
+            print '\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n'
+            os._exit(0)
 
     def ping(self):
         try:
