@@ -45,6 +45,7 @@ def get_config(configfile):
     if not config.has_option('easyaccess','prefetch'): configwrite = True ;config.set('easyaccess','prefetch',10000)
     if not config.has_option('easyaccess','histcache'): configwrite = True ;config.set('easyaccess','histcache',5000)
     if not config.has_option('easyaccess','timeout'): configwrite = True ;config.set('easyaccess','timeout',900)
+    if not config.has_option('easyaccess','nullvalue'): configwrite = True ;config.set('easyaccess','nullvalue',-9999)
     
     if not config.has_section('display'):
         configwrite=True
