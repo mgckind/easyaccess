@@ -937,6 +937,7 @@ class easy_or(cmd.Cmd, object):
             prefetch       : Number of rows prefetched by Oracle, see --> help prefetch 
             histcache      : Length of the history of commands
             timeout        : Timeout for a query to be printed on the screen. Doesn't apply to output files
+            nullvalue      : value to replace Null entries when writting a file (default = -9999)
             max_rows       : Max number of rows to display on the screen. Doesn't apply to output files
             width          : Width of the output format on the screen
             max_columns    : Max number of columsn to display on the screen. Doesn't apply to output files
@@ -981,6 +982,7 @@ class easy_or(cmd.Cmd, object):
             if key == 'timeout': self.timeout = self.config.getint('easyaccess', 'timeout')
             if key == 'prefetch': self.prefetch = self.config.get('easyaccess', 'prefetch')
             if key == 'loading_bar': self.loading_bar = self.config.getboolean('display', 'loading_bar')
+            if key == 'nullvalue': self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
             return 
         else:
             return self.do_help('config')
