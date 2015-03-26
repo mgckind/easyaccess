@@ -17,6 +17,7 @@ configcomment="""#
 # histcache : The number of line in the history cache (when possible)
 # timeout   : The time in seconds before closing a connection for a query to print on screen
 #             If the results are redirected to a file there is not a timeout
+# nullvalue : The value used to replace null or empty entries when printing into a file
 """
 
 descomment="""#
