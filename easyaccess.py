@@ -88,6 +88,7 @@ options_def = ['Coma separated value', 'space separated value', 'Fits format', '
 options_config = ['all','database', 'editor', 'prefetch', 'histcache','timeout','max_rows','max_columns',
                 'width','color_terminal','loading_bar','filepath','nullvalue']
 options_config2 = ['show', 'set']
+options_app = ['check', 'submit']
 
 type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
 
@@ -200,7 +201,7 @@ class easy_or(cmd.Cmd, object):
         self.interactive = interactive
         self.undoc_header = None
         self.doc_header = colored(' *General Commands*', "cyan") + ' (type help <command>):'
-        self.docdb_header = colored('\n *DB Commands*', "cyan") + ' (type help <command>):'
+        self.docdb_header = colored('\n *DB Commands*', "cyan") + '      (type help <command>):'
         #connect to db  
         self.user = self.desconfig.get('db-' + self.dbname, 'user')
         self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
@@ -365,10 +366,13 @@ class easy_or(cmd.Cmd, object):
             self.print_topics(self.docdb_header, cmds_db, 15, 80)
             self.print_topics(self.misc_header, help.keys(), 15, 80)
             self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
-
-            print "\n* To run queries just add ; at the end of query"
-            print "* To write to a file after ; append > filename"
+            
+            print colored(' *Default Input*', 'cyan')
+            print '==================================================='
+            print "* To run SQL queries just add ; at the end of query"
+            print "* To write to a file  : select ... from ... where ... ; > filename"
             print "* Supported file formats (.csv, .tab., .fits, .h5) "
+            print "* To check SQL syntax : select ... from ... where ... ; < check"
             print 
             print "* To access an online tutorial type: online_tutorial "
 
@@ -471,6 +475,26 @@ class easy_or(cmd.Cmd, object):
             #with open('easy.buf', 'w') as filebuf:
             #filebuf.write(self.buff)
             query = line[:fend]
+            if line[fend:].find('<') > -1:
+                app = line[fend:].split('<')[1].strip().split()[0]
+                if app.find('check') > -1:
+                    print '\nChecking statement...'
+                    try:
+                        self.cur.parse(query)
+                        print colored('Ok!\n','green')
+                        return
+                    except:
+                        (type, value, traceback) = sys.exc_info()
+                        print
+                        print colored(type, "red")
+                        print colored(value, "red")
+                        print
+                        return
+                elif app.find('submit') > -1:
+                    print colored('\nTo be done: Submit jobs to the DB cluster','cyan')
+                    return
+                else:
+                    return
             if line[fend:].find('>') > -1:
                 try:
                     fileout = line[fend:].split('>')[1].strip().split()[0]
@@ -511,6 +535,12 @@ class easy_or(cmd.Cmd, object):
             if line[qstop:].find('>') > -1:
                 line = line[qstop + 1:]
                 return _complete_path(line)
+            if line[qstop:].find('<') > -1:
+                if text:
+                    return [option for option in options_app if option.startswith(text)]
+                else:
+                    return options_app
+
         if line[0] == '@':
             line = '@ ' + line[1:]
             return _complete_path(line)
