@@ -1,5 +1,5 @@
 # easyaccess
-![help_screen](help_screen.png)
+![help_screen](help_screenshot.png)
 
 Refactored version of trivialAccess for accessing the DES DB
 
