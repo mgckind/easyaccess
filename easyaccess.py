@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.0.7b'
+__version__ = '1.0.7'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
@@ -371,7 +371,7 @@ class easy_or(cmd.Cmd, object):
             print '==================================================='
             print "* To run SQL queries just add ; at the end of query"
             print "* To write to a file  : select ... from ... where ... ; > filename"
-            print "* Supported file formats (.csv, .tab., .fits, .h5) "
+            print colored("* Supported file formats (.csv, .tab., .fits, .h5) ","green")
             print "* To check SQL syntax : select ... from ... where ... ; < check"
             print 
             print "* To access an online tutorial type: online_tutorial "
