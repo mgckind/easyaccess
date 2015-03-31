@@ -1,5 +1,6 @@
 # easyaccess
 ![help_screen](help_screenshot.png)
+[[ help_screenshot.png | height = 600px ]]
 
 Refactored version of trivialAccess for accessing the DES DB
 
