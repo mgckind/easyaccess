@@ -1768,7 +1768,7 @@ if __name__ == '__main__':
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
     csv or fits format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
-    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet inizialization")
+    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization")
     args = parser.parse_args()
 
     if args.db is not None:
