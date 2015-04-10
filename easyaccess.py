@@ -587,7 +587,9 @@ class easy_or(cmd.Cmd, object):
                         break
                 t2 = time.time()
                 tt.cancel()
-                if self.loading_bar: self.pload.terminate()
+                if self.loading_bar:
+                    #self.pload.terminate()
+                    if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
                 self.do_clear(None)
                 print
                 if print_time: print colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
@@ -609,7 +611,9 @@ class easy_or(cmd.Cmd, object):
             else:
                 t2 = time.time()
                 tt.cancel()
-                if self.loading_bar: self.pload.terminate()
+                if self.loading_bar:
+                    #self.pload.terminate()
+                    if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
                 self.do_clear(None)
                 print colored(suc_arg, "green")
                 self.con.commit()
@@ -618,7 +622,9 @@ class easy_or(cmd.Cmd, object):
             (type, value, traceback) = sys.exc_info()
             self.con.cancel()
             t2 = time.time()
-            if self.loading_bar: self.pload.terminate()
+            if self.loading_bar:
+                #self.pload.terminate()
+                if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
             print
             print colored(type, "red")
             print colored(value, "red")
@@ -681,7 +687,9 @@ class easy_or(cmd.Cmd, object):
                     else:
                         break
                 t2 = time.time()
-                if self.loading_bar: self.pload.terminate()
+                if self.loading_bar:
+                    #self.pload.terminate()
+                    if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
                 elapsed = '%.1f seconds' % (t2 - t1)
                 print
                 if print_time: print colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
@@ -692,7 +700,9 @@ class easy_or(cmd.Cmd, object):
             print
         except:
             (type, value, traceback) = sys.exc_info()
-            if self.loading_bar:  self.pload.terminate()
+            if self.loading_bar:
+                #self.pload.terminate()
+                if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
             print
             print colored(type, "red")
             print colored(value, "red")
