@@ -1470,6 +1470,9 @@ class easy_or(cmd.Cmd, object):
                         print colored(
                             '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
                             "cyan")
+                        print
+                        print colored('To make this table public run:', "blue", 'on_white') , '\n'
+                        print colored('   grant select on %s to DES_READER; ' % table.upper() , "blue", 'on_white'),'\n'
                         del DF
                     except:
                         (type, value, traceback) = sys.exc_info()
@@ -1541,6 +1544,9 @@ class easy_or(cmd.Cmd, object):
                         print colored(
                             '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
                             "cyan")
+                        print
+                        print colored('To make this table public run:', "blue", 'on_white') , '\n'
+                        print colored('   grant select on %s to DES_READER; ' % table.upper() , "blue", 'on_white'),'\n'
                         DF.close()
                         del DF
                     except:
