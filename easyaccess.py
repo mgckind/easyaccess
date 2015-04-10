@@ -231,7 +231,7 @@ class easy_or(cmd.Cmd, object):
     def handler(self,signum, frame):
         print 'Ctrl+Z pressed'
         print 'Job = %d Stopped' % pid
-        print colored(' * Type bg to send this job to the backgroud *', 'cyan')
+        print colored(' * Type bg to send this job to the background *', 'cyan')
         print colored(' * Type fg to bring this job to the foreground *', 'cyan')
         print
         os.kill(pid,signal.SIGSTOP)
@@ -426,7 +426,7 @@ class easy_or(cmd.Cmd, object):
 
     def precmd(self, line):
         """ This method is called after the line has been input but before
-             it has been interpreted. If you want to modifdy the input line
+             it has been interpreted. If you want to modify the input line
              before execution (for example, variable substitution) do it here.
          """
 
@@ -967,10 +967,10 @@ class easy_or(cmd.Cmd, object):
             prefetch       : Number of rows prefetched by Oracle, see --> help prefetch 
             histcache      : Length of the history of commands
             timeout        : Timeout for a query to be printed on the screen. Doesn't apply to output files
-            nullvalue      : value to replace Null entries when writting a file (default = -9999)
+            nullvalue      : value to replace Null entries when writing a file (default = -9999)
             max_rows       : Max number of rows to display on the screen. Doesn't apply to output files
             width          : Width of the output format on the screen
-            max_columns    : Max number of columsn to display on the screen. Doesn't apply to output files
+            max_columns    : Max number of columns to display on the screen. Doesn't apply to output files
             color_terminal : yes/no toggles the color for terminal std output. Need to restart easyaccess
             loading_bar    : yes/no toggles the loading bar. Useful for background jobs  
         """
@@ -1086,7 +1086,7 @@ class easy_or(cmd.Cmd, object):
         """DB:Refreshes meta data cache for auto-completion of table names and column names """
 
         # Meta data access: With the two linked databases, accessing the
-        # "truth" via fgetmetadata has become maddenly slow.
+        # "truth" via fgetmetadata has become very slow.
         # what it returns is a function of each users's permissions, and their
         # "mydb". so yet another level of caching is needed. Ta loads a table
         # called fgottenmetadata in the user's mydb. It refreshes on command
@@ -1760,7 +1760,7 @@ if __name__ == '__main__':
             readline.read_history_file(history_file)
             readline.set_history_length(conf.getint('easyaccess', 'histcache'))
         except:
-            'Print readline might give problems accesing the history of commands'
+            'Print readline might give problems accessing the history of commands'
 
     parser = MyParser(description='Easy Access to the DES DB. There is a configuration file located in %s for more customizable options' % config_file, version="version: %s" % __version__)
     parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
