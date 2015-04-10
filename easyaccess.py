@@ -1479,7 +1479,7 @@ class easy_or(cmd.Cmd, object):
                         print
                         return
                     return
-                elif format == 'fits':
+                elif format == 'fits' or format=='fit':
                     try:
                         DF = pf.open(line)
                     except:
