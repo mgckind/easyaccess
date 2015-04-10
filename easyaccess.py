@@ -1497,7 +1497,7 @@ class easy_or(cmd.Cmd, object):
                         col_n.append(col.name)
                         if col.format.find('A') > -1:
                             if col.format == 'A':
-                                qtable+= 'VARCHAR2(1),'
+                                qtable += col.name + ' VARCHAR2(1),'
                             else:
                                 qtable += col.name + ' ' + 'VARCHAR2(' + str(int(col.format.replace('A', ''))) + '),'
                         elif col.format == 'I':
