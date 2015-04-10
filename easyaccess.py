@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.0.7'
+__version__ = '1.0.8a'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
@@ -1496,7 +1496,10 @@ class easy_or(cmd.Cmd, object):
                     for col in DF[1].columns:
                         col_n.append(col.name)
                         if col.format.find('A') > -1:
-                            qtable += col.name + ' ' + 'VARCHAR2(' + str(int(col.format.replace('A', ''))) + '),'
+                            if col.format == 'A':
+                                qtable+= 'VARCHAR2(1),'
+                            else:
+                                qtable += col.name + ' ' + 'VARCHAR2(' + str(int(col.format.replace('A', ''))) + '),'
                         elif col.format == 'I':
                             qtable += col.name + ' NUMBER(6,0),'
                         elif col.format == 'J':
