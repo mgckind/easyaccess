@@ -27,3 +27,6 @@ v1.0.7, 2015-MAR-31 -- Null and NaN values fixed and customizable (config nullva
                        It will print 'Null' on the screen but nullvalue on the files
                     -- Added a SQL syntax checker (<SQL query> ; < check)
                     -- Reformatted help 
+v1.0.8, 2015-XXX-XX -- Fixed bug with single character for fits ('A' and 'A1' are valid)
+                    -- Fix enconding, loading bar termination, added message after loading table
+
