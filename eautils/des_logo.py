@@ -9,13 +9,13 @@ except:
 def noc(line,color):
     return line
 def print_deslogo(color=True):
-    char0=u"\u203E"
-    char1=u"\u203E"
-    char2=u"\u00B4"
+    char0 = u"\u203E"
+    char1 = u"\u203E"
+    char2 = u"\u00B4"
     if sys.stdout.encoding != 'UTF-8':
-        char0=' '
-        char1='-'
-        char2='`'
+        char0 = ' '
+        char1 = '-'
+        char2 = '`'
     if color:
         c2=c
     else:
