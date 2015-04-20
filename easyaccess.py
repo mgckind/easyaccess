@@ -58,7 +58,7 @@ if os.path.exists(desfile):
 
 def loading():
     char_s=u"\u2606"
-    if sys.stdout.encondig != 'UTF-8': char_s = "o"
+    if sys.stdout.enconding != 'UTF-8': char_s = "o"
     print
     cc = 0
     spinner = itertools.cycle(range(13)+range(1,14,1)[::-1])
