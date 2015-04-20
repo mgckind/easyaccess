@@ -1686,6 +1686,7 @@ def to_pandas(cur):
 
 class connect():
     def __init__(self, section='', quiet=False):
+        self.quiet=quiet
         conf = config_mod.get_config(config_file)
         pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
         pd.set_option('display.width', conf.getint('display', 'width'))
@@ -1708,7 +1709,7 @@ class connect():
         connected = False
         for tries in range(3):
             try:
-                self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+                self.Connection = cx_Oracle.connect(self.user, self.password, dsn=dsn)
                 connected = True
                 break
             except Exception as e:
@@ -1722,18 +1723,18 @@ class connect():
 
     def ping(self):
         try:
-            self.con.ping()
-            if not quiet :print 'Still connected to DB'
+            self.Connection.ping()
+            if not self.quiet :print 'Still connected to DB'
         except:
-            if not quiet :print 'Connection with DB lost'
+            if not self.quiet :print 'Connection with DB lost'
 
     def cursor(self):
-        cursor = self.con.cursor()
+        cursor = self.Connection.cursor()
         cursor.arraysize = self.prefetch
         return cursor
 
     def close(self):
-        self.con.close()
+        self.Connection.close()
 
 
 ##################################################
