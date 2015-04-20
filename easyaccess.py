@@ -57,6 +57,8 @@ if os.path.exists(desfile):
 
 
 def loading():
+    char_s=u"\u2606"
+    if sys.stdout.encondig != 'UTF-8': char_s = "o"
     print
     cc = 0
     spinner = itertools.cycle(range(13)+range(1,14,1)[::-1])
@@ -66,7 +68,7 @@ def loading():
             line = list('    |              |')
             time.sleep(0.1)
             idx = int(spinner.next())
-            line[5 + idx] = u"\u2606"
+            line[5 + idx] = char_s
             sys.stdout.write("".join(line))
             sys.stdout.write(line2)
             sys.stdout.flush()
