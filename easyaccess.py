@@ -89,7 +89,7 @@ options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
 options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
-options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'fits_max_mb', 'max_rows',
+options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
                   'width', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue']
 options_config2 = ['show', 'set']
@@ -148,7 +148,7 @@ def change_type(info):
             return "int32"
         elif info[5] == 0 and info[4] >= 1:
             return "int8"
-        elif info[5] > 0 and info[5] <= 5:
+        elif 0 < info[5] <= 5:
             return "float32"
         else:
             return "float64"
@@ -165,13 +165,12 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
     # build the dtypes...
     dtypes = []
     for col in df:
-        type_df = df[col].dtype.name
-    if col in listN:
-        fmt = listT[listN.index(col)]
-    else:
-        fmt = df[col].dtype.name
+        if col in listN:
+            fmt = listT[listN.index(col)]
+        else:
+            fmt = df[col].dtype.name
 
-    dtypes.append((col, fmt))
+        dtypes.append((col, fmt))
 
     # create the numpy array to write
     arr = np.zeros(len(df.index), dtype=dtypes)
@@ -184,6 +183,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
     if mode == 'w':
         # assume that this is smaller than the max size!
         fitsio.write(fitsfile, arr, clobber=True)
+        return fileindex
     elif mode == 'a':
         # what is the actual name of the current file?
         fileparts = fitsfile.split('.fits')
@@ -209,11 +209,13 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
             thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
 
             fitsio.write(thisfile, arr, clobber=True)
+            return fileindex
         else:
             # just append
             fits = fitsio.FITS(thisfile, mode='rw')
             fits[1].append(arr)
             fits.close()
+            return fileindex
 
     else:
         raise Exception("Illegal write mode!")
@@ -236,7 +238,7 @@ class easy_or(cmd.Cmd, object):
         self.prefetch = self.config.getint('easyaccess', 'prefetch')
         self.loading_bar = self.config.getboolean('display', 'loading_bar')
         self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
-        self.fits_max_mb = self.config.getint('easyaccess', 'fits_max_mb')
+        self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
         self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
@@ -504,7 +506,7 @@ class easy_or(cmd.Cmd, object):
 
 
         # support model_query Get
-        #self.prompt = self.savePrompt
+        # self.prompt = self.savePrompt
 
         self._hist += [line.strip()]
         return line
@@ -516,7 +518,7 @@ class easy_or(cmd.Cmd, object):
         fend = line.find(';')
         if fend > -1:
             # with open('easy.buf', 'w') as filebuf:
-            #filebuf.write(self.buff)
+            # filebuf.write(self.buff)
             query = line[:fend]
             if line[fend:].find('<') > -1:
                 app = line[fend:].split('<')[1].strip().split()[0]
@@ -614,7 +616,7 @@ class easy_or(cmd.Cmd, object):
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[1:6] for rec in self.cur.description]
-                #data = pd.DataFrame(self.cur.fetchall())
+                # data = pd.DataFrame(self.cur.fetchall())
                 data = pd.DataFrame(self.cur.fetchmany())
                 while True:
                     if data.empty: break
@@ -656,7 +658,7 @@ class easy_or(cmd.Cmd, object):
                 t2 = time.time()
                 tt.cancel()
                 if self.loading_bar:
-                    #self.pload.terminate()
+                    # self.pload.terminate()
                     if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 self.do_clear(None)
                 print colored(suc_arg, "green")
@@ -667,7 +669,7 @@ class easy_or(cmd.Cmd, object):
             self.con.cancel()
             t2 = time.time()
             if self.loading_bar:
-                #self.pload.terminate()
+                # self.pload.terminate()
                 if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
             print
             print colored(type, "red")
@@ -681,6 +683,7 @@ class easy_or(cmd.Cmd, object):
 
 
     def query_and_save(self, query, fileout, mode='csv', print_time=True):
+        fileout_original = fileout
         self.cur.arraysize = self.prefetch
         t1 = time.time()
         if self.loading_bar: self.pload = Process(target=loading)
@@ -719,14 +722,46 @@ class easy_or(cmd.Cmd, object):
                         for jj, col in enumerate(data):
                             nt = change_type(info[jj])
                             if nt != "": data[col] = data[col].astype(nt)
+
+                        if mode_write == 'a' and mode in ('csv', 'tab', 'h5'):
+                            fileparts = fileout_original.split('.' + mode)
+                            if (fileindex == 1):
+                                thisfile = fileout_original
+                            else:
+                                thisfile = '%s_%06d.%s' % (fileparts[0], fileindex, mode)
+
+                            # check the size of the current file
+                            size = float(os.path.getsize(thisfile)) / (2. ** 20)
+
+                            if (size > self.outfile_max_mb):
+                                # it's time to increment
+                                if (fileindex == 1):
+                                    # this is the first one ... it needs to be moved
+                                    # we're doing a 1-index thing here, because...
+                                    os.rename(fileout_original, '%s_%06d.%s' % ( fileparts[0], fileindex, mode))
+
+                                # and make a new filename, after incrementing
+                                fileindex += 1
+
+                                thisfile = '%s_%06d.%s' % (fileparts[0], fileindex, mode)
+                                fileout = thisfile
+                                mode_write = 'w'
+                                header_out = True
+                                first = True
+
+                            else:
+                                fileout = thisfile
+                                header_out = False
+
                         if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.8f', sep=',',
                                                       mode=mode_write, header=header_out)
                         if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.8f', sep=' ',
                                                       mode=mode_write, header=header_out)
                         if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False,
-                                                      header=header_out)  #, complevel=9,complib='bzip2'
-                        if mode == 'fits': write_to_fits(data, fileout, fileindex, mode=mode_write, listN=list_names,
-                                                         listT=list_type, fits_max_mb=self.fits_max_mb)
+                                                      header=header_out)  # , complevel=9,complib='bzip2'
+                        if mode == 'fits': fileindex = write_to_fits(data, fileout, fileindex, mode=mode_write,
+                                                                     listN=list_names,
+                                                                     listT=list_type, fits_max_mb=self.outfile_max_mb)
                         if first:
                             mode_write = 'a'
                             header_out = False
@@ -735,7 +770,7 @@ class easy_or(cmd.Cmd, object):
                         break
                 t2 = time.time()
                 if self.loading_bar:
-                    #self.pload.terminate()
+                    # self.pload.terminate()
                     if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 elapsed = '%.1f seconds' % (t2 - t1)
                 print
@@ -748,7 +783,7 @@ class easy_or(cmd.Cmd, object):
         except:
             (type, value, traceback) = sys.exc_info()
             if self.loading_bar:
-                #self.pload.terminate()
+                # self.pload.terminate()
                 if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
             print
             print colored(type, "red")
@@ -788,7 +823,7 @@ class easy_or(cmd.Cmd, object):
         if len(tnames) > 0:
             print colored('\nPublic tables from %s' % user.upper(), "cyan")
             print tnames
-            #Add tname to cache (no longer needed)
+            # Add tname to cache (no longer needed)
             #table_list=tnames.values.flatten().tolist()
             #for table in table_list:
             #    tn=user.upper()+'.'+table.upper()
@@ -847,7 +882,7 @@ class easy_or(cmd.Cmd, object):
         return col_list
 
 
-    ## DO METHODS
+    # # DO METHODS
     def do_prefetch(self, line):
         """
         Shows, sets or sets to default the number of prefetch rows from Oracle
@@ -1019,18 +1054,18 @@ class easy_or(cmd.Cmd, object):
             - config filepath: Prints the path to the config file
 
         Parameters:
-            database       : Default DB to connect to
-            editor         : Editor for editing sql queries, see --> help edit
-            prefetch       : Number of rows prefetched by Oracle, see --> help prefetch 
-            histcache      : Length of the history of commands
-            timeout        : Timeout for a query to be printed on the screen. Doesn't apply to output files
-            nullvalue      : value to replace Null entries when writing a file (default = -9999)
-            fits_max_mb    : Max size of each fits file in MB
-            max_rows       : Max number of rows to display on the screen. Doesn't apply to output files
-            width          : Width of the output format on the screen
-            max_columns    : Max number of columns to display on the screen. Doesn't apply to output files
-            color_terminal : yes/no toggles the color for terminal std output. Need to restart easyaccess
-            loading_bar    : yes/no toggles the loading bar. Useful for background jobs  
+            database          : Default DB to connect to
+            editor            : Editor for editing sql queries, see --> help edit
+            prefetch          : Number of rows prefetched by Oracle, see --> help prefetch
+            histcache         : Length of the history of commands
+            timeout           : Timeout for a query to be printed on the screen. Doesn't apply to output files
+            nullvalue         : value to replace Null entries when writing a file (default = -9999)
+            outfile_max_mb    : Max size of each fits file in MB
+            max_rows          : Max number of rows to display on the screen. Doesn't apply to output files
+            width             : Width of the output format on the screen
+            max_columns       : Max number of columns to display on the screen. Doesn't apply to output files
+            color_terminal    : yes/no toggles the color for terminal std output. Need to restart easyaccess
+            loading_bar       : yes/no toggles the loading bar. Useful for background jobs
         """
         if line == '': return self.do_help('config')
         oneline = "".join(line.split())
@@ -1058,7 +1093,7 @@ class easy_or(cmd.Cmd, object):
             key = oneline.split('set')[0]
             val = oneline.split('set')[1]
             if val == '': return self.do_help('config')
-            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'fits_max_mb',
+            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
                         'nullvalue', 'loading_bar']
             #if key in int_keys: val=int(val) 
             for section in (self.config.sections()):
@@ -1072,7 +1107,7 @@ class easy_or(cmd.Cmd, object):
             if key == 'prefetch': self.prefetch = self.config.get('easyaccess', 'prefetch')
             if key == 'loading_bar': self.loading_bar = self.config.getboolean('display', 'loading_bar')
             if key == 'nullvalue': self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
-            if key == 'fits_max_mb': self.fits_max_mb = self.config.getint('easyaccess', 'fits_max_mb')
+            if key == 'outfile_max_mb': self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
             return
         else:
             return self.do_help('config')
@@ -1565,17 +1600,18 @@ class easy_or(cmd.Cmd, object):
                             # string type
                             qtable += '%s VARCHAR2(%d),' % (col_n[i], dtypes[i].itemsize)
                         elif (dtypes[i].kind == 'i'):
-                            if (dtypes[i].itemsize == 2):
+                            if (dtypes[i].itemsize == 1):
+                                # 1-byte (16 bit) integer
+                                qtable += '%s NUMBER(2,0),' % (col_n[i])
+                            elif (dtypes[i].itemsize == 2):
                                 # 2-byte (16 bit) integer
                                 qtable += '%s NUMBER(6,0),' % (col_n[i])
                             elif (dtypes[i].itemsize == 4):
                                 # 4-byte (32 bit) integer
                                 qtable += '%s NUMBER(11,0),' % (col_n[i])
-                            elif (dtypes[i].itemsize == 8):
+                            else (dtypes[i].itemsize == 8):
                                 # 8-byte (64 bit) integer
                                 qtable += '%s NUMBER,' % (col_n[i])
-                            else:
-                                raise ValueError("Unsupported integer type")
                         elif (dtypes[i].kind == 'f'):
                             if (dtypes[i].itemsize == 4):
                                 # 4-byte (32 bit) float

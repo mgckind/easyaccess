@@ -9,16 +9,16 @@ import os
 configcomment = """#
 # Easyaccess default parameters
 # 
-# database    : Default is dessci, change to desoper, destest and others
-#               Make sure the db-"database" section is in the .desservices.ini
-# editor      : Deafault editor to open from inside easyaccess if $EDITOR is not set
-# prefetch    : Prefetch number of rows to get from oracle (not the number of total rows)
-#             : This determine the number of trips to the DB to get all results from query
-# histcache   : The number of line in the history cache (when possible)
-# timeout     : The time in seconds before closing a connection for a query to print on screen
-#               If the results are redirected to a file there is not a timeout
-# nullvalue   : The value used to replace null or empty entries when printing into a file
-# fits_max_mb : Max size of each fits file in MB
+# database       : Default is dessci, change to desoper, destest and others
+#                  Make sure the db-"database" section is in the .desservices.ini
+# editor         : Deafault editor to open from inside easyaccess if $EDITOR is not set
+# prefetch       : Prefetch number of rows to get from oracle (not the number of total rows)
+#                : This determine the number of trips to the DB to get all results from query
+# histcache      : The number of line in the history cache (when possible)
+# timeout        : The time in seconds before closing a connection for a query to print on screen
+#                  If the results are redirected to a file there is not a timeout
+# nullvalue      : The value used to replace null or empty entries when printing into a file
+# outfile_max_mb : Max size of each fits file in MB (default 1GB)
 """
 
 descomment = """#
@@ -50,7 +50,8 @@ def get_config(configfile):
     if not config.has_option('easyaccess', 'histcache'): configwrite = True;config.set('easyaccess', 'histcache', 5000)
     if not config.has_option('easyaccess', 'timeout'): configwrite = True;config.set('easyaccess', 'timeout', 900)
     if not config.has_option('easyaccess', 'nullvalue'): configwrite = True;config.set('easyaccess', 'nullvalue', -9999)
-    if not config.has_option('easyaccess', 'fits_max_mb'): configwrite = True;config.set('easyaccess', 'fits_max_mb',
+    if not config.has_option('easyaccess', 'outfile_max_mb'): configwrite = True;config.set('easyaccess',
+                                                                                            'outfile_max_mb',
                                                                                          1000)
 
     if not config.has_section('display'):
