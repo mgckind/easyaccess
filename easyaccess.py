@@ -37,7 +37,7 @@ from multiprocessing import Pool, Process
 import webbrowser
 import signal
 
-pid=os.getpid()
+pid = os.getpid()
 
 # FILES
 ea_path = os.path.join(os.environ["HOME"], ".easyacess/")
@@ -55,14 +55,13 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
 
-
 def loading():
-    char_s=u"\u2606"
+    char_s = u"\u2606"
     if sys.stdout.encoding != 'UTF-8':
         char_s = "o"
     print
     cc = 0
-    spinner = itertools.cycle(range(13)+range(1,14,1)[::-1])
+    spinner = itertools.cycle(range(13) + range(1, 14, 1)[::-1])
     line2 = "  Press Ctrl-C to abort"
     try:
         while True:
@@ -88,8 +87,8 @@ options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
 options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
-options_config = ['all','database', 'editor', 'prefetch', 'histcache','timeout','max_rows','max_columns',
-                'width','color_terminal','loading_bar','filepath','nullvalue']
+options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'max_rows', 'max_columns',
+                  'width', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit']
 
@@ -134,7 +133,7 @@ def read_buf(fbuf):
     for line in list:
         if line[0:2] == '--': continue
         newquery += ' ' + line.split('--')[0]
-    #newquery = newquery.split(';')[0]
+    # newquery = newquery.split(';')[0]
     return newquery
 
 
@@ -187,7 +186,9 @@ class easy_or(cmd.Cmd, object):
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
-        self.intro = colored("\neasyaccess  %s. The DESDM Database shell. \n* Type help or ? to list commands. *\n" % __version__, "cyan")
+        self.intro = colored(
+            "\neasyaccess  %s. The DESDM Database shell. \n* Type help or ? to list commands. *\n" % __version__,
+            "cyan")
         self.writeconfig = False
         self.config = conf
         self.quiet = quiet
@@ -205,7 +206,7 @@ class easy_or(cmd.Cmd, object):
         self.undoc_header = None
         self.doc_header = colored(' *General Commands*', "cyan") + ' (type help <command>):'
         self.docdb_header = colored('\n *DB Commands*', "cyan") + '      (type help <command>):'
-        #connect to db  
+        # connect to db
         self.user = self.desconfig.get('db-' + self.dbname, 'user')
         self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
         self.port = self.desconfig.get('db-' + self.dbname, 'port')
@@ -231,22 +232,22 @@ class easy_or(cmd.Cmd, object):
         self.cur.arraysize = self.prefetch
 
 
-    def handler(self,signum, frame):
+    def handler(self, signum, frame):
         print 'Ctrl+Z pressed'
         print 'Job = %d Stopped' % pid
         print colored(' * Type bg to send this job to the background *', 'cyan')
         print colored(' * Type fg to bring this job to the foreground *', 'cyan')
         print
-        os.kill(pid,signal.SIGSTOP)
+        os.kill(pid, signal.SIGSTOP)
         try:
             if self.loading_bar:
-                if self.pload.pid != None: 
-                    os.kill(self.pload.pid,signal.SIGKILL)
+                if self.pload.pid != None:
+                    os.kill(self.pload.pid, signal.SIGKILL)
         except AttributeError:
             pass
-    
 
-    ### OVERRIDE CMD METHODS
+
+    # ## OVERRIDE CMD METHODS
 
     def cmdloop(self, intro=None):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
@@ -262,7 +263,7 @@ class easy_or(cmd.Cmd, object):
 
                 self.old_completer = readline.get_completer()
                 readline.set_completer(self.complete)
-                #readline.parse_and_bind(self.completekey+": complete")
+                # readline.parse_and_bind(self.completekey+": complete")
                 if 'libedit' in readline.__doc__:
                     # readline linked to BSD libedit
                     if self.completekey == 'tab':
@@ -369,14 +370,14 @@ class easy_or(cmd.Cmd, object):
             self.print_topics(self.docdb_header, cmds_db, 15, 80)
             self.print_topics(self.misc_header, help.keys(), 15, 80)
             self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
-            
+
             print colored(' *Default Input*', 'cyan')
             print '==================================================='
             print "* To run SQL queries just add ; at the end of query"
             print "* To write to a file  : select ... from ... where ... ; > filename"
-            print colored("* Supported file formats (.csv, .tab., .fits, .h5) ","green")
+            print colored("* Supported file formats (.csv, .tab., .fits, .h5) ", "green")
             print "* To check SQL syntax : select ... from ... where ... ; < check"
-            print 
+            print
             print "* To access an online tutorial type: online_tutorial "
 
 
@@ -413,11 +414,11 @@ class easy_or(cmd.Cmd, object):
             query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
             self.cur.execute(query_2)
 
-        if not self.quiet : print 'Loading metadata into cache...'
+        if not self.quiet: print 'Loading metadata into cache...'
         self.cache_table_names = self.get_tables_names()
         self.cache_usernames = self.get_userlist()
         self.cache_column_names = self.get_columnlist()
-        #history
+        # history
         ht = open(history_file, 'r')
         Allq = ht.readlines()
         ht.close()
@@ -444,7 +445,7 @@ class easy_or(cmd.Cmd, object):
             self.buff += '\n' + temp
             line += temp
 
-        #self.prompt = self.savePrompt
+        # self.prompt = self.savePrompt
 
         if not line: return ""  # empty line no need to go further
         if line[0] == "@":
@@ -458,7 +459,7 @@ class easy_or(cmd.Cmd, object):
                 print '@ must be followed by a filename'
                 return ""
         if line[0] == '.':
-            if len(line) ==1:
+            if len(line) == 1:
                 self.do_clear(None)
                 return ""
 
@@ -475,7 +476,7 @@ class easy_or(cmd.Cmd, object):
     def default(self, line):
         fend = line.find(';')
         if fend > -1:
-            #with open('easy.buf', 'w') as filebuf:
+            # with open('easy.buf', 'w') as filebuf:
             #filebuf.write(self.buff)
             query = line[:fend]
             if line[fend:].find('<') > -1:
@@ -484,7 +485,7 @@ class easy_or(cmd.Cmd, object):
                     print '\nChecking statement...'
                     try:
                         self.cur.parse(query)
-                        print colored('Ok!\n','green')
+                        print colored('Ok!\n', 'green')
                         return
                     except:
                         (type, value, traceback) = sys.exc_info()
@@ -494,7 +495,7 @@ class easy_or(cmd.Cmd, object):
                         print
                         return
                 elif app.find('submit') > -1:
-                    print colored('\nTo be done: Submit jobs to the DB cluster','cyan')
+                    print colored('\nTo be done: Submit jobs to the DB cluster', 'cyan')
                     return
                 else:
                     return
@@ -548,7 +549,7 @@ class easy_or(cmd.Cmd, object):
             line = '@ ' + line[1:]
             return _complete_path(line)
         if line.upper().find('SELECT') > -1:
-            #return self._complete_colnames(text)
+            # return self._complete_colnames(text)
             if line.upper().find('FROM') == -1:
                 return self._complete_colnames(text)
             elif line.upper().find('FROM') > -1 and line.upper().find('WHERE') == -1:
@@ -559,7 +560,7 @@ class easy_or(cmd.Cmd, object):
             return self._complete_tables(text)
 
 
-    ### QUERY METHODS
+    # ## QUERY METHODS
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra=""):
         self.cur.arraysize = self.prefetch
@@ -577,22 +578,23 @@ class easy_or(cmd.Cmd, object):
                 #data = pd.DataFrame(self.cur.fetchall())
                 data = pd.DataFrame(self.cur.fetchmany())
                 while True:
-                    if data.empty : break
-                    rowline= '   Rows : %d, Avg time (rows/sec): %.1f '  % (self.cur.rowcount, self.cur.rowcount*1./(time.time()-t1))
-                    if self.loading_bar: sys.stdout.write(colored(rowline,'yellow'))
+                    if data.empty: break
+                    rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
+                        self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
+                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
                     if self.loading_bar: sys.stdout.flush()
-                    if self.loading_bar: sys.stdout.write('\b'*len(rowline)) 
-                    if self.loading_bar:sys.stdout.flush()
+                    if self.loading_bar: sys.stdout.write('\b' * len(rowline))
+                    if self.loading_bar: sys.stdout.flush()
                     temp = pd.DataFrame(self.cur.fetchmany())
                     if not temp.empty:
-                        data=data.append(temp, ignore_index=True)
+                        data = data.append(temp, ignore_index=True)
                     else:
                         break
                 t2 = time.time()
                 tt.cancel()
                 if self.loading_bar:
                     #self.pload.terminate()
-                    if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
+                    if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 self.do_clear(None)
                 print
                 if print_time: print colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
@@ -609,14 +611,14 @@ class easy_or(cmd.Cmd, object):
                     data.index += 1
                     if extra != "":
                         print colored(extra + '\n', "cyan")
-                    data.fillna('Null',inplace=True)
+                    data.fillna('Null', inplace=True)
                     print data
             else:
                 t2 = time.time()
                 tt.cancel()
                 if self.loading_bar:
                     #self.pload.terminate()
-                    if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
+                    if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 self.do_clear(None)
                 print colored(suc_arg, "green")
                 self.con.commit()
@@ -627,7 +629,7 @@ class easy_or(cmd.Cmd, object):
             t2 = time.time()
             if self.loading_bar:
                 #self.pload.terminate()
-                if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
+                if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
             print
             print colored(type, "red")
             print colored(value, "red")
@@ -656,11 +658,12 @@ class easy_or(cmd.Cmd, object):
                 com_it = 0
                 while True:
                     data = pd.DataFrame(self.cur.fetchmany())
-                    rowline= '   Rows : %d, Avg time (rows/sec): %.1f '  % (self.cur.rowcount, self.cur.rowcount*1./(time.time()-t1))
-                    if self.loading_bar: sys.stdout.write(colored(rowline,'yellow'))
+                    rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
+                        self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
+                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
                     if self.loading_bar: sys.stdout.flush()
-                    if self.loading_bar: sys.stdout.write('\b'*len(rowline)) 
-                    if self.loading_bar:sys.stdout.flush()
+                    if self.loading_bar: sys.stdout.write('\b' * len(rowline))
+                    if self.loading_bar: sys.stdout.flush()
                     com_it += 1
                     if first:
                         list_names = []
@@ -671,7 +674,7 @@ class easy_or(cmd.Cmd, object):
                                 list_type.append(str(inf[3]) + 'A')
                     if not data.empty:
                         data.columns = header
-                        data.fillna(self.nullvalue,inplace=True)
+                        data.fillna(self.nullvalue, inplace=True)
                         for jj, col in enumerate(data):
                             nt = change_type(info[jj])
                             if nt != "": data[col] = data[col].astype(nt)
@@ -692,7 +695,7 @@ class easy_or(cmd.Cmd, object):
                 t2 = time.time()
                 if self.loading_bar:
                     #self.pload.terminate()
-                    if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
+                    if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 elapsed = '%.1f seconds' % (t2 - t1)
                 print
                 if print_time: print colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
@@ -705,7 +708,7 @@ class easy_or(cmd.Cmd, object):
             (type, value, traceback) = sys.exc_info()
             if self.loading_bar:
                 #self.pload.terminate()
-                if self.pload.pid != None: os.kill(self.pload.pid,signal.SIGKILL)
+                if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
             print
             print colored(type, "red")
             print colored(value, "red")
@@ -992,17 +995,17 @@ class easy_or(cmd.Cmd, object):
         if oneline.find('show') > -1:
             key = oneline.split('show')[0]
             for section in (self.config.sections()):
-                if key == 'all' :
-                    for key0,val in self.config.items(section):
-                        strr='Current value for %s' % key0
-                        strr=strr.ljust(32)
+                if key == 'all':
+                    for key0, val in self.config.items(section):
+                        strr = 'Current value for %s' % key0
+                        strr = strr.ljust(32)
                         print '\n%s = %s ' % (strr, val)
                 elif key == 'filepath':
                     print '\n config file path = %s\n' % config_file
                     return
                 else:
-                    if self.config.has_option(section,key):
-                        print '\nCurrent value for %s = %s ' % (key, self.config.get(section,key))
+                    if self.config.has_option(section, key):
+                        print '\nCurrent value for %s = %s ' % (key, self.config.get(section, key))
                         break
             print
         elif oneline.find('filepath') > -1:
@@ -1012,11 +1015,11 @@ class easy_or(cmd.Cmd, object):
                 return self.do_help('config')
             key = oneline.split('set')[0]
             val = oneline.split('set')[1]
-            if val =='': return self.do_help('config')
-            int_keys=['prefetch','histcache','timeout','max_rows','width','max_columns']
+            if val == '': return self.do_help('config')
+            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns']
             #if key in int_keys: val=int(val) 
             for section in (self.config.sections()):
-                if self.config.has_option(section,key):
+                if self.config.has_option(section, key):
                     self.config.set(section, key, val)
                     self.writeconfig = True
                     break
@@ -1026,24 +1029,23 @@ class easy_or(cmd.Cmd, object):
             if key == 'prefetch': self.prefetch = self.config.get('easyaccess', 'prefetch')
             if key == 'loading_bar': self.loading_bar = self.config.getboolean('display', 'loading_bar')
             if key == 'nullvalue': self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
-            return 
+            return
         else:
             return self.do_help('config')
 
     def complete_config(self, text, line, start_index, end_index):
-        line2=' '.join(line.split())
-        args=line2.split()
+        line2 = ' '.join(line.split())
+        args = line2.split()
         if text:
-            if  len(args) > 2:
+            if len(args) > 2:
                 return [option for option in options_config2 if option.startswith(text)]
             else:
                 return [option for option in options_config if option.startswith(text)]
         else:
-            if  len(args) > 1:
+            if len(args) > 1:
                 return options_config2
             else:
                 return options_config
-
 
 
     #DO METHODS FOR DB
@@ -1484,8 +1486,8 @@ class easy_or(cmd.Cmd, object):
                             '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
                             "cyan")
                         print
-                        print colored('To make this table public run:', "blue", 'on_white') , '\n'
-                        print colored('   grant select on %s to DES_READER; ' % table.upper() , "blue", 'on_white'),'\n'
+                        print colored('To make this table public run:', "blue", 'on_white'), '\n'
+                        print colored('   grant select on %s to DES_READER; ' % table.upper(), "blue", 'on_white'), '\n'
                         del DF
                     except:
                         (type, value, traceback) = sys.exc_info()
@@ -1495,7 +1497,7 @@ class easy_or(cmd.Cmd, object):
                         print
                         return
                     return
-                elif format == 'fits' or format=='fit':
+                elif format == 'fits' or format == 'fit':
                     try:
                         DF = pf.open(line)
                     except:
@@ -1558,8 +1560,8 @@ class easy_or(cmd.Cmd, object):
                             '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
                             "cyan")
                         print
-                        print colored('To make this table public run:', "blue", 'on_white') , '\n'
-                        print colored('   grant select on %s to DES_READER; ' % table.upper() , "blue", 'on_white'),'\n'
+                        print colored('To make this table public run:', "blue", 'on_white'), '\n'
+                        print colored('   grant select on %s to DES_READER; ' % table.upper(), "blue", 'on_white'), '\n'
                         DF.close()
                         del DF
                     except:
@@ -1667,12 +1669,13 @@ class easy_or(cmd.Cmd, object):
     def do_clean_history(self, line):
         if readline_present: readline.clear_history()
 
-    def do_online_tutorial(self,line):
-        tut=webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')   
+    def do_online_tutorial(self, line):
+        tut = webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
 
 
+        ##################################################
 
-##################################################
+
 def to_pandas(cur):
     """
     Returns a pandas DataFrame from a executed query 
@@ -1686,7 +1689,7 @@ def to_pandas(cur):
 
 class connect():
     def __init__(self, section='', quiet=False):
-        self.quiet=quiet
+        self.quiet = quiet
         conf = config_mod.get_config(config_file)
         pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
         pd.set_option('display.width', conf.getint('display', 'width'))
@@ -1697,7 +1700,7 @@ class connect():
             db = section
         self.prefetch = conf.getint('easyaccess', 'prefetch')
         self.dbname = db
-        #connect to db  
+        # connect to db
         desconf = config_mod.get_desconfig(desfile, self.dbname)
         self.user = desconf.get('db-' + self.dbname, 'user')
         self.dbhost = desconf.get('db-' + self.dbname, 'server')
@@ -1705,7 +1708,7 @@ class connect():
         self.password = desconf.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         dsn = cx_Oracle.makedsn(**kwargs)
-        if not quiet : print 'Connecting to DB ** %s ** ...' % self.dbname
+        if not quiet: print 'Connecting to DB ** %s ** ...' % self.dbname
         connected = False
         for tries in range(3):
             try:
@@ -1724,9 +1727,9 @@ class connect():
     def ping(self):
         try:
             self.Connection.ping()
-            if not self.quiet :print 'Still connected to DB'
+            if not self.quiet: print 'Still connected to DB'
         except:
-            if not self.quiet :print 'Connection with DB lost'
+            if not self.quiet: print 'Connection with DB lost'
 
     def cursor(self):
         cursor = self.Connection.cursor()
@@ -1737,7 +1740,7 @@ class connect():
         self.Connection.close()
 
 
-##################################################
+# #################################################
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -1751,17 +1754,17 @@ class MyParser(argparse.ArgumentParser):
 if __name__ == '__main__':
 
     conf = config_mod.get_config(config_file)
-    #PANDAS DISPLAY SET UP
+    # PANDAS DISPLAY SET UP
     pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
     pd.set_option('display.width', conf.getint('display', 'width'))
     pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
 
-
-    color_term=True
-    if not conf.getboolean('display','color_terminal'):
-        def colored(line,color):
+    color_term = True
+    if not conf.getboolean('display', 'color_terminal'):
+        def colored(line, color):
             return line
-        color_term=False
+
+        color_term = False
     try:
         import readline
 
@@ -1776,7 +1779,9 @@ if __name__ == '__main__':
         except:
             'Print readline might give problems accessing the history of commands'
 
-    parser = MyParser(description='Easy Access to the DES DB. There is a configuration file located in %s for more customizable options' % config_file, version="version: %s" % __version__)
+    parser = MyParser(
+        description='Easy Access to the DES DB. There is a configuration file located in %s for more customizable options' % config_file,
+        version="version: %s" % __version__)
     parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
