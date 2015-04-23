@@ -719,9 +719,9 @@ class easy_or(cmd.Cmd, object):
                         for jj, col in enumerate(data):
                             nt = change_type(info[jj])
                             if nt != "": data[col] = data[col].astype(nt)
-                        if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.6f', sep=',',
+                        if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.8f', sep=',',
                                                       mode=mode_write, header=header_out)
-                        if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.6f', sep=' ',
+                        if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.8f', sep=' ',
                                                       mode=mode_write, header=header_out)
                         if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False,
                                                       header=header_out)  #, complevel=9,complib='bzip2'
