@@ -1609,7 +1609,7 @@ class easy_or(cmd.Cmd, object):
                             elif (dtypes[i].itemsize == 4):
                                 # 4-byte (32 bit) integer
                                 qtable += '%s NUMBER(11,0),' % (col_n[i])
-                            else (dtypes[i].itemsize == 8):
+                            else:
                                 # 8-byte (64 bit) integer
                                 qtable += '%s NUMBER,' % (col_n[i])
                         elif (dtypes[i].kind == 'f'):
