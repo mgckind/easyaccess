@@ -29,7 +29,9 @@ except:
         return line
 import pandas as pd
 import datetime
-import pyfits as pf
+# import pyfits as pf
+import fitsio
+import numpy as np
 import argparse
 import config as config_mod
 import eautils.des_logo as dl
@@ -87,7 +89,8 @@ options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
 options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
-options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'max_rows', 'max_columns',
+options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'fits_max_mb', 'max_rows',
+                  'max_columns',
                   'width', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit']
@@ -158,27 +161,62 @@ def change_type(info):
         return ""
 
 
-def write_to_fits(df, fitsfile, mode='w', listN=[], listT=[]):
+def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
+    # build the dtypes...
+    dtypes = []
+    for col in df:
+        type_df = df[col].dtype.name
+    if col in listN:
+        fmt = listT[listN.index(col)]
+    else:
+        fmt = df[col].dtype.name
+
+    dtypes.append((col, fmt))
+
+    # create the numpy array to write
+    arr = np.zeros(len(df.index), dtype=dtypes)
+
+    # fill array
+    for col in df:
+        arr[col][:] = df[col].values
+
+    # write or append...
     if mode == 'w':
-        C = pf.ColDefs([])
-        for col in df:
-            type_df = df[col].dtype.name
-            if col in listN:
-                fmt = listT[listN.index(col)]
-            else:
-                fmt = type_dict[type_df]
-            CC = pf.Column(name=col, format=fmt, array=df[col].values)
-            C.add_col(CC)
-        SS = pf.BinTableHDU.from_columns(C)
-        SS.writeto(fitsfile, clobber=True)
-    if mode == 'a':
-        Htemp = pf.open(fitsfile)
-        nrows1 = Htemp[1].data.shape[0]
-        ntot = nrows1 + len(df)
-        SS = pf.BinTableHDU.from_columns(Htemp[1].columns, nrows=ntot)
-        for colname in Htemp[1].columns.names:
-            SS.data[colname][nrows1:] = df[colname].values
-        SS.writeto(fitsfile, clobber=True)
+        # assume that this is smaller than the max size!
+        fitsio.write(fitsfile, arr, clobber=True)
+    elif mode == 'a':
+        # what is the actual name of the current file?
+        fileparts = fitsfile.split('.fits')
+
+        if (fileindex == 1):
+            thisfile = fitsfile
+        else:
+            thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
+
+        # check the size of the current file
+        size = float(os.path.getsize(thisfile)) / (2. ** 20)
+
+        if (size > fits_max_mb):
+            # it's time to increment
+            if (fileindex == 1):
+                # this is the first one ... it needs to be moved
+                # we're doing a 1-index thing here, because...
+                os.rename(fitsfile, '%s_%06d.fits' % (fileparts[0], fileindex))
+
+            # and make a new filename, after incrementing
+            fileindex += 1
+
+            thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
+
+            fitsio.write(thisfile, arr, clobber=True)
+        else:
+            # just append
+            fits = fitsio.FITS(thisfile, mode='rw')
+            fits[1].append(arr)
+            fits.close()
+
+    else:
+        raise Exception("Illegal write mode!")
 
 
 class easy_or(cmd.Cmd, object):
@@ -198,6 +236,7 @@ class easy_or(cmd.Cmd, object):
         self.prefetch = self.config.getint('easyaccess', 'prefetch')
         self.loading_bar = self.config.getboolean('display', 'loading_bar')
         self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
+        self.fits_max_mb = self.config.getint('easyaccess', 'fits_max_mb')
         self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
@@ -666,12 +705,14 @@ class easy_or(cmd.Cmd, object):
                     if self.loading_bar: sys.stdout.flush()
                     com_it += 1
                     if first:
+                        fileindex = 1  # 1-indexed for backwards compatibility
                         list_names = []
                         list_type = []
                         for inf in info:
                             if inf[1] == or_s:
                                 list_names.append(inf[0])
-                                list_type.append(str(inf[3]) + 'A')
+                                # list_type.append(str(inf[3]) + 'A') #pyfits uses A, fitsio S
+                                list_type.append('S' + str(inf[3]))
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
@@ -684,8 +725,8 @@ class easy_or(cmd.Cmd, object):
                                                       mode=mode_write, header=header_out)
                         if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False,
                                                       header=header_out)  #, complevel=9,complib='bzip2'
-                        if mode == 'fits': write_to_fits(data, fileout, mode=mode_write, listN=list_names,
-                                                         listT=list_type)
+                        if mode == 'fits': write_to_fits(data, fileout, fileindex, mode=mode_write, listN=list_names,
+                                                         listT=list_type, fits_max_mb=self.fits_max_mb)
                         if first:
                             mode_write = 'a'
                             header_out = False
@@ -968,7 +1009,7 @@ class easy_or(cmd.Cmd, object):
 
     def do_config(self, line):
         """
-        Change parameters from config file (config.ini). Smart autocompletion enable
+        Change parameters from config file (config.ini). Smart autocompletion enabled
 
         Usage:
             - config <parameter> show : Shows current value for parameter in config file
@@ -984,6 +1025,7 @@ class easy_or(cmd.Cmd, object):
             histcache      : Length of the history of commands
             timeout        : Timeout for a query to be printed on the screen. Doesn't apply to output files
             nullvalue      : value to replace Null entries when writing a file (default = -9999)
+            fits_max_mb    : Max size of each fits file in MB
             max_rows       : Max number of rows to display on the screen. Doesn't apply to output files
             width          : Width of the output format on the screen
             max_columns    : Max number of columns to display on the screen. Doesn't apply to output files
@@ -1016,7 +1058,8 @@ class easy_or(cmd.Cmd, object):
             key = oneline.split('set')[0]
             val = oneline.split('set')[1]
             if val == '': return self.do_help('config')
-            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns']
+            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'fits_max_mb',
+                        'nullvalue', 'loading_bar']
             #if key in int_keys: val=int(val) 
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
@@ -1029,6 +1072,7 @@ class easy_or(cmd.Cmd, object):
             if key == 'prefetch': self.prefetch = self.config.get('easyaccess', 'prefetch')
             if key == 'loading_bar': self.loading_bar = self.config.getboolean('display', 'loading_bar')
             if key == 'nullvalue': self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
+            if key == 'fits_max_mb': self.fits_max_mb = self.config.getint('easyaccess', 'fits_max_mb')
             return
         else:
             return self.do_help('config')
@@ -1499,7 +1543,7 @@ class easy_or(cmd.Cmd, object):
                     return
                 elif format == 'fits' or format == 'fit':
                     try:
-                        DF = pf.open(line)
+                        DF = fitsio.FITS(line)
                     except:
                         print colored('\nProblems reading %s\n' % line, "red")
                         return
@@ -1510,26 +1554,41 @@ class easy_or(cmd.Cmd, object):
                         print '\n Table already exists! Change name of file or drop table ' \
                               '\n with:  DROP TABLE %s\n ' % table.upper()
                     qtable = 'create table %s ( ' % table
-                    col_n = []
-                    for col in DF[1].columns:
-                        col_n.append(col.name)
-                        if col.format.find('A') > -1:
-                            if col.format == 'A':
-                                qtable += col.name + ' VARCHAR2(1),'
+
+                    # returns a list of column names
+                    col_n = DF[1].get_colnames()
+                    # and the data types
+                    dtypes = DF[1].get_rec_dtype(vstorage='fixed')[0]
+
+                    for i in xrange(len(col_n)):
+                        if (dtypes[i].kind == 'S'):
+                            # string type
+                            qtable += '%s VARCHAR2(%d),' % (col_n[i], dtypes[i].itemsize)
+                        elif (dtypes[i].kind == 'i'):
+                            if (dtypes[i].itemsize == 2):
+                                # 2-byte (16 bit) integer
+                                qtable += '%s NUMBER(6,0),' % (col_n[i])
+                            elif (dtypes[i].itemsize == 4):
+                                # 4-byte (32 bit) integer
+                                qtable += '%s NUMBER(11,0),' % (col_n[i])
+                            elif (dtypes[i].itemsize == 8):
+                                # 8-byte (64 bit) integer
+                                qtable += '%s NUMBER,' % (col_n[i])
                             else:
-                                qtable += col.name + ' ' + 'VARCHAR2(' + str(int(col.format.replace('A', ''))) + '),'
-                        elif col.format == 'I':
-                            qtable += col.name + ' NUMBER(6,0),'
-                        elif col.format == 'J':
-                            qtable += col.name + ' NUMBER(11,0),'
-                        elif col.format == 'K':
-                            qtable += col.name + ' NUMBER,'
-                        elif col.format == 'E':
-                            qtable += col.name + ' BINARY_FLOAT,'
-                        elif col.format == 'D':
-                            qtable += col.name + ' BINARY_DOUBLE,'
+                                raise ValueError("Unsupported integer type")
+                        elif (dtypes[i].kind == 'f'):
+                            if (dtypes[i].itemsize == 4):
+                                # 4-byte (32 bit) float
+                                qtable += '%s BINARY_FLOAT,' % (col_n[i])
+                            elif (dtypes[i].itemsize == 8):
+                                # 8-byte (64 bit) double
+                                qtable += '%s BINARY_DOUBLE,' % (col_n[i])
+                            else:
+                                raise ValueError("Unsupported float type")
                         else:
-                            qtable += col.name + ' NUMBER,'
+                            raise ValueError("Unsupported type")
+
+                    # cut last , and close paren
                     qtable = qtable[:-1] + ')'
                     try:
                         self.cur.execute(qtable)
@@ -1550,12 +1609,12 @@ class easy_or(cmd.Cmd, object):
                     qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
                     try:
                         t1 = time.time()
-                        self.cur.executemany(qinsert, DF[1].data.tolist())
+                        self.cur.executemany(qinsert, DF[1].read().tolist())
                         t2 = time.time()
                         self.con.commit()
                         print colored(
                             '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
-                                table.upper(), len(DF[1].data), len(col_n), t2 - t1), "green")
+                                table.upper(), DF[1].get_nrows(), len(col_n), t2 - t1), "green")
                         print colored(
                             '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
                             "cyan")
