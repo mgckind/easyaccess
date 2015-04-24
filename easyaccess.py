@@ -83,6 +83,7 @@ or_n = cx_Oracle.NUMBER
 or_s = cx_Oracle.STRING
 or_f = cx_Oracle.NATIVE_FLOAT
 or_o = cx_Oracle.OBJECT
+or_ov = cx_Oracle.OBJECT
 
 options_prefetch = ['show', 'set', 'default']
 options_add_comment = ['table', 'column']
@@ -170,14 +171,26 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
         else:
             fmt = df[col].dtype.name
 
-        dtypes.append((col, fmt))
+        if fmt == 'FLOAT': #fot objects -- some --
+            dtypes.append((col, 'f8', len(df[col].values[0])))
+        else:
+            dtypes.append((col, fmt))
+
 
     # create the numpy array to write
     arr = np.zeros(len(df.index), dtype=dtypes)
 
     # fill array
     for col in df:
-        arr[col][:] = df[col].values
+        if col in listN:
+            fmt = listT[listN.index(col)]
+            if fmt == 'FLOAT':
+                temp_arr=np.array(df[col].values.tolist())
+                arr[col] = temp_arr
+            else:
+                arr[col][:] = df[col].values
+        else:
+            arr[col][:] = df[col].values
 
     # write or append...
     if mode == 'w':
@@ -716,6 +729,10 @@ class easy_or(cmd.Cmd, object):
                                 list_names.append(inf[0])
                                 # list_type.append(str(inf[3]) + 'A') #pyfits uses A, fitsio S
                                 list_type.append('S' + str(inf[3]))
+                            if inf[1] == or_ov:
+                                list_names.append(inf[0])
+                                list_type.append('FLOAT')
+                                
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
