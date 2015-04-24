@@ -1781,11 +1781,13 @@ def to_pandas(cur):
         data = ""
     return data
 
+color_term = True
 
 class connect():
     def __init__(self, section='', quiet=False):
         self.quiet = quiet
         conf = config_mod.get_config(config_file)
+        self.conf=conf
         pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
         pd.set_option('display.width', conf.getint('display', 'width'))
         pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
@@ -1797,6 +1799,7 @@ class connect():
         self.dbname = db
         # connect to db
         desconf = config_mod.get_desconfig(desfile, self.dbname)
+        self.desconf = desconf
         self.user = desconf.get('db-' + self.dbname, 'user')
         self.dbhost = desconf.get('db-' + self.dbname, 'server')
         self.port = desconf.get('db-' + self.dbname, 'port')
