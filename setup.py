@@ -26,5 +26,5 @@ setup(
     description='Easy Access to access DES DB',
     long_description=read('README.md'),
     url='https://github.com/mgckind/easyaccess',
-    install_requires=['pandas >= 0.14','termcolor','pyfits >= 3.3','cx_Oracle'],
+    install_requires=['pandas >= 0.14','termcolor','fitsio','cx_Oracle'],
 )

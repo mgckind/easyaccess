@@ -28,5 +28,9 @@ v1.0.7, 2015-MAR-31 -- Null and NaN values fixed and customizable (config nullva
                     -- Added a SQL syntax checker (<SQL query> ; < check)
                     -- Reformatted help 
 v1.0.8, 2015-XXX-XX -- Fixed bug with single character for fits ('A' and 'A1' are valid)
-                    -- Fix enconding, loading bar termination, added message after loading table
+                    -- Fix enconding issues (between ASCII and UTF-8)
+                    -- Loading bar termination
+                    -- Added message after loading table
+                    -- ** Change pyfits to fitsio **
+                    -- Set max limit for output files in MB
 
