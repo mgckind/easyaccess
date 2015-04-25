@@ -1807,6 +1807,25 @@ def to_pandas(cur):
 
 color_term = True
 
+class connect2(easy_or):
+    def __init__(self, section='', quiet=False):
+        self.quiet = quiet
+        conf = config_mod.get_config(config_file)
+        self.conf = conf
+        pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
+        pd.set_option('display.width', conf.getint('display', 'width'))
+        pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
+        if section == '':
+            db = conf.get('easyaccess', 'database')
+        else:
+            db = section
+        desconf = config_mod.get_desconfig(desfile, db)
+        easy_or.__init__(self,conf, desconf, db, interactive=False, quiet=quiet)
+    def cursor(self):
+        return self.cur
+
+
+
 class connect():
     def __init__(self, section='', quiet=False):
         self.quiet = quiet
