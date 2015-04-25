@@ -27,10 +27,10 @@ v1.0.7, 2015-MAR-31 -- Null and NaN values fixed and customizable (config nullva
                        It will print 'Null' on the screen but nullvalue on the files
                     -- Added a SQL syntax checker (<SQL query> ; < check)
                     -- Reformatted help 
-v1.0.8, 2015-XXX-XX -- Fixed bug with single character for fits ('A' and 'A1' are valid)
+v1.0.8, 2015-XXX-XX -- Fixed bug with single character for fits 
                     -- Fix enconding issues (between ASCII and UTF-8)
-                    -- Loading bar termination
-                    -- Added message after loading table
+                    -- Loading bar termination issue fixed
+                    -- Added message after loading table for sharing tables
                     -- ** Change pyfits to fitsio **
                     -- Set max limit for output files in MB
 
