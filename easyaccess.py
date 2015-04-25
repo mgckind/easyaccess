@@ -84,6 +84,7 @@ or_s = cx_Oracle.STRING
 or_f = cx_Oracle.NATIVE_FLOAT
 or_o = cx_Oracle.OBJECT
 or_ov = cx_Oracle.OBJECT
+or_dt = cx_Oracle.DATETIME
 
 options_prefetch = ['show', 'set', 'default']
 options_add_comment = ['table', 'column']
@@ -665,7 +666,10 @@ class easy_or(cmd.Cmd, object):
                     data.index += 1
                     if extra != "":
                         print colored(extra + '\n', "cyan")
-                    data.fillna('Null', inplace=True)
+                    try:
+                        data.fillna('Null', inplace=True)
+                    except:
+                        pass
                     print data
             else:
                 t2 = time.time()
@@ -732,6 +736,9 @@ class easy_or(cmd.Cmd, object):
                             if inf[1] == or_ov:
                                 list_names.append(inf[0])
                                 list_type.append('FLOAT')
+                            if inf[1] == or_dt:
+                                list_names.append(inf[0])
+                                list_type.append('S50')
                                 
                     if not data.empty:
                         data.columns = header
