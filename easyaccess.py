@@ -1823,7 +1823,7 @@ def to_pandas(cur):
 
 color_term = True
 
-class connect2(easy_or):
+class connect(easy_or):
     def __init__(self, section='', quiet=False):
         self.quiet = quiet
         conf = config_mod.get_config(config_file)
@@ -1871,61 +1871,6 @@ class connect2(easy_or):
         Describes a table from the DB
         """
         self.do_describe_table(tablename ,False)
-
-
-class connect():
-    def __init__(self, section='', quiet=False):
-        self.quiet = quiet
-        conf = config_mod.get_config(config_file)
-        self.conf=conf
-        pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
-        pd.set_option('display.width', conf.getint('display', 'width'))
-        pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
-        if section == '':
-            db = conf.get('easyaccess', 'database')
-        else:
-            db = section
-        self.prefetch = conf.getint('easyaccess', 'prefetch')
-        self.dbname = db
-        # connect to db
-        desconf = config_mod.get_desconfig(desfile, self.dbname)
-        self.desconf = desconf
-        self.user = desconf.get('db-' + self.dbname, 'user')
-        self.dbhost = desconf.get('db-' + self.dbname, 'server')
-        self.port = desconf.get('db-' + self.dbname, 'port')
-        self.password = desconf.get('db-' + self.dbname, 'passwd')
-        kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
-        dsn = cx_Oracle.makedsn(**kwargs)
-        if not quiet: print 'Connecting to DB ** %s ** ...' % self.dbname
-        connected = False
-        for tries in range(3):
-            try:
-                self.Connection = cx_Oracle.connect(self.user, self.password, dsn=dsn)
-                connected = True
-                break
-            except Exception as e:
-                lasterr = str(e).strip()
-                print "Error when trying to connect to database: %s" % lasterr
-                print "\n   Retrying...\n"
-                time.sleep(8)
-        if not connected:
-            print '\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n'
-            os._exit(0)
-
-    def ping(self):
-        try:
-            self.Connection.ping()
-            if not self.quiet: print 'Still connected to DB'
-        except:
-            if not self.quiet: print 'Connection with DB lost'
-
-    def cursor(self):
-        cursor = self.Connection.cursor()
-        cursor.arraysize = self.prefetch
-        return cursor
-
-    def close(self):
-        self.Connection.close()
 
 
 # #################################################
