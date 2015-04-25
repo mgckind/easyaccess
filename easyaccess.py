@@ -560,7 +560,7 @@ class easy_or(cmd.Cmd, object):
                     fileformat = fileout.split('.')[-1]
                     if fileformat in options_out:
                         print '\nFetching data and saving it to %s ...' % fileout + '\n'
-                        self.query_and_save(query, fileout, mode=fileformat)
+                        self.query_and_save(query, fileout)
                     else:
                         print colored('\nFile format not valid.\n', 'red')
                         print 'Supported formats:\n'
@@ -617,7 +617,7 @@ class easy_or(cmd.Cmd, object):
 
     # ## QUERY METHODS
 
-    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra=""):
+    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="", clear = True):
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
@@ -650,7 +650,7 @@ class easy_or(cmd.Cmd, object):
                 if self.loading_bar:
                     #self.pload.terminate()
                     if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
-                self.do_clear(None)
+                if clear: self.do_clear(None)
                 print
                 if print_time: print colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green")
                 if print_time: print
@@ -677,7 +677,7 @@ class easy_or(cmd.Cmd, object):
                 if self.loading_bar:
                     # self.pload.terminate()
                     if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
-                self.do_clear(None)
+                if clear: self.do_clear(None)
                 print colored(suc_arg, "green")
                 self.con.commit()
             print
@@ -699,7 +699,23 @@ class easy_or(cmd.Cmd, object):
                 print 'To see a list of compatible format\n'
 
 
-    def query_and_save(self, query, fileout, mode='csv', print_time=True):
+    def query_and_save(self, query, fileout, print_time=True):
+        """
+        Executes a query and save the results to a file, Supported formats are
+        .csv, .tab, .fits and .h5
+        """
+        fileformat = fileout.split('.')[-1]
+        mode=fileformat
+        if fileformat in options_out:
+            pass
+        else:
+            print colored('\nFile format not valid.\n', 'red')
+            print 'Supported formats:\n'
+            for jj, ff in enumerate(options_out): print '%5s  %s' % (ff, options_def[jj])
+            return
+        if mode != fileout.split('.')[-1]:
+            print colored(' fileout extension and mode do not match! \n', "red")
+            return
         fileout_original = fileout
         self.cur.arraysize = self.prefetch
         t1 = time.time()
@@ -1331,7 +1347,7 @@ class easy_or(cmd.Cmd, object):
         else:
             return options_users
 
-    def do_describe_table(self, arg):
+    def do_describe_table(self, arg, clear=True):
         """
         DB:This tool is useful in noting the lack of documentation for the
         columns. If you don't know the full table name you can use tab
@@ -1414,7 +1430,7 @@ class easy_or(cmd.Cmd, object):
            order by atc.column_id
            """ % (link, link, schema, table, schema, table)
         self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user',
-                             extra=comm)
+                             extra=comm, clear=clear)
         return
 
     def complete_describe_table(self, text, line, start_index, end_index):
@@ -1821,9 +1837,40 @@ class connect2(easy_or):
             db = section
         desconf = config_mod.get_desconfig(desfile, db)
         easy_or.__init__(self,conf, desconf, db, interactive=False, quiet=quiet)
+        self.loading_bar = False
     def cursor(self):
-        return self.cur
+        cursor = self.con.cursor()
+        cursor.arraysize = self.prefetch
+        return cursor
+    def ping(self):
+        try:
+            self.con.ping()
+            if not self.quiet: print 'Still connected to DB'
+        except:
+            if not self.quiet: print 'Connection with DB lost'
+    def close(self):
+        self.con.close()
+    def query_to_pandas(self, query, prefetch=''):
+        """
+        Executes a query and return the results in pandas DataFrame
+        """
+        cursor=self.con.cursor()
+        cursor.arraysize = self.prefetch
+        if prefetch != '': cursor.arraysize=prefetch
+        temp = cursor.execute(query)
+        if temp.description != None:
+            data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
+        else:
+            data = ""
+        cursor.close()
+        return data
 
+
+    def describe_table(self, tablename):
+        """
+        Describes a table from the DB
+        """
+        self.do_describe_table(tablename ,False)
 
 
 class connect():
