@@ -1282,7 +1282,7 @@ class easy_or(cmd.Cmd, object):
             sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
         self.query_and_print(sql_getUserDetails, print_time=False)
 
-    def do_myquota(self, arg):
+    def do_myquota(self, arg, clear=True):
         """
         DB:Print information about quota status.
 
@@ -1290,16 +1290,16 @@ class easy_or(cmd.Cmd, object):
         """
         sql_getquota = "select TABLESPACE_NAME,  \
         MBYTES_USED/1024 as GBYTES_USED, MBYTES_LEFT/1024 as GBYTES_LEFT from myquota"
-        self.query_and_print(sql_getquota, print_time=False)
+        self.query_and_print(sql_getquota, print_time=False, clear=clear)
 
-    def do_mytables(self, arg):
+    def do_mytables(self, arg, clear = True):
         """
         DB:Lists  table you have made in your 'mydb'
 
         Usage: mytables
         """
         query = "SELECT table_name FROM user_tables"
-        self.query_and_print(query, print_time=False, extra="List of my tables")
+        self.query_and_print(query, print_time=False, extra="List of my tables", clear=clear)
 
     def do_find_user(self, line):
         """
@@ -1514,7 +1514,7 @@ class easy_or(cmd.Cmd, object):
         return self._complete_tables(text)
 
 
-    def do_load_table(self, line):
+    def do_load_table(self, line, name=''):
         """
         DB:Loads a table from a file (csv or fits) taking name from filename and columns from header
 
@@ -1549,7 +1549,10 @@ class easy_or(cmd.Cmd, object):
                 print '\nDo not use extra . in filename\n'
                 return
             else:
-                table = alls[0]
+                if name == '':
+                    table = alls[0]
+                else:
+                    table =name
                 format = alls[1]
                 if format in ('csv', 'tab'):
                     if format == 'csv': sepa = ','
@@ -1825,6 +1828,10 @@ color_term = True
 
 class connect(easy_or):
     def __init__(self, section='', quiet=False):
+        """
+        Creates a connection to the DB ans easyaccess commands, section is obtained frmo
+        config file, can be bypass here, e.g., section = desoper
+        """
         self.quiet = quiet
         conf = config_mod.get_config(config_file)
         self.conf = conf
@@ -1873,6 +1880,35 @@ class connect(easy_or):
         self.do_describe_table(tablename ,False)
 
 
+    def loadsql(self,filename):
+        """
+        Reads sql statement from a file, returns query to be parsed in query_and_save, query_to_pandas, etc.
+        """
+        query=read_buf(filename)
+        if query.find(';') > -1:
+            query = query.split(';')[0]
+        return query
+
+    def mytables(self):
+        """
+        List tables in own schema
+        """
+        self.do_mytables('',clear=False)
+
+    def myquota(self):
+        """
+        Show quota in current database
+        """
+        self.do_myquota('',clear=False)
+
+    def load_table(self, table_file, name=''):
+        """
+        Loads and create a table in the DB. If name is not passed, is taken from
+        the filename. Formats supported are fits, csv and tab files
+        """
+        self.do_load_table(table_file, name=name)
+
+
 # #################################################
 
 class MyParser(argparse.ArgumentParser):
@@ -1918,7 +1954,7 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
-    csv or fits format and getting name from filename")
+    csv, tab or fits format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization")
     args = parser.parse_args()
