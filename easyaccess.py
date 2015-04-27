@@ -93,7 +93,7 @@ options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
-                  'width', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue']
+                  'width', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit']
 
@@ -253,6 +253,7 @@ class easy_or(cmd.Cmd, object):
         self.loading_bar = self.config.getboolean('display', 'loading_bar')
         self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
         self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
+        self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
         self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
@@ -702,7 +703,7 @@ class easy_or(cmd.Cmd, object):
                     if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 if clear: self.do_clear(None)
                 print colored(suc_arg, "green")
-                self.con.commit()
+                if self.autocommit: self.con.commit()
             print
         except:
             (type, value, traceback) = sys.exc_info()
@@ -1086,7 +1087,7 @@ class easy_or(cmd.Cmd, object):
         except:
             pass
         try:
-            self.con.commit()
+            if self.autocommit: self.con.commit()
             self.con.close()
         except:
             pass
@@ -1129,6 +1130,7 @@ class easy_or(cmd.Cmd, object):
             max_columns       : Max number of columns to display on the screen. Doesn't apply to output files
             color_terminal    : yes/no toggles the color for terminal std output. Need to restart easyaccess
             loading_bar       : yes/no toggles the loading bar. Useful for background jobs
+            autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
         """
         if line == '': return self.do_help('config')
         oneline = "".join(line.split())
@@ -1157,7 +1159,7 @@ class easy_or(cmd.Cmd, object):
             val = oneline.split('set')[1]
             if val == '': return self.do_help('config')
             int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
-                        'nullvalue', 'loading_bar']
+                        'nullvalue', 'loading_bar', 'autocommit']
             # if key in int_keys: val=int(val)
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
@@ -1171,6 +1173,8 @@ class easy_or(cmd.Cmd, object):
             if key == 'loading_bar': self.loading_bar = self.config.getboolean('display', 'loading_bar')
             if key == 'nullvalue': self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
             if key == 'outfile_max_mb': self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
+            if key == 'autocommit': self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
+
             return
         else:
             return self.do_help('config')
@@ -1605,7 +1609,7 @@ class easy_or(cmd.Cmd, object):
                     qtable = qtable[:-1] + ')'
                     try:
                         self.cur.execute(qtable)
-                        self.con.commit()
+                        if self.autocommit: self.con.commit()
                     except:
                         (type, value, traceback) = sys.exc_info()
                         print
@@ -1623,7 +1627,7 @@ class easy_or(cmd.Cmd, object):
                         t1 = time.time()
                         self.cur.executemany(qinsert, DF.values.tolist())
                         t2 = time.time()
-                        self.con.commit()
+                        if self.autocommit: self.con.commit()
                         print colored(
                             '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
                                 table.upper(), len(DF), len(DF.columns), t2 - t1), "green")
@@ -1694,7 +1698,7 @@ class easy_or(cmd.Cmd, object):
                     qtable = qtable[:-1] + ')'
                     try:
                         self.cur.execute(qtable)
-                        self.con.commit()
+                        if self.autocommit: self.con.commit()
                     except:
                         (type, value, traceback) = sys.exc_info()
                         print
@@ -1713,7 +1717,7 @@ class easy_or(cmd.Cmd, object):
                         t1 = time.time()
                         self.cur.executemany(qinsert, DF[1].read().tolist())
                         t2 = time.time()
-                        self.con.commit()
+                        if self.autocommit: self.con.commit()
                         print colored(
                             '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
                                 table.upper(), DF[1].get_nrows(), len(col_n), t2 - t1), "green")
