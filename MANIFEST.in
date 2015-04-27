@@ -1,2 +1,3 @@
 include *.md
 include easyaccess
+include help_screenshot.png
