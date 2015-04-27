@@ -19,6 +19,7 @@ configcomment = """#
 #                  If the results are redirected to a file there is not a timeout
 # nullvalue      : The value used to replace null or empty entries when printing into a file
 # outfile_max_mb : Max size of each fits file in MB (default 1GB)
+# autocommit     : Auto commit changes in DB (default yes)
 """
 
 descomment = """#
@@ -53,6 +54,8 @@ def get_config(configfile):
     if not config.has_option('easyaccess', 'outfile_max_mb'): configwrite = True;config.set('easyaccess',
                                                                                             'outfile_max_mb',
                                                                                          1000)
+    if not config.has_option('easyaccess', 'autocommit'): configwrite = True;config.set('easyaccess', 'autocommit',
+                                                                                        'yes')
 
     if not config.has_section('display'):
         configwrite = True
