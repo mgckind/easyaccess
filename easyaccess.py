@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.0.8'
+__version__ = '1.1.0a'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
@@ -259,6 +259,7 @@ class easy_or(cmd.Cmd, object):
         self.buff = None
         self.interactive = interactive
         self.undoc_header = None
+        self.metadata = True
         self.doc_header = colored(' *General Commands*', "cyan") + ' (type help <command>):'
         self.docdb_header = colored('\n *DB Commands*', "cyan") + '      (type help <command>):'
         # connect to db
@@ -336,7 +337,7 @@ class easy_or(cmd.Cmd, object):
                 self.intro = intro
             if self.intro:
                 if not self.quiet:
-                    self.do_clear(None)
+                    if self.metadata: self.do_clear(None)
                     dl.print_deslogo(color_term)
                     self.stdout.write(str(self.intro) + "\n")
             stop = None
@@ -451,28 +452,49 @@ class easy_or(cmd.Cmd, object):
         Initialization before prompting user for commands.
         Despite the claims in the Cmd documentation, Cmd.preloop() is not a stub.
         """
-        cmd.Cmd.preloop(self)  # # sets up command completion
-        create_metadata = False
-        check = 'select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
-        self.cur.execute(check)
-        if self.cur.fetchall()[0][0] == 0:
-            create_metadata = True
-        else:
-            query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
-                self.user.upper())
-            qt = self.cur.execute(query_time)
-            last = qt.fetchall()
-            now = datetime.datetime.now()
-            diff = abs(now - last[0][0]).seconds / (3600.)
-            if diff >= 24: create_metadata = True
-        if create_metadata:
-            query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-            self.cur.execute(query_2)
+        tcache = threading.Timer(45, self.con.cancel)
+        tcache.start()
+        try:
+            if not self.quiet: print 'Loading metadata into cache...'
 
-        if not self.quiet: print 'Loading metadata into cache...'
-        self.cache_table_names = self.get_tables_names()
-        self.cache_usernames = self.get_userlist()
-        self.cache_column_names = self.get_columnlist()
+            cmd.Cmd.preloop(self)  # # sets up command completion
+            create_metadata = False
+            check = 'select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
+            self.cur.execute(check)
+            if self.cur.fetchall()[0][0] == 0:
+                create_metadata = True
+            else:
+                query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
+                    self.user.upper())
+                qt = self.cur.execute(query_time)
+                last = qt.fetchall()
+                now = datetime.datetime.now()
+                diff = abs(now - last[0][0]).seconds / (3600.)
+                if diff >= 24: create_metadata = True
+            if create_metadata:
+                query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
+                self.cur.execute(query_2)
+
+            self.cache_table_names = self.get_tables_names()
+            self.cache_usernames = self.get_userlist()
+            self.cache_column_names = self.get_columnlist()
+            self.metadata = True
+            tcache.cancel()
+
+        except:
+            print colored(
+                "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
+                "red")
+            tcache.cancel()
+            self.cache_table_names = []
+            self.cache_usernames = []
+            self.cache_column_names = []
+            self.metadata = False
+
+
+
+
+
         # history
         ht = open(history_file, 'r')
         Allq = ht.readlines()
