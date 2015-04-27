@@ -33,4 +33,6 @@ v1.0.8, 2015-XXX-XX -- Fixed bug with single character for fits
                     -- Added message after loading table for sharing tables
                     -- ** Change pyfits to fitsio **
                     -- Set max limit for output files in MB
+                    -- Add python API features for key commands and bugfix
+                       (All commnands can still be accessed from python API)
 
