@@ -64,7 +64,7 @@ def loading():
     print
     cc = 0
     spinner = itertools.cycle(range(13) + range(1, 14, 1)[::-1])
-    line2 = "  Press Ctrl-C to abort"
+    line2 = "  Press Ctrl-C to abort "
     try:
         while True:
             line = list('    |              |')
@@ -172,7 +172,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
         else:
             fmt = df[col].dtype.name
 
-        if fmt == 'FLOAT': #fot objects -- some --
+        if fmt == 'FLOAT':  # fot objects -- some --
             dtypes.append((col, 'f8', len(df[col].values[0])))
         else:
             dtypes.append((col, fmt))
@@ -186,7 +186,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
         if col in listN:
             fmt = listT[listN.index(col)]
             if fmt == 'FLOAT':
-                temp_arr=np.array(df[col].values.tolist())
+                temp_arr = np.array(df[col].values.tolist())
                 arr[col] = temp_arr
             else:
                 arr[col][:] = df[col].values
@@ -617,7 +617,8 @@ class easy_or(cmd.Cmd, object):
 
     # ## QUERY METHODS
 
-    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="", clear = True):
+    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
+                        clear=True):
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
@@ -648,7 +649,7 @@ class easy_or(cmd.Cmd, object):
                 t2 = time.time()
                 tt.cancel()
                 if self.loading_bar:
-                    #self.pload.terminate()
+                    # self.pload.terminate()
                     if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 if clear: self.do_clear(None)
                 print
@@ -705,7 +706,7 @@ class easy_or(cmd.Cmd, object):
         .csv, .tab, .fits and .h5
         """
         fileformat = fileout.split('.')[-1]
-        mode=fileformat
+        mode = fileformat
         if fileformat in options_out:
             pass
         else:
@@ -755,7 +756,7 @@ class easy_or(cmd.Cmd, object):
                             if inf[1] == or_dt:
                                 list_names.append(inf[0])
                                 list_type.append('S50')
-                                
+
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
@@ -864,7 +865,7 @@ class easy_or(cmd.Cmd, object):
             print colored('\nPublic tables from %s' % user.upper(), "cyan")
             print tnames
             # Add tname to cache (no longer needed)
-            #table_list=tnames.values.flatten().tolist()
+            # table_list=tnames.values.flatten().tolist()
             #for table in table_list:
             #    tn=user.upper()+'.'+table.upper()
             #    try : self.cache_table_names.index(tn)
@@ -1078,7 +1079,7 @@ class easy_or(cmd.Cmd, object):
         Clear screen. There is a shortcut by typing . on the interpreter
         """
         # TODO: platform dependent
-        #tmp = sp.call('clear', shell=True)
+        # tmp = sp.call('clear', shell=True)
         tmp = os.system(['clear', 'cls'][os.name == 'nt'])
 
 
@@ -1135,7 +1136,7 @@ class easy_or(cmd.Cmd, object):
             if val == '': return self.do_help('config')
             int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
                         'nullvalue', 'loading_bar']
-            #if key in int_keys: val=int(val) 
+            # if key in int_keys: val=int(val)
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
                     self.config.set(section, key, val)
@@ -1167,7 +1168,7 @@ class easy_or(cmd.Cmd, object):
                 return options_config
 
 
-    #DO METHODS FOR DB
+    # DO METHODS FOR DB
 
     def do_set_password(self, arg):
         """
@@ -1292,7 +1293,7 @@ class easy_or(cmd.Cmd, object):
         MBYTES_USED/1024 as GBYTES_USED, MBYTES_LEFT/1024 as GBYTES_LEFT from myquota"
         self.query_and_print(sql_getquota, print_time=False, clear=clear)
 
-    def do_mytables(self, arg, clear = True):
+    def do_mytables(self, arg, clear=True):
         """
         DB:Lists  table you have made in your 'mydb'
 
@@ -1552,7 +1553,7 @@ class easy_or(cmd.Cmd, object):
                 if name == '':
                     table = alls[0]
                 else:
-                    table =name
+                    table = name
                 format = alls[1]
                 if format in ('csv', 'tab'):
                     if format == 'csv': sepa = ','
@@ -1824,7 +1825,9 @@ def to_pandas(cur):
         data = ""
     return data
 
+
 color_term = True
+
 
 class connect(easy_or):
     def __init__(self, section='', quiet=False):
@@ -1843,27 +1846,31 @@ class connect(easy_or):
         else:
             db = section
         desconf = config_mod.get_desconfig(desfile, db)
-        easy_or.__init__(self,conf, desconf, db, interactive=False, quiet=quiet)
+        easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet)
         self.loading_bar = False
+
     def cursor(self):
         cursor = self.con.cursor()
         cursor.arraysize = self.prefetch
         return cursor
+
     def ping(self):
         try:
             self.con.ping()
             if not self.quiet: print 'Still connected to DB'
         except:
             if not self.quiet: print 'Connection with DB lost'
+
     def close(self):
         self.con.close()
+
     def query_to_pandas(self, query, prefetch=''):
         """
         Executes a query and return the results in pandas DataFrame
         """
-        cursor=self.con.cursor()
+        cursor = self.con.cursor()
         cursor.arraysize = self.prefetch
-        if prefetch != '': cursor.arraysize=prefetch
+        if prefetch != '': cursor.arraysize = prefetch
         temp = cursor.execute(query)
         if temp.description != None:
             data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
@@ -1877,14 +1884,14 @@ class connect(easy_or):
         """
         Describes a table from the DB
         """
-        self.do_describe_table(tablename ,False)
+        self.do_describe_table(tablename, False)
 
 
-    def loadsql(self,filename):
+    def loadsql(self, filename):
         """
         Reads sql statement from a file, returns query to be parsed in query_and_save, query_to_pandas, etc.
         """
-        query=read_buf(filename)
+        query = read_buf(filename)
         if query.find(';') > -1:
             query = query.split(';')[0]
         return query
@@ -1893,13 +1900,13 @@ class connect(easy_or):
         """
         List tables in own schema
         """
-        self.do_mytables('',clear=False)
+        self.do_mytables('', clear=False)
 
     def myquota(self):
         """
         Show quota in current database
         """
-        self.do_myquota('',clear=False)
+        self.do_myquota('', clear=False)
 
     def load_table(self, table_file, name=''):
         """

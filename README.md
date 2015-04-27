@@ -17,7 +17,7 @@ For a short tutorial (To be completed) chek [here](http://deslogin.cosmology.ill
 - Oracle Client > 11g.2 (External library, no python)
   Check [here](https://deswiki.cosmology.illinois.edu/confluence/display/CMBT/Instructions+for+installing+Oracle+client+and+easyaccess+without+EUPS) for instructions on how to install these libraries
 - [cx_Oracle](https://bitbucket.org/anthony_tuininga/cx_oracle)
-- [fitsio](https://github.com/esheldon/fitsio) 
+- [fitsio](https://github.com/esheldon/fitsio) >= 0.9.7
 - [pandas](http://pandas.pydata.org/) >= 0.14
 - [termcolor](https://pypi.python.org/pypi/termcolor)
 - [PyTables](http://pytables.github.io/) (optional, for hdf5 output)
