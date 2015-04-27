@@ -1,7 +1,7 @@
 # Changes
 
 ## v1.0.8
-### 2015-APR-27 
+#### 2015-APR-27 
 - Fixed bug with single character for fits 
 - Fix enconding issues (between ASCII and UTF-8)
 - Loading bar termination issue fixed
