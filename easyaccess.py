@@ -452,7 +452,7 @@ class easy_or(cmd.Cmd, object):
         Initialization before prompting user for commands.
         Despite the claims in the Cmd documentation, Cmd.preloop() is not a stub.
         """
-        tcache = threading.Timer(45, self.con.cancel)
+        tcache = threading.Timer(60, self.con.cancel)
         tcache.start()
         try:
             if not self.quiet: print 'Loading metadata into cache...'
