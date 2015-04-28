@@ -1,9 +1,9 @@
 # Changes
 
 ## v.1.1.0
-#### 2015-XXXX-XX
+#### 2015-APR-28
 - **Change pyfits to fitsio**
-- Added autocommit as configuration option to commit changes or not by default (default is yes)
+- Added autocommit as configuration option to commit changes or not by default (default = yes)
 - Added timeout (1 min) to initial metadata cache loading 
 
 ## v1.0.8
@@ -12,7 +12,7 @@
 - Fix enconding issues (between ASCII and UTF-8)
 - Loading bar termination issue fixed
 - Added message after loading table for sharing tables
-- Change pyfits to fitsio
+- Started migratrion from pyfits to fitsio
 - Set max limit for output files in MB
 - Add python API features for key commands and bugfix (All commnands can still be accessed from python API)
 
