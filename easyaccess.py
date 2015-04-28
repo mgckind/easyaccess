@@ -275,6 +275,7 @@ class easy_or(cmd.Cmd, object):
         for tries in range(3):
             try:
                 self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+                if self.autocommit: self.con.autocommit = True
                 connected = True
                 break
             except Exception as e:
@@ -1138,10 +1139,11 @@ class easy_or(cmd.Cmd, object):
             key = oneline.split('show')[0]
             for section in (self.config.sections()):
                 if key == 'all':
+                    print
                     for key0, val in self.config.items(section):
                         strr = 'Current value for %s' % key0
                         strr = strr.ljust(32)
-                        print '\n%s = %s ' % (strr, val)
+                        print '%s = %s ' % (strr, val)
                 elif key == 'filepath':
                     print '\n config file path = %s\n' % config_file
                     return
