@@ -23,7 +23,7 @@ setup(
     #packages=find_packages(),
     packages=['eautils'],
     license='LICENSE.txt',
-    description='Easy Access to access DES DB',
+    description='Easy access to access DES DB. Command line interpreter client for DESDM',
     long_description=read('README.md'),
     url='https://github.com/mgckind/easyaccess',
     install_requires=['pandas >= 0.14','termcolor','fitsio >= 0.9.6','cx_Oracle'],
