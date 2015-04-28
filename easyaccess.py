@@ -21,6 +21,10 @@ import threading
 import time
 import getpass
 import itertools
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p')
 
 try:
     from termcolor import colored
@@ -196,6 +200,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
     # write or append...
     if mode == 'w':
         # assume that this is smaller than the max size!
+        if os.path.exists(fitsfile): os.remove(fitsfile)
         fitsio.write(fitsfile, arr, clobber=True)
         return fileindex
     elif mode == 'a':
@@ -222,6 +227,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
 
             thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
 
+            if os.path.exists(thisfile): os.remove(thisfile)
             fitsio.write(thisfile, arr, clobber=True)
             return fileindex
         else:
@@ -890,7 +896,7 @@ class easy_or(cmd.Cmd, object):
             print tnames
             # Add tname to cache (no longer needed)
             # table_list=tnames.values.flatten().tolist()
-            #for table in table_list:
+            # for table in table_list:
             #    tn=user.upper()+'.'+table.upper()
             #    try : self.cache_table_names.index(tn)
             #    except: self.cache_table_names.append(tn)
@@ -1255,7 +1261,7 @@ class easy_or(cmd.Cmd, object):
         # called fgottenmetadata in the user's mydb. It refreshes on command
         # or on timeout (checked at startup).
 
-        #get last update
+        # get last update
         verb = True
         if arg == 'quiet': verb = False
         query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
@@ -1392,8 +1398,8 @@ class easy_or(cmd.Cmd, object):
             return self.do_help('describe_table')
         tablename = arg.upper()
         tablename = tablename.replace(';', '')
-        schema = self.user.upper()  #default --- Mine
-        link = ""  #default no link
+        schema = self.user.upper()  # default --- Mine
+        link = ""  # default no link
         if "." in tablename: (schema, tablename) = tablename.split(".")
         if "@" in tablename: (tablename, link) = tablename.split("@")
         table = tablename
@@ -1406,7 +1412,7 @@ class easy_or(cmd.Cmd, object):
         # common schema.
         #
         while (1):
-            #check for fundamental definition  e.g. schema.table@link
+            # check for fundamental definition  e.g. schema.table@link
             q = """
             select count(*) from all_tab_columns%s
                where OWNER = '%s' and
@@ -1487,7 +1493,7 @@ class easy_or(cmd.Cmd, object):
         Usage: find_tables_with_column  <column-name-substring>                                                                 
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG 
         """
-        #query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
+        # query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
         if arg == '': return self.do_help('find_tables_with_column')
         query = """
            SELECT 
@@ -1592,7 +1598,7 @@ class easy_or(cmd.Cmd, object):
                         print colored('\nProblems reading %s\n' % line, "red")
                         return
 
-                    #check table first
+                    # check table first
                     self.cur.execute(
                         'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
                     if self.cur.fetchall()[0][0] == 1:
@@ -1654,7 +1660,7 @@ class easy_or(cmd.Cmd, object):
                     except:
                         print colored('\nProblems reading %s\n' % line, "red")
                         return
-                    #check table first
+                    # check table first
                     self.cur.execute(
                         'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
                     if self.cur.fetchall()[0][0] == 1:
@@ -1817,7 +1823,7 @@ class easy_or(cmd.Cmd, object):
             return options_add_comment
 
 
-    #UNDOCCUMENTED DO METHODS
+    # UNDOCCUMENTED DO METHODS
 
 
     def do_EOF(self, line):
