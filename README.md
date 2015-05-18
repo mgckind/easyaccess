@@ -1,4 +1,4 @@
-# easyaccess <s href="https://github.com/mgckind/easyaccess/releases/tag/1.1.0"> <img src="https://img.shields.io/badge/release-v1.1.0-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a>
+# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.1.0"> <img src="https://img.shields.io/badge/release-v1.1.0-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a>
 ![help_screen](help_screenshot.png)
 
 Refactored version of trivialAccess for accessing the DES DB
