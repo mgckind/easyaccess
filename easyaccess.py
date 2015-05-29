@@ -61,6 +61,14 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
 
+def print_exception():
+    (type, value, traceback) = sys.exc_info()
+    print
+    print colored(type, "red")
+    print colored(value, "red")
+    print
+
+
 def loading():
     char_s = u"\u2606"
     if sys.stdout.encoding != 'UTF-8':
@@ -165,6 +173,41 @@ def change_type(info):
             return "float64"
     else:
         return ""
+
+
+def dtype2oracle(dtype):
+    kind = dtype.kind
+    size = dtype.itemsize
+
+    if (kind == 'S'):
+        # string type
+        return 'VARCHAR2(%d)'%size
+    elif (kind == 'i'):
+        if (size == 1):
+            # 1-byte (16 bit) integer
+            return 'NUMBER(2,0)'
+        elif (size == 2):
+            # 2-byte (16 bit) integer
+            return 'NUMBER(6,0)'
+        elif (size == 4):
+            # 4-byte (32 bit) integer
+            return 'NUMBER(11,0)'
+        else:
+            # 8-byte (64 bit) integer
+            return 'NUMBER'
+    elif (kind == 'f'):
+        if (size == 4):
+            # 4-byte (32 bit) float
+            return 'BINARY_FLOAT'
+        elif (size == 8):
+            # 8-byte (64 bit) double
+            return 'BINARY_DOUBLE'
+        else:
+            msg = "Unsupported float type: %s"%kind
+            raise ValueError(msg)
+    else:
+        msg = "Unsupported type: %s"%kind
+        raise ValueError(msg)
 
 
 def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
