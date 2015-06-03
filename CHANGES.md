@@ -1,6 +1,10 @@
 # Changes
 
-## v.1.1.0
+## v1.1.1a
+#### 2015-XXX-XX
+
+
+## v1.1.0
 #### 2015-APR-28
 - **Change pyfits to fitsio**
 - Added autocommit as configuration option to commit changes or not by default (default = yes)

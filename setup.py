@@ -15,7 +15,7 @@ library_dirs = []
 include_dirs = []
 setup(
     name='easyaccess',
-    version='1.1.0',
+    version='1.1.1a',
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['easyaccess'],
