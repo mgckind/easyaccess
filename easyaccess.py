@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.1.0'
+__version__ = '1.1.1a'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
@@ -1998,6 +1998,8 @@ if __name__ == '__main__':
     csv, tab or fits format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization")
+    parser.add_argument("-u", "--user", action="store_true", dest='user', help="username")
+    parser.add_argument("-p", "--password", action="password", dest='password', help="password")
     args = parser.parse_args()
 
     if args.db is not None:
@@ -2007,6 +2009,7 @@ if __name__ == '__main__':
         db = conf.get('easyaccess', 'database')
 
     desconf = config_mod.get_desconfig(desfile, db)
+
 
     if args.command is not None:
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
