@@ -1998,8 +1998,8 @@ if __name__ == '__main__':
     csv, tab or fits format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization")
-    parser.add_argument("-u", "--user", action="store_true", dest='user', help="username")
-    parser.add_argument("-p", "--password", action="password", dest='password', help="password")
+    parser.add_argument("-u", "--user", dest='user', help="username")
+    parser.add_argument("-p", "--password", dest='password', help="password")
     args = parser.parse_args()
 
     if args.db is not None:
@@ -2009,6 +2009,15 @@ if __name__ == '__main__':
         db = conf.get('easyaccess', 'database')
 
     desconf = config_mod.get_desconfig(desfile, db)
+
+    if args.user is not None:
+        print 'Bypassing .desservices file with user : %s' % args.user
+        if args.password is None:
+            print 'Must include password'
+            os._exit(0)
+        else:
+            desconf.set('db-'+db,'user',args.user)
+            desconf.set('db-'+db,'passwd',args.password) 
 
 
     if args.command is not None:

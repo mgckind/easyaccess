@@ -2,6 +2,7 @@
 
 ## v1.1.1a
 #### 2015-XXX-XX
+- Added optional user/password from command line (using --user <user> and --password <password>)
 
 
 ## v1.1.0

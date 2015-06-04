@@ -1,7 +1,6 @@
 # Config file
 import ConfigParser
 import getpass
-import time
 import sys
 import cx_Oracle
 import os
