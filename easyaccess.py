@@ -61,6 +61,14 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
 
+def print_exception():
+    (type, value, traceback) = sys.exc_info()
+    print
+    print colored(type, "red")
+    print colored(value, "red")
+    print
+
+
 def loading():
     char_s = u"\u2606"
     if sys.stdout.encoding != 'UTF-8':
@@ -165,6 +173,41 @@ def change_type(info):
             return "float64"
     else:
         return ""
+
+
+def dtype2oracle(dtype):
+    kind = dtype.kind
+    size = dtype.itemsize
+
+    if (kind == 'S'):
+        # string type
+        return 'VARCHAR2(%d)'%size
+    elif (kind == 'i'):
+        if (size == 1):
+            # 1-byte (16 bit) integer
+            return 'NUMBER(2,0)'
+        elif (size == 2):
+            # 2-byte (16 bit) integer
+            return 'NUMBER(6,0)'
+        elif (size == 4):
+            # 4-byte (32 bit) integer
+            return 'NUMBER(11,0)'
+        else:
+            # 8-byte (64 bit) integer
+            return 'NUMBER'
+    elif (kind == 'f'):
+        if (size == 4):
+            # 4-byte (32 bit) float
+            return 'BINARY_FLOAT'
+        elif (size == 8):
+            # 8-byte (64 bit) double
+            return 'BINARY_DOUBLE'
+        else:
+            msg = "Unsupported float type: %s"%kind
+            raise ValueError(msg)
+    else:
+        msg = "Unsupported type: %s"%kind
+        raise ValueError(msg)
 
 
 def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
@@ -697,10 +740,12 @@ class easy_or(cmd.Cmd, object):
                     data.index += 1
                     if extra != "":
                         print colored(extra + '\n', "cyan")
-                    try:
-                        data.fillna('Null', inplace=True)
-                    except:
-                        pass
+                    # ADW: Oracle distinguishes between NaN and Null while pandas 
+                    # does not making this replacement confusing...
+                    ###try:
+                    ###    data.fillna('Null', inplace=True)
+                    ###except:
+                    ###    pass
                     print data
             else:
                 t2 = time.time()
@@ -1333,7 +1378,10 @@ class easy_or(cmd.Cmd, object):
 
         Usage: mytables
         """
-        query = "SELECT table_name FROM user_tables"
+        #query = "SELECT table_name FROM user_tables"
+        query = "SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES \
+        FROM user_segments s, user_tables t WHERE s.segment_name = t.table_name"
+
         self.query_and_print(query, print_time=False, extra="List of my tables", clear=clear)
 
     def do_find_user(self, line):
@@ -1549,6 +1597,118 @@ class easy_or(cmd.Cmd, object):
         return self._complete_tables(text)
 
 
+    def get_filename(self,line):
+        line = line.replace(';', '')
+        if line == "":
+            print '\nMust include table filename!\n'
+            return
+        if line.find('.') == -1:
+            print colored('\nError in filename\n', "red")
+            return
+
+        filename = "".join(line.split())
+        basename = os.path.basename(filename)
+        alls = basename.split('.')
+        if len(alls) > 2:
+            print "\nDo not use extra '.' in filename\n"
+            return
+
+        return filename
+
+    def check_table_exists(self,table):
+        # check table first
+        self.cur.execute(
+            'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
+        exists = self.cur.fetchall()[0][0]
+
+        # ADW: Removed print statement
+        ### if exists:
+        ###     print '\n Table already exists. Table can be removed with:' \
+        ###         '\n  DROP TABLE %s;\n' % table.upper()
+        ### else:
+        ###     print '\n Table does not exist. Table can be created with:' \
+        ###         '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper()
+
+        return exists
+
+    def load_data(self, filename):
+        base,format = os.path.basename(filename).split('.')
+        if format in ('csv', 'tab'):
+            if format == 'csv': sepa = ','
+            if format == 'tab': sepa = None
+            try:
+                DF = pd.read_csv(filename, sep=sepa)
+            except:
+                msg = 'Problem reading %s\n' % filename
+                raise Exception(msg)
+            # Monkey patch to grab columns and values
+            DF.ea_get_columns = DF.columns.values.tolist
+            DF.eag_get_values = DF.values.tolist
+        elif format in ('fits', 'fit'):
+            try:
+                DF = fitsio.FITS(filename)
+            except:
+                msg = 'Problems reading %s\n' % filename
+                raise Exception(msg)
+            # Monkey patch to grab columns and values
+            DF.ea_get_columns = DF[1].get_colnames
+            DF.ea_get_values = DF[1].read().tolist
+        else:
+            msg = "Format not recognized: %s \nUse 'csv' or 'fits' as extensions\n"%format
+            raise Exception(msg)
+        return DF
+
+    def new_table_columns(self,DF,format='csv'):
+        qtable = '( '
+        if format in ('csv', 'tab'):
+            for col in DF:
+                if DF[col].dtype.name == 'object':
+                    qtable += col + ' ' + 'VARCHAR2(' + str(max(DF[col].str.len())) + '),'
+                elif DF[col].dtype.name.find('int') > -1:
+                    qtable += col + ' INT,'
+                elif DF[col].dtype.name.find('float') > -1:
+                    qtable += col + ' BINARY_DOUBLE,'
+                else:
+                    qtable += col + ' NUMBER,'
+        elif format in ('fits','fit'):
+            # returns a list of column names
+            col_n = DF[1].get_colnames()
+            # and the data types
+            dtypes = DF[1].get_rec_dtype(vstorage='fixed')[0]
+            for i in xrange(len(col_n)):
+                qtable += '%s %s,' % (col_n[i],dtype2oracle(dtypes[i]))
+        # cut last , and close paren
+        qtable = qtable[:-1] + ')'
+
+        return qtable
+
+    def drop_table(self, table):
+        # Do we want to add a PURGE to this query?
+        qdrop = "DROP TABLE %s" % table.upper()
+        self.cur.execute(qdrop)
+        if self.autocommit: self.con.commit()
+
+    def create_table(self,table,DF,format='csv'):
+        qtable = 'create table %s ' % table
+        qtable += self.new_table_columns(DF,format)
+        self.cur.execute(qtable)
+        if self.autocommit: self.con.commit()
+
+    def insert_data(self,columns,values,table):
+        cols = ','.join(columns)
+        vals = ',:'.join(columns)
+        vals = ':' + vals
+        qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
+
+        t1 = time.time()
+        self.cur.executemany(qinsert, values)
+        t2 = time.time()
+        if self.autocommit: self.con.commit()
+        print colored(
+            '\n Inserted %d rows and %d columns into table %s in %.2f seconds' % (
+                len(values), len(columns), table.upper(), t2 - t1), "green")
+
+
     def do_load_table(self, line, name=''):
         """
         DB:Loads a table from a file (csv or fits) taking name from filename and columns from header
@@ -1566,191 +1726,112 @@ class easy_or(cmd.Cmd, object):
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
-        line = line.replace(';', '')
-        if line == "":
-            print '\nMust include table filename!\n'
-            return
-        if line.find('.') == -1:
-            print colored('\nError in filename\n', "red")
-            return
+        filename = self.get_filename(line)
+        if filename is None: return
+        base,format = os.path.basename(filename).split('.')
+
+        if name == '':
+            table = base
         else:
-            line = "".join(line.split())
-            if line.find('/') > -1:
-                filename = line.split('/')[-1]
-            else:
-                filename = line
-            alls = filename.split('.')
-            if len(alls) > 2:
-                print '\nDo not use extra . in filename\n'
-                return
-            else:
-                if name == '':
-                    table = alls[0]
-                else:
-                    table = name
-                format = alls[1]
-                if format in ('csv', 'tab'):
-                    if format == 'csv': sepa = ','
-                    if format == 'tab': sepa = None
-                    try:
-                        DF = pd.read_csv(line, sep=sepa)
-                    except:
-                        print colored('\nProblems reading %s\n' % line, "red")
-                        return
+            table = name
 
-                    # check table first
-                    self.cur.execute(
-                        'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
-                    if self.cur.fetchall()[0][0] == 1:
-                        print '\n Table already exists! Change name of file or drop table ' \
-                              '\n with:  DROP TABLE %s\n ' % table.upper()
-                    qtable = 'create table %s ( ' % table
-                    for col in DF:
-                        if DF[col].dtype.name == 'object':
-                            qtable += col + ' ' + 'VARCHAR2(' + str(max(DF[col].str.len())) + '),'
-                        elif DF[col].dtype.name.find('int') > -1:
-                            qtable += col + ' INT,'
-                        elif DF[col].dtype.name.find('float') > -1:
-                            qtable += col + ' BINARY_DOUBLE,'
-                        else:
-                            qtable += col + ' NUMBER,'
-                    qtable = qtable[:-1] + ')'
-                    try:
-                        self.cur.execute(qtable)
-                        if self.autocommit: self.con.commit()
-                    except:
-                        (type, value, traceback) = sys.exc_info()
-                        print
-                        print colored(type, "red")
-                        print colored(value, "red")
-                        print
-                        del DF
-                        return
+        # check table first
+        if self.check_table_exists(table): 
+            print '\n Table already exists. Table can be removed with:' \
+                '\n  DROP TABLE %s;\n' % table.upper()
+            return
 
-                    cols = ','.join(DF.columns.values.tolist())
-                    vals = ',:'.join(DF.columns.values.tolist())
-                    vals = ':' + vals
-                    qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
-                    try:
-                        t1 = time.time()
-                        self.cur.executemany(qinsert, DF.values.tolist())
-                        t2 = time.time()
-                        if self.autocommit: self.con.commit()
-                        print colored(
-                            '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
-                                table.upper(), len(DF), len(DF.columns), t2 - t1), "green")
-                        print colored(
-                            '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
-                            "cyan")
-                        print
-                        print colored('To make this table public run:', "blue", 'on_white'), '\n'
-                        print colored('   grant select on %s to DES_READER; ' % table.upper(), "blue", 'on_white'), '\n'
-                        del DF
-                    except:
-                        (type, value, traceback) = sys.exc_info()
-                        print
-                        print colored(type, "red")
-                        print colored(value, "red")
-                        print
-                        return
-                    return
-                elif format == 'fits' or format == 'fit':
-                    try:
-                        DF = fitsio.FITS(line)
-                    except:
-                        print colored('\nProblems reading %s\n' % line, "red")
-                        return
-                    # check table first
-                    self.cur.execute(
-                        'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
-                    if self.cur.fetchall()[0][0] == 1:
-                        print '\n Table already exists! Change name of file or drop table ' \
-                              '\n with:  DROP TABLE %s\n ' % table.upper()
-                    qtable = 'create table %s ( ' % table
+        try:
+            DF = self.load_data(filename)
+        except:
+            print_exception()
+            return
+            
+        columns = DF.ea_get_columns()
+        values = DF.ea_get_values()
 
-                    # returns a list of column names
-                    col_n = DF[1].get_colnames()
-                    # and the data types
-                    dtypes = DF[1].get_rec_dtype(vstorage='fixed')[0]
+        try:
+            self.create_table(table,DF,format)
+        except:
+            print_exception()
+            self.drop_table(table)
+            del DF
+            return
+        del DF
 
-                    for i in xrange(len(col_n)):
-                        if (dtypes[i].kind == 'S'):
-                            # string type
-                            qtable += '%s VARCHAR2(%d),' % (col_n[i], dtypes[i].itemsize)
-                        elif (dtypes[i].kind == 'i'):
-                            if (dtypes[i].itemsize == 1):
-                                # 1-byte (16 bit) integer
-                                qtable += '%s NUMBER(2,0),' % (col_n[i])
-                            elif (dtypes[i].itemsize == 2):
-                                # 2-byte (16 bit) integer
-                                qtable += '%s NUMBER(6,0),' % (col_n[i])
-                            elif (dtypes[i].itemsize == 4):
-                                # 4-byte (32 bit) integer
-                                qtable += '%s NUMBER(11,0),' % (col_n[i])
-                            else:
-                                # 8-byte (64 bit) integer
-                                qtable += '%s NUMBER,' % (col_n[i])
-                        elif (dtypes[i].kind == 'f'):
-                            if (dtypes[i].itemsize == 4):
-                                # 4-byte (32 bit) float
-                                qtable += '%s BINARY_FLOAT,' % (col_n[i])
-                            elif (dtypes[i].itemsize == 8):
-                                # 8-byte (64 bit) double
-                                qtable += '%s BINARY_DOUBLE,' % (col_n[i])
-                            else:
-                                raise ValueError("Unsupported float type")
-                        else:
-                            raise ValueError("Unsupported type")
+        try:
+            self.insert_data(columns,values,table)
+        except:
+            print_exception()
+            self.drop_table(table)
+            return
 
-                    # cut last , and close paren
-                    qtable = qtable[:-1] + ')'
-                    try:
-                        self.cur.execute(qtable)
-                        if self.autocommit: self.con.commit()
-                    except:
-                        (type, value, traceback) = sys.exc_info()
-                        print
-                        print colored(type, "red")
-                        print colored(value, "red")
-                        print
-                        DF.close()
-                        del DF
-                        return
-
-                    cols = ','.join(col_n)
-                    vals = ',:'.join(col_n)
-                    vals = ':' + vals
-                    qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
-                    try:
-                        t1 = time.time()
-                        self.cur.executemany(qinsert, DF[1].read().tolist())
-                        t2 = time.time()
-                        if self.autocommit: self.con.commit()
-                        print colored(
-                            '\n  Table %s created successfully with %d rows and %d columns in %.2f seconds' % (
-                                table.upper(), DF[1].get_nrows(), len(col_n), t2 - t1), "green")
-                        print colored(
-                            '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
-                            "cyan")
-                        print
-                        print colored('To make this table public run:', "blue", 'on_white'), '\n'
-                        print colored('   grant select on %s to DES_READER; ' % table.upper(), "blue", 'on_white'), '\n'
-                        DF.close()
-                        del DF
-                    except:
-                        (type, value, traceback) = sys.exc_info()
-                        print
-                        print colored(type, "red")
-                        print colored(value, "red")
-                        print
-                        return
-                    return
-                else:
-                    print '\n Format not recognized, use csv  or fits as extensions\n'
-                    return
+        print colored('\n Table %s loaded successfully.'%table.upper(),"green")
+        print colored(
+            '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
+            "cyan")
+        print
+        print colored('To make this table public run:', "blue"), '\n'
+        print colored('   grant select on %s to DES_READER; ' % table.upper(), "blue"), '\n'
+        return
 
 
     def complete_load_table(self, text, line, start_idx, end_idx):
+        return _complete_path(line)
+
+
+    def do_append_table(self, line, name=''):
+        """
+        DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
+
+        Usage: append_table <filename>
+        Ex: example.csv has the following content
+             RA,DEC,MAG
+             1.23,0.13,23
+             0.13,0.01,22
+
+        This command will append the contents of example.csv to the table named EXAMPLE.
+
+        Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
+        as data (using ',' or space)
+              - For fits file header must have columns names and data types
+              - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
+        """
+
+        filename = self.get_filename(line)
+        if filename is None: return
+        base,format = os.path.basename(filename).split('.')
+
+        if name == '':
+            table = base
+        else:
+            table = name
+
+        # check table first 
+        if not self.check_table_exists(table): 
+            print '\n Table does not exist. Table can be created with:' \
+                '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper()
+            return
+        try:
+            DF = self.load_data(filename)
+        except:
+            print_exception()
+            return
+            
+        columns = DF.ea_get_columns()
+        values = DF.ea_get_values()
+        del DF
+
+        try:
+            self.insert_data(columns,values,table)
+        except:
+            print_exception()
+            return
+
+        print colored('\n Table %s appended successfully.'%table.upper(),"green")
+
+
+    def complete_append_table(self, text, line, start_idx, end_idx):
         return _complete_path(line)
 
 
@@ -1945,9 +2026,16 @@ class connect(easy_or):
     def load_table(self, table_file, name=''):
         """
         Loads and create a table in the DB. If name is not passed, is taken from
-        the filename. Formats supported are fits, csv and tab files
+        the filename. Formats supported are 'fits', 'csv' and 'tab' files
         """
         self.do_load_table(table_file, name=name)
+
+    def append_table(self, table_file, name=''):
+        """
+        Appends data to a table in the DB. If name is not passed, is taken from
+        the filename. Formats supported are 'fits', 'csv' and 'tab' files
+        """
+        self.do_append_table(table_file, name=name)
 
 
 # #################################################
@@ -1996,6 +2084,8 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
     csv, tab or fits format and getting name from filename")
+    parser.add_argument("-at", "--append_table", dest='appendtable', help="Appends to a table in the DB, using \
+    csv, tab or fits format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization")
     parser.add_argument("-u", "--user", dest='user', help="username")
@@ -2032,6 +2122,11 @@ if __name__ == '__main__':
     elif args.loadtable is not None:
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "load_table " + args.loadtable
+        cmdinterp.onecmd(linein)
+        os._exit(0)
+    elif args.appendtable is not None:
+        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
+        linein = "append_table " + args.appendtable
         cmdinterp.onecmd(linein)
         os._exit(0)
     else:
