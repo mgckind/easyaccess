@@ -1378,7 +1378,10 @@ class easy_or(cmd.Cmd, object):
 
         Usage: mytables
         """
-        query = "SELECT table_name FROM user_tables"
+        #query = "SELECT table_name FROM user_tables"
+        query = "SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES \
+        FROM user_segments s, user_tables t WHERE s.segment_name = t.table_name"
+
         self.query_and_print(query, print_time=False, extra="List of my tables", clear=clear)
 
     def do_find_user(self, line):
@@ -1618,12 +1621,13 @@ class easy_or(cmd.Cmd, object):
             'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
         exists = self.cur.fetchall()[0][0]
 
-        if exists:
-            print '\n Table already exists. Table can be removed with:' \
-                '\n  DROP TABLE %s;\n' % table.upper()
-        else:
-            print '\n Table does not exist. Table can be created with:' \
-                '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper()
+        # ADW: Removed print statement
+        ### if exists:
+        ###     print '\n Table already exists. Table can be removed with:' \
+        ###         '\n  DROP TABLE %s;\n' % table.upper()
+        ### else:
+        ###     print '\n Table does not exist. Table can be created with:' \
+        ###         '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper()
 
         return exists
 
@@ -1679,6 +1683,7 @@ class easy_or(cmd.Cmd, object):
         return qtable
 
     def drop_table(self, table):
+        # Do we want to add a PURGE to this query?
         qdrop = "DROP TABLE %s" % table.upper()
         self.cur.execute(qdrop)
         if self.autocommit: self.con.commit()
@@ -1731,7 +1736,10 @@ class easy_or(cmd.Cmd, object):
             table = name
 
         # check table first
-        if self.check_table_exists(table): return
+        if self.check_table_exists(table): 
+            print '\n Table already exists. Table can be removed with:' \
+                '\n  DROP TABLE %s;\n' % table.upper()
+            return
 
         try:
             DF = self.load_data(filename)
@@ -1800,7 +1808,10 @@ class easy_or(cmd.Cmd, object):
             table = name
 
         # check table first 
-        if not self.check_table_exists(table): return
+        if not self.check_table_exists(table): 
+            print '\n Table does not exist. Table can be created with:' \
+                '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper()
+            return
         try:
             DF = self.load_data(filename)
         except:
