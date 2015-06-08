@@ -1,5 +1,10 @@
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import input
+from builtins import range
 # Config file
-import ConfigParser
+import configparser
 import getpass
 import sys
 import cx_Oracle
@@ -33,12 +38,12 @@ def get_config(configfile):
     Loads config file or create one if not
     Returns a configParser object
     """
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     configwrite = False
     check = config.read(configfile)
     if check == []:
         configwrite = True
-        print '\nCreating a configuration file... at %s\n' % configfile
+        print('\nCreating a configuration file... at %s\n' % configfile)
 
     if not config.has_section('easyaccess'):
         configwrite = True
@@ -86,7 +91,7 @@ def write_config(configfile, config_ob):
         F.close()
         return True
     except:
-        print "Problems writing the configuration  file %s" % configfile
+        print("Problems writing the configuration  file %s" % configfile)
         return False
 
 
@@ -99,38 +104,38 @@ def get_desconfig(desfile, db):
     port_n = '1521'
 
     if not db[:3] == 'db-': db = 'db-' + db
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     configwrite = False
     check = config.read(desfile)
     if check == []:
         configwrite = True
-        print '\nError in DES_SERVICES config file, creating a new one...'
-        print 'File might not exists or is not configured'
-        print
+        print('\nError in DES_SERVICES config file, creating a new one...')
+        print('File might not exists or is not configured')
+        print()
 
     databases = ['db-desoper', 'db-dessci', 'db-destest']  #most used ones anyways
 
     if db not in databases and not config.has_section(db):
-        check_db = raw_input(
+        check_db = input(
             '\nDB entered not dessci, desoper or destest or in DES_SERVICE file, continue anyway [y]/n\n')
         if check_db in ('n', 'N', 'no', 'No', 'NO'): sys.exit(0)
 
     if not config.has_section(db):
-        print '\nAdding section %s to des_service file\n' % db
+        print('\nAdding section %s to des_service file\n' % db)
         configwrite = True
         kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
         dsn = cx_Oracle.makedsn(**kwargs)
         good = False
         for i in range(3):
             try:
-                user = raw_input('Enter username : ')
+                user = input('Enter username : ')
                 pw1 = getpass.getpass(prompt='Enter password : ')
                 ctemp = cx_Oracle.connect(user, pw1, dsn=dsn)
                 good = True
                 break
             except:
                 (type, value, traceback) = sys.exc_info()
-                print value
+                print(value)
                 if value.message.code == 1017:
                     pass
                 else:
@@ -138,7 +143,7 @@ def get_desconfig(desfile, db):
         if good:
             ctemp.close()
         else:
-            print '\n Check your credentials and/or database access\n'
+            print('\n Check your credentials and/or database access\n')
             sys.exit(0)
         config.add_section(db)
 
@@ -169,6 +174,6 @@ def write_desconfig(configfile, config_ob):
         os.chmod(configfile, 2 ** 8 + 2 ** 7)  #rw-------
         return True
     except:
-        print "Problems writing the configuration  file %s" % configfile
+        print("Problems writing the configuration  file %s" % configfile)
         return False
 

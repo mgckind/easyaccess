@@ -1,3 +1,4 @@
+from __future__ import print_function
 __author__ = 'Matias Carrasco Kind'
 import sys
 try:
@@ -32,9 +33,9 @@ def print_deslogo(color=True):
     last=c2("""   `"""+char1*7+char2,"red") +"     DATA MANAGEMENT"
     L.append(last)
 
-    print 
-    for l in L: print l
+    print() 
+    for l in L: print(l)
 
 if __name__ == "__main__":
-    print
+    print()
     print_deslogo()
