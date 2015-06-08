@@ -6,7 +6,7 @@
 - Added size info to mytables command
 - Added append_tables option to append data to existing tables
 - Minor changes in uploading tables
-- ** python 3 compatible **
+- **python 3 compatible**
 
 ## v1.1.0
 #### 2015-APR-28
