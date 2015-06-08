@@ -19,7 +19,7 @@ setup(
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['easyaccess'],
-    py_modules=['easyaccess','config','eautils.des_logo'],
+    py_modules=['easyaccess','config','eautils.des_logo','eautils.dircache'],
     #packages=find_packages(),
     packages=['eautils'],
     license='LICENSE.txt',
