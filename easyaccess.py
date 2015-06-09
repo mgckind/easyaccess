@@ -5,7 +5,6 @@ from __future__ import absolute_import
 from builtins import input
 from builtins import str
 from builtins import range
-from past.utils import old_div
 __author__ = 'Matias Carrasco Kind'
 __version__ = '1.2.0a'
 # TODO:
@@ -263,7 +262,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
             thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
 
         # check the size of the current file
-        size = old_div(float(os.path.getsize(thisfile)), (2. ** 20))
+        size = float(os.path.getsize(thisfile))/(2. ** 20)
 
         if (size > fits_max_mb):
             # it's time to increment
@@ -527,7 +526,7 @@ class easy_or(cmd.Cmd, object):
                 qt = self.cur.execute(query_time)
                 last = qt.fetchall()
                 now = datetime.datetime.now()
-                diff = old_div(abs(now - last[0][0]).seconds, (3600.))
+                diff = abs(now - last[0][0]).seconds/(3600.)
                 if diff >= 24: create_metadata = True
             if create_metadata:
                 query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
@@ -854,7 +853,7 @@ class easy_or(cmd.Cmd, object):
                                 thisfile = '%s_%06d.%s' % (fileparts[0], fileindex, mode)
 
                             # check the size of the current file
-                            size = old_div(float(os.path.getsize(thisfile)), (2. ** 20))
+                            size = float(os.path.getsize(thisfile))/(2. ** 20)
 
                             if (size > self.outfile_max_mb):
                                 # it's time to increment
@@ -1322,7 +1321,7 @@ class easy_or(cmd.Cmd, object):
             qt = self.cur.execute(query_time)
             last = qt.fetchall()
             now = datetime.datetime.now()
-            diff = old_div(abs(now - last[0][0]).seconds, 3600.)
+            diff = abs(now - last[0][0]).seconds/(3600.)
             if verb: print('Updated %.2f hours ago' % diff)
         except:
             pass
