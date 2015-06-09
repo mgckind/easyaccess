@@ -7,7 +7,7 @@ from builtins import str
 from builtins import range
 from past.utils import old_div
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.1.1a'
+__version__ = '1.2.0a'
 # TODO:
 # add other formats in load tables from fits (like boolean or complex)
 # clean up, comments
