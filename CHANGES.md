@@ -1,12 +1,14 @@
 # Changes
 
-## v1.1.1a
+## v1.2.0
 #### 2015-XXX-XX
 - Added optional user/password from command line (using --user <user> and --password <password>)
 - Added size info to mytables command
 - Added append_tables option to append data to existing tables
 - Minor changes in uploading tables
 - **python 3 compatible**
+- **change config.ini folder, from .easyacess/ to .easyaccess (typo)**
+- move multiprocess import depending on loading bar
 
 ## v1.1.0
 #### 2015-APR-28
