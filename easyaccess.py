@@ -2,19 +2,12 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+__author__ = 'Matias Carrasco Kind'
+__version__ = '1.2.0a'
 from builtins import input
 from builtins import str
 from builtins import range
-__author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.0a'
-# TODO:
-# add other formats in load tables from fits (like boolean or complex)
-# clean up, comments
-# readline bug (GNU vs libedit) for history
-# self upgrade
-
 import warnings
-
 warnings.filterwarnings("ignore")
 import cmd
 import cx_Oracle
@@ -28,10 +21,6 @@ import time
 import getpass
 import itertools
 import logging
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
-
 try:
     from termcolor import colored
 except:
@@ -39,24 +28,25 @@ except:
         return line
 import pandas as pd
 import datetime
-# import pyfits as pf
 import fitsio
 import numpy as np
 import argparse
 import config as config_mod
 from eautils import des_logo as dl
-from multiprocessing import Pool, Process
 import webbrowser
 import signal
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p')
 
 pid = os.getpid()
 
 # FILES
-ea_path = os.path.join(os.environ["HOME"], ".easyacess/")
+ea_path = os.path.join(os.environ["HOME"], ".easyaccess/")
 if not os.path.exists(ea_path): os.makedirs(ea_path)
-history_file = os.path.join(os.environ["HOME"], ".easyacess/history")
+history_file = os.path.join(os.environ["HOME"], ".easyaccess/history")
 if not os.path.exists(history_file): os.system('echo $null >> ' + history_file)
-config_file = os.path.join(os.environ["HOME"], ".easyacess/config.ini")
+config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
 if not os.path.exists(config_file): os.system('echo $null >> ' + config_file)
 desfile = os.getenv("DES_SERVICES")
 if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
@@ -394,7 +384,9 @@ class easy_or(cmd.Cmd, object):
                 self.intro = intro
             if self.intro:
                 if not self.quiet:
-                    if self.metadata: self.do_clear(None)
+                    if self.metadata:
+                        #self.do_clear(None) #not cleaning screen  
+                        print()
                     dl.print_deslogo(color_term)
                     self.stdout.write(str(self.intro) + "\n")
             stop = None
@@ -2055,6 +2047,12 @@ class MyParser(argparse.ArgumentParser):
         sys.exit(2)
 
 
+def initial_message(quiet=False, clear=True):
+    if not quiet:
+        if clear: os.system(['clear', 'cls'][os.name == 'nt'])
+        print(colored("\n*IMPORTANT* : ","red"), "The config.ini file is now located at %s \n" % config_file,
+        colored("(It changed from previous version due to a typo)\n","magenta"))
+
 if __name__ == '__main__':
 
     conf = config_mod.get_config(config_file)
@@ -2062,6 +2060,10 @@ if __name__ == '__main__':
     pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
     pd.set_option('display.width', conf.getint('display', 'width'))
     pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
+
+    bar = conf.getboolean('display', 'loading_bar')
+    if bar:
+        from multiprocessing import Process
 
     color_term = True
     if not conf.getboolean('display', 'color_terminal'):
@@ -2121,28 +2123,30 @@ if __name__ == '__main__':
 
 
     if args.command is not None:
+        initial_message(args.quiet,clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         cmdinterp.onecmd(args.command)
         os._exit(0)
     elif args.loadsql is not None:
+        initial_message(args.quiet,clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.loadtable is not None:
+        initial_message(args.quiet,clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "load_table " + args.loadtable
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.appendtable is not None:
+        initial_message(args.quiet,clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "append_table " + args.appendtable
         cmdinterp.onecmd(linein)
         os._exit(0)
     else:
-
-        if not args.quiet:
-            os.system(['clear', 'cls'][os.name == 'nt'])
+        initial_message(args.quiet,clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
 
 
