@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.0a'
+__version__ = '1.2.0b'
 from builtins import input
 from builtins import str
 from builtins import range
@@ -39,6 +39,7 @@ import signal
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p')
 
+global load_bar
 pid = os.getpid()
 
 # FILES
@@ -1144,6 +1145,7 @@ class easy_or(cmd.Cmd, object):
         if readline_present:
             readline.write_history_file(history_file)
         if self.writeconfig:
+            self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')
             config_mod.write_config(config_file, self.config)
         os._exit(0)
 
@@ -1157,6 +1159,7 @@ class easy_or(cmd.Cmd, object):
 
 
     def do_config(self, line):
+        global load_bar
         """
         Change parameters from config file (config.ini). Smart autocompletion enabled
 
@@ -1215,8 +1218,10 @@ class easy_or(cmd.Cmd, object):
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
                     self.config.set(section, key, str(val))
+                    if key == 'loading_bar' : load_bar = True if val == 'yes' else False
                     self.writeconfig = True
                     break
+            self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')        
             config_mod.write_config(config_file, self.config)
             if key == 'editor': self.editor = self.config.get('easyaccess', 'editor')
             if key == 'timeout': self.timeout = self.config.getint('easyaccess', 'timeout')
@@ -2061,8 +2066,8 @@ if __name__ == '__main__':
     pd.set_option('display.width', conf.getint('display', 'width'))
     pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
 
-    bar = conf.getboolean('display', 'loading_bar')
-    if bar:
+    load_bar = conf.getboolean('display', 'loading_bar')
+    if load_bar:
         from multiprocessing import Process
 
     color_term = True
@@ -2095,7 +2100,7 @@ if __name__ == '__main__':
     parser.add_argument("-at", "--append_table", dest='appendtable', help="Appends to a table in the DB, using \
     csv, tab or fits format and getting name from filename")
     parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
-    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization")
+    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization, no loading bar")
     parser.add_argument("-u", "--user", dest='user', help="username")
     parser.add_argument("-p", "--password", dest='password', help="password")
     args = parser.parse_args()
@@ -2103,6 +2108,9 @@ if __name__ == '__main__':
     if args.version:
         print('version: %s' % __version__)
         os._exit(0)
+
+    if args.quiet:
+        conf.set('display', 'loading_bar', 'no')
 
     if args.db is not None:
         db = args.db
