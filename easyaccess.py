@@ -1016,12 +1016,12 @@ class easy_or(cmd.Cmd, object):
             val = line.split('set')[-1]
             if val != '':
                 self.prefetch = int(val)
-                self.config.set('easyaccess', 'prefetch', val)
+                self.config.set('easyaccess', 'prefetch', str(val))
                 self.writeconfig = True
                 print('\nPrefetch value set to  {:}\n'.format(self.prefetch))
         elif line.find('default') > -1:
             self.prefetch = 10000
-            self.config.set('easyaccess', 'prefetch', 10000)
+            self.config.set('easyaccess', 'prefetch', '10000')
             self.writeconfig = True
             print('\nPrefetch value set to default (10000) \n')
         else:
@@ -1214,7 +1214,7 @@ class easy_or(cmd.Cmd, object):
             # if key in int_keys: val=int(val)
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
-                    self.config.set(section, key, val)
+                    self.config.set(section, key, str(val))
                     self.writeconfig = True
                     break
             config_mod.write_config(config_file, self.config)

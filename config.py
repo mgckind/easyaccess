@@ -51,13 +51,13 @@ def get_config(configfile):
     if not config.has_option('easyaccess', 'database'): configwrite = True;config.set('easyaccess', 'database',
                                                                                       'dessci')
     if not config.has_option('easyaccess', 'editor'): configwrite = True;config.set('easyaccess', 'editor', 'nano')
-    if not config.has_option('easyaccess', 'prefetch'): configwrite = True;config.set('easyaccess', 'prefetch', 10000)
-    if not config.has_option('easyaccess', 'histcache'): configwrite = True;config.set('easyaccess', 'histcache', 5000)
-    if not config.has_option('easyaccess', 'timeout'): configwrite = True;config.set('easyaccess', 'timeout', 900)
-    if not config.has_option('easyaccess', 'nullvalue'): configwrite = True;config.set('easyaccess', 'nullvalue', -9999)
+    if not config.has_option('easyaccess', 'prefetch'): configwrite = True;config.set('easyaccess', 'prefetch', '10000')
+    if not config.has_option('easyaccess', 'histcache'): configwrite = True;config.set('easyaccess', 'histcache', '5000')
+    if not config.has_option('easyaccess', 'timeout'): configwrite = True;config.set('easyaccess', 'timeout', '900')
+    if not config.has_option('easyaccess', 'nullvalue'): configwrite = True;config.set('easyaccess', 'nullvalue', '-9999')
     if not config.has_option('easyaccess', 'outfile_max_mb'): configwrite = True;config.set('easyaccess',
                                                                                             'outfile_max_mb',
-                                                                                         1000)
+                                                                                         '1000')
     if not config.has_option('easyaccess', 'autocommit'): configwrite = True;config.set('easyaccess', 'autocommit',
                                                                                         'yes')
 
@@ -67,9 +67,9 @@ def get_config(configfile):
     if not config.has_option('display', 'color_terminal'): configwrite = True;config.set('display', 'color_terminal',
                                                                                          'yes')
     if not config.has_option('display', 'loading_bar'): configwrite = True;config.set('display', 'loading_bar', 'yes')
-    if not config.has_option('display', 'max_rows'): configwrite = True;config.set('display', 'max_rows', 1500)
-    if not config.has_option('display', 'width'): configwrite = True;config.set('display', 'width', 1000)
-    if not config.has_option('display', 'max_columns'): configwrite = True;config.set('display', 'max_columns', 50)
+    if not config.has_option('display', 'max_rows'): configwrite = True;config.set('display', 'max_rows', '1500')
+    if not config.has_option('display', 'width'): configwrite = True;config.set('display', 'width', '1000')
+    if not config.has_option('display', 'max_columns'): configwrite = True;config.set('display', 'max_columns', '50')
 
     check = True
     if configwrite == True:
