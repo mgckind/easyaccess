@@ -2,6 +2,7 @@
 
 ## v1.2.0
 #### 2015-XXX-XX
+- Bugfix (show_index,...)
 - Added optional user/password from command line (using --user <user> and --password <password>)
 - Added size info to mytables command
 - Added append_tables option to append data to existing tables

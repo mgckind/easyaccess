@@ -1586,6 +1586,7 @@ class easy_or(cmd.Cmd, object):
             print("table name required")
             return
         tablename = arg
+        tablename = tablename.replace(';', '')
         query_template = """select
              a.table_name, a.column_name, b.index_type, b.index_name, b.ityp_name from
              all_ind_columns a, all_indexes b
