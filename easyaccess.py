@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.0b'
+__version__ = '1.2.0c'
 from builtins import input
 from builtins import str
 from builtins import range
@@ -102,7 +102,7 @@ options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
-                  'width', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
+                  'width', 'max_colwidth','color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit']
 
@@ -1159,7 +1159,6 @@ class easy_or(cmd.Cmd, object):
 
 
     def do_config(self, line):
-        global load_bar
         """
         Change parameters from config file (config.ini). Smart autocompletion enabled
 
@@ -1181,10 +1180,12 @@ class easy_or(cmd.Cmd, object):
             max_rows          : Max number of rows to display on the screen. Doesn't apply to output files
             width             : Width of the output format on the screen
             max_columns       : Max number of columns to display on the screen. Doesn't apply to output files
+            max_colwidth      : Max number of characters per column at display. Doesn't apply to output files
             color_terminal    : yes/no toggles the color for terminal std output. Need to restart easyaccess
             loading_bar       : yes/no toggles the loading bar. Useful for background jobs
             autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
         """
+        global load_bar
         if line == '': return self.do_help('config')
         oneline = "".join(line.split())
         if oneline.find('show') > -1:
@@ -1213,7 +1214,7 @@ class easy_or(cmd.Cmd, object):
             val = oneline.split('set')[1]
             if val == '': return self.do_help('config')
             int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
-                        'nullvalue', 'loading_bar', 'autocommit']
+                        'nullvalue', 'loading_bar', 'autocommit', 'max_col_width']
             # if key in int_keys: val=int(val)
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
@@ -1960,6 +1961,7 @@ class connect(easy_or):
         pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
         pd.set_option('display.width', conf.getint('display', 'width'))
         pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
+        pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
         if section == '':
             db = conf.get('easyaccess', 'database')
         else:
@@ -2066,6 +2068,7 @@ if __name__ == '__main__':
     pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
     pd.set_option('display.width', conf.getint('display', 'width'))
     pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
+    pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
 
     load_bar = conf.getboolean('display', 'loading_bar')
     if load_bar:

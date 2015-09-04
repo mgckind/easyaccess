@@ -70,6 +70,7 @@ def get_config(configfile):
     if not config.has_option('display', 'max_rows'): configwrite = True;config.set('display', 'max_rows', '1500')
     if not config.has_option('display', 'width'): configwrite = True;config.set('display', 'width', '1000')
     if not config.has_option('display', 'max_columns'): configwrite = True;config.set('display', 'max_columns', '50')
+    if not config.has_option('display', 'max_colwidth'): configwrite = True;config.set('display', 'max_colwidth', '50')
 
     check = True
     if configwrite == True:
