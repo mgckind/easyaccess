@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.0c'
+__version__ = '1.2.0d'
 from builtins import input
 from builtins import str
 from builtins import range
