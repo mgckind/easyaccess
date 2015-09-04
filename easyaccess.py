@@ -104,7 +104,7 @@ options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout
                   'max_columns',
                   'width', 'max_colwidth','color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
 options_config2 = ['show', 'set']
-options_app = ['check', 'submit']
+options_app = ['check', 'submit', 'explain']
 
 type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
 
@@ -624,6 +624,16 @@ class easy_or(cmd.Cmd, object):
                 elif app.find('submit') > -1:
                     print(colored('\nTo be done: Submit jobs to the DB cluster', 'cyan'))
                     return
+                elif app.find('explain') > -1:
+                    exquery = 'explain plan for '+ query
+                    try:
+                        self.cur.execute(exquery)
+                        planquery = 'SELECT PLAN_TABLE_OUTPUT FROM TABLE(DBMS_XPLAN.DISPLAY)'
+                        self.query_and_print(planquery)
+                        return
+                    except:
+                        print('Something went wrong')
+                        return
                 else:
                     return
             if line[fend:].find('>') > -1:

@@ -3,6 +3,7 @@
 ## v1.2.0
 #### 2015-XXX-XX
 - Bugfix (show_index,...)
+- Added explain option to see the execution plan
 - Added extra configuration option for column width
 - Added optional user/password from command line (using --user <user> and --password <password>)
 - Added size info to mytables command
