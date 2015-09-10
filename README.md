@@ -21,6 +21,7 @@ For a short tutorial (To be completed) chek [here](http://deslogin.cosmology.ill
 - [pandas](http://pandas.pydata.org/) >= 0.14
 - [termcolor](https://pypi.python.org/pypi/termcolor)
 - [PyTables](http://pytables.github.io/) (optional, for hdf5 output)
+- [future](http://python-future.org/) (for python 2/3 compatibility) 
 
 ## Some *nice* features
 - Smart tab completion for commands, table names, column names and file paths accordingly
