@@ -3,15 +3,15 @@
 ## v1.2.0
 #### 2015-XXX-XX
 - Bugfixes (show_index, connection issues when returning error)
-- Added explain option to see the execution plan
-- Added extra configuration option for column width
+- Added explain option to see the execution plan, i.e. DESDB ~> SELECT * FROM TABLE; < explain
+- Added extra configuration option for column width (useful when printing large text columns)
 - Added optional user/password from command line (using --user <user> and --password <password>)
 - Added size info to mytables command
 - Added append_tables option to append data to existing tables
 - Minor changes in uploading tables
 - **python 3 compatible**
 - **change config.ini folder, from .easyacess/ to .easyaccess (typo)**
-- move multiprocess import call depending on loading bar is set
+- move multiprocess import call depending on whether the loading bar is set
 
 ## v1.1.0
 #### 2015-APR-28
