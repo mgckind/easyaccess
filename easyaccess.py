@@ -483,6 +483,7 @@ class easy_or(cmd.Cmd, object):
             print("* To write to a file  : select ... from ... where ... ; > filename")
             print(colored("* Supported file formats (.csv, .tab., .fits, .h5) ", "green"))
             print("* To check SQL syntax : select ... from ... where ... ; < check")
+            print("* To see the Oracle execution plan  : select ... from ... where ... ; < explain")
             print()
             print("* To access an online tutorial type: online_tutorial ")
 
@@ -1040,6 +1041,7 @@ class easy_or(cmd.Cmd, object):
         elif line.find('default') > -1:
             self.prefetch = 10000
             self.config.set('easyaccess', 'prefetch', '10000')
+            o
             self.writeconfig = True
             print('\nPrefetch value set to default (10000) \n')
         else:
