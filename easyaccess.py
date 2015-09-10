@@ -1241,6 +1241,11 @@ class easy_or(cmd.Cmd, object):
                     break
             self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')        
             config_mod.write_config(config_file, self.config)
+            if key == 'max_columns': pd.set_option('display.max_columns', self.config.getint('display', 'max_columns'))
+            if key == 'max_rows': pd.set_option('display.max_rows', self.config.getint('display', 'max_rows'))
+            if key == 'width': pd.set_option('display.width', self.config.getint('display', 'width'))
+            if key == 'max_colwidth': pd.set_option('display.max_colwidth',
+                                                    self.config.getint('display', 'max_colwidth'))
             if key == 'editor': self.editor = self.config.get('easyaccess', 'editor')
             if key == 'timeout': self.timeout = self.config.getint('easyaccess', 'timeout')
             if key == 'prefetch': self.prefetch = self.config.get('easyaccess', 'prefetch')
