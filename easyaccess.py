@@ -568,7 +568,7 @@ class easy_or(cmd.Cmd, object):
         while line and line[-1] == "\\":
             self.buff = self.buff[:-1]
             line = line[:-1]  # strip terminal \
-            temp = input('...')
+            temp = input('... ')
             self.buff += '\n' + temp
             line += temp
 
