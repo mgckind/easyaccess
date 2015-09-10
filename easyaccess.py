@@ -315,12 +315,12 @@ class easy_or(cmd.Cmd, object):
         self.port = self.desconfig.get('db-' + self.dbname, 'port')
         self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
-        dsn = cx_Oracle.makedsn(**kwargs)
+        self.dsn = cx_Oracle.makedsn(**kwargs)
         if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
         for tries in range(3):
             try:
-                self.con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
+                self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
                 if self.autocommit: self.con.autocommit = True
                 connected = True
                 break
@@ -502,7 +502,7 @@ class easy_or(cmd.Cmd, object):
         Initialization before prompting user for commands.
         Despite the claims in the Cmd documentation, Cmd.preloop() is not a stub.
         """
-        tcache = threading.Timer(60, self.con.cancel)
+        tcache = threading.Timer(120, self.con.cancel)
         tcache.start()
         try:
             if not self.quiet: print('Loading metadata into cache...')
@@ -560,6 +560,13 @@ class easy_or(cmd.Cmd, object):
              it has been interpreted. If you want to modify the input line
              before execution (for example, variable substitution) do it here.
          """
+        try:
+            self.con.ping()
+        except:
+            self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
+            if self.autocommit: self.con.autocommit = True
+            self.cur = self.con.cursor()
+            self.cur.arraysize = self.prefetch
 
         # handle line continuations -- line terminated with \
         # beware of null lines.

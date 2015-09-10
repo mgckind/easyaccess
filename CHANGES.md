@@ -2,7 +2,7 @@
 
 ## v1.2.0
 #### 2015-XXX-XX
-- Bugfix (show_index,...)
+- Bugfixes (show_index, connection issues when returning error)
 - Added explain option to see the execution plan
 - Added extra configuration option for column width
 - Added optional user/password from command line (using --user <user> and --password <password>)
