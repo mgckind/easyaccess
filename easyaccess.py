@@ -1384,7 +1384,10 @@ class easy_or(cmd.Cmd, object):
         Usage: whoami
         """
         if self.dbname in ('dessci', 'desoper'):
-            sql_getUserDetails = "select * from des_users where username = '" + self.user + "'"
+            sql_getUserDetails = """
+            select d.username, d.email, d.firstname as first, d.lastname as last, trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
+            trunc(sysdate-t.ctime,0)||' days ago' created
+            from des_users d, sys.user$ t  where d.username = '""" + self.user + """' and t.name=upper(d.username)"""
         if self.dbname in ('destest'):
             print(colored('\nThis function is not implemented in destest\n', 'red'))
             sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
