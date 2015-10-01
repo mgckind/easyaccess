@@ -1,7 +1,8 @@
 # Changes
 
 ## v1.2.0
-#### 2015-XXX-XX
+#### 2015-OCT-01
+- Fixes several issues, like: #35, #34, #30, #26 #25 among others
 - Does not clear screen after query
 - Added a message when password has not been set in the last 200 days  (added extra columns to whoami as well)
 - Fix problem with connection after entering a wrong query which used to hangs in some networks

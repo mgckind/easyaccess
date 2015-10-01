@@ -15,16 +15,16 @@ library_dirs = []
 include_dirs = []
 setup(
     name='easyaccess',
-    version='1.2.0d',
+    version='1.2.0',
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['easyaccess'],
-    py_modules=['easyaccess','config','eautils.des_logo','eautils.dircache'],
+    py_modules=['easyaccess','config_ea','eautils.des_logo','eautils.dircache'],
     #packages=find_packages(),
     packages=['eautils'],
     license='LICENSE.txt',
     description='Easy access to access DES DB. Command line interpreter client for DESDM',
     long_description=read('README.md'),
     url='https://github.com/mgckind/easyaccess',
-    install_requires=['pandas >= 0.14','termcolor','fitsio >= 0.9.6','cx_Oracle','future'],
+    install_requires=['pandas >= 0.14','termcolor','fitsio >= 0.9.6','cx_Oracle','future >= 0.15.0'],
 )

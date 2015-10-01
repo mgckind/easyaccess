@@ -1,4 +1,4 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.1.0"> <img src="https://img.shields.io/badge/release-v1.1.0-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.1.0"><img src="https://img.shields.io/badge/pypi-v1.1.0-orange.svg" alt="pypi version"/></a>
+# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.2.0"> <img src="https://img.shields.io/badge/release-v1.2.0-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.2.0"><img src="https://img.shields.io/badge/pypi-v1.2.0-orange.svg" alt="pypi version"/></a>
 ![help_screen](help_screenshot.png)
 
 Refactored version of trivialAccess for accessing the DES DB
@@ -6,11 +6,11 @@ Refactored version of trivialAccess for accessing the DES DB
 Python Command Line Interpreter to access Oracle DES DB
 using cx_Oracle 
 
-For a short tutorial (To be completed) chek [here](http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html)
+For a short tutorial (To be completed) check [here](http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html)
 (Using des credentials)
 
 
-**Current version = 1.1.0**
+**Current version = 1.2.0**
 
 ## Requirements
 
@@ -22,8 +22,11 @@ For a short tutorial (To be completed) chek [here](http://deslogin.cosmology.ill
 - [termcolor](https://pypi.python.org/pypi/termcolor)
 - [PyTables](http://pytables.github.io/) (optional, for hdf5 output)
 - [future](http://python-future.org/) (for python 2/3 compatibility) 
+- ** Note that you need to install python-future for python2/3 compatibility**
 
 ## Some *nice* features
+- Nice output format
+- Very flexible configuration
 - Smart tab completion for commands, table names, column names and file paths accordingly
 - write output results to csv, tab, fits files or HDF5 files
 - load tables from csv or fits directly into DB
@@ -31,6 +34,7 @@ For a short tutorial (To be completed) chek [here](http://deslogin.cosmology.ill
 - It can be imported as module
 - Can run command directly from command line
 - Load sql query from file and/or from editor
+- Show the execution plan of a query if required
 - Many more
 
 ## Basic use
@@ -63,6 +67,29 @@ or
 
 The format is the same as in command line, SQL statement must end with ;
 and to write output files it must be followed by > <output file>
+
+### Configuration
+
+The configuration file is located at $HOME/.easyaccess/config.ini
+
+but everything can be configured from inside easyaccess
+
+type:
+   
+        DESDB ~> help config
+        
+to see the meanings of all the options, and:
+
+        DESDB ~> config all show
+        
+to see the current values, to modify one value, e.g., the prefetch value
+
+        DESDB ~> config prefetch set 50000
+        
+and to see any particular option (e.g., timeout):
+
+        DESDB ~> config timeout show
+
 
 ### TODO
     - There is a bug with some versions of readline

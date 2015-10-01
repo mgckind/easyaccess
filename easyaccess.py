@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.0d'
+__version__ = '1.2.0'
 from builtins import input
 from builtins import str
 from builtins import range
@@ -621,8 +621,7 @@ class easy_or(cmd.Cmd, object):
 
                 else:
                     line = read_buf(fbuf.split()[0])
-                    if line == "" : return ""
-
+                    if line == "": return ""
 
                 self.buff = line
                 print()
@@ -855,7 +854,7 @@ class easy_or(cmd.Cmd, object):
                     # does not making this replacement confusing...
                     # ##try:
                     # ##    data.fillna('Null', inplace=True)
-                    ###except:
+                    # ##except:
                     ###    pass
                     print(data)
             else:
@@ -1055,7 +1054,7 @@ class easy_or(cmd.Cmd, object):
             # for table in table_list:
             # tn=user.upper()+'.'+table.upper()
             # try : self.cache_table_names.index(tn)
-            #    except: self.cache_table_names.append(tn)
+            # except: self.cache_table_names.append(tn)
             #self.cache_table_names.sort()
         else:
             if self.dbname in ('dessci', 'desoper'):
@@ -1799,7 +1798,7 @@ class easy_or(cmd.Cmd, object):
         # ADW: Removed print statement
         # ## if exists:
         # ##     print '\n Table already exists. Table can be removed with:' \
-        ###         '\n  DROP TABLE %s;\n' % table.upper()
+        # ##         '\n  DROP TABLE %s;\n' % table.upper()
         ### else:
         ###     print '\n Table does not exist. Table can be created with:' \
         ###         '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper()
