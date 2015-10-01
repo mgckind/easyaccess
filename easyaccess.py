@@ -1517,6 +1517,12 @@ class easy_or(cmd.Cmd, object):
         Describes the columns in <table-name> as
           column_name, oracle_Type, date_length, comments
 
+        Optional: describe_table <table_name> with <pattern>
+        Describes only the columns with certain pattern, example:
+
+        describe_table Y1A1_COADD_OBJECTS with MAG%
+        will describe only columns starting with MAG in that table
+
 
         """
         if arg == '':
