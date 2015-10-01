@@ -22,7 +22,7 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - [termcolor](https://pypi.python.org/pypi/termcolor)
 - [PyTables](http://pytables.github.io/) (optional, for hdf5 output)
 - [future](http://python-future.org/) (for python 2/3 compatibility) 
-- ** Note that you need to install python-future for python2/3 compatibility**
+- **Note that you need to install python-future for python2/3 compatibility**
 
 ## Some *nice* features
 - Nice output format
