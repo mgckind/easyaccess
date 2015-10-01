@@ -15,6 +15,7 @@ import cmd
 import cx_Oracle
 import sys
 import os
+import shutil
 import stat
 import re
 import eautils.dircache as dircache
@@ -49,9 +50,26 @@ pid = os.getpid()
 ea_path = os.path.join(os.environ["HOME"], ".easyaccess/")
 if not os.path.exists(ea_path): os.makedirs(ea_path)
 history_file = os.path.join(os.environ["HOME"], ".easyaccess/history")
-if not os.path.exists(history_file): os.system('echo $null >> ' + history_file)
 config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
-if not os.path.exists(config_file): os.system('echo $null >> ' + config_file)
+
+
+# check if old path is there
+ea_path_old = os.path.join(os.environ["HOME"], ".easyacess/")
+if os.path.exists(ea_path_old):
+    if not os.path.exists(history_file):
+        shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/history"), history_file)
+    if not os.path.exists(config_file):
+        shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/config.ini"), config_file)
+    os.rename(ea_path_old, os.path.join(os.environ["HOME"], ".easyacess_old/"))
+
+# create files if they don't exist
+if not os.path.exists(history_file):
+    os.system('echo $null >> ' + history_file)
+if not os.path.exists(config_file):
+    os.system('echo $null >> ' + config_file)
+
+
+
 desfile = os.getenv("DES_SERVICES")
 if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
 if os.path.exists(desfile):
@@ -736,7 +754,7 @@ class easy_or(cmd.Cmd, object):
 
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
-                        clear=True):
+                        clear=False):
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
@@ -1403,7 +1421,7 @@ class easy_or(cmd.Cmd, object):
         query = """
            select owner, db_link, username, host, created from all_db_links where OWNER = '%s'
         """ % (self.user.upper())
-        self.query_and_print(query, print_time=False, extra=lines)
+        self.query_and_print(query, print_time=False, extra=lines, clear=True)
 
     def do_whoami(self, arg):
         """
@@ -1419,9 +1437,9 @@ class easy_or(cmd.Cmd, object):
         if self.dbname in ('destest'):
             print(colored('\nThis function is not implemented in destest\n', 'red'))
             sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
-        self.query_and_print(sql_getUserDetails, print_time=False)
+        self.query_and_print(sql_getUserDetails, print_time=False, clear=True)
 
-    def do_myquota(self, arg, clear=True):
+    def do_myquota(self, arg):
         """
         DB:Print information about quota status.
 
@@ -1429,9 +1447,9 @@ class easy_or(cmd.Cmd, object):
         """
         sql_getquota = "select TABLESPACE_NAME,  \
         MBYTES_USED/1024 as GBYTES_USED, MBYTES_LEFT/1024 as GBYTES_LEFT from myquota"
-        self.query_and_print(sql_getquota, print_time=False, clear=clear)
+        self.query_and_print(sql_getquota, print_time=False, clear=True)
 
-    def do_mytables(self, arg, clear=True):
+    def do_mytables(self, arg):
         """
         DB:Lists  table you have made in your 'mydb'
 
@@ -1441,7 +1459,7 @@ class easy_or(cmd.Cmd, object):
         query = "SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES \
         FROM user_segments s, user_tables t WHERE s.segment_name = t.table_name"
 
-        self.query_and_print(query, print_time=False, extra="List of my tables", clear=clear)
+        self.query_and_print(query, print_time=False, extra="List of my tables", clear=True)
 
     def do_find_user(self, line):
         """
@@ -1463,7 +1481,7 @@ class easy_or(cmd.Cmd, object):
         if len(keys) >= 1:
             query += 'upper(firstname) like upper(\'' + keys[0] + '\') or upper(lastname) like upper(\'' + keys[
                 0] + '\') or upper(username) like upper (\'' + keys[0] + '\')'
-        self.query_and_print(query, print_time=True)
+        self.query_and_print(query, print_time=False, clear=True)
 
     def complete_find_user(self, text, line, start_index, end_index):
         options_users = self.cache_usernames
@@ -2113,8 +2131,7 @@ class MyParser(argparse.ArgumentParser):
 def initial_message(quiet=False, clear=True):
     if not quiet:
         if clear: os.system(['clear', 'cls'][os.name == 'nt'])
-        print(colored("\n*IMPORTANT* : ", "red"), "The config.ini file is now located at %s \n" % config_file,
-              colored("(It changed from previous version due to a typo)\n", "magenta"))
+        # No messages for now
 
 
 if __name__ == '__main__':

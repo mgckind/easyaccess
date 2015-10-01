@@ -2,6 +2,7 @@
 
 ## v1.2.0
 #### 2015-XXX-XX
+- Does not clear screen after query
 - Added a message when password has not been set in the last 200 days  (added extra columns to whoami as well)
 - Bugfixes (show_index, connection issues after returning error, change display setting without restarting)
 - Added explain option to see the execution plan, i.e. DESDB ~> SELECT * FROM TABLE; < explain
