@@ -68,8 +68,6 @@ if not os.path.exists(history_file):
 if not os.path.exists(config_file):
     os.system('echo $null >> ' + config_file)
 
-
-
 desfile = os.getenv("DES_SERVICES")
 if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
 if os.path.exists(desfile):
@@ -607,9 +605,25 @@ class easy_or(cmd.Cmd, object):
 
         if not line: return ""  # empty line no need to go further
         if line[0] == "@":
-            if len(line) >= 1:
-                fbuf = line[1:].split()[0]
-                line = read_buf(fbuf)
+            if len(line) > 1:
+                fbuf = line[1:]
+                if fbuf.find('>') > -1:
+                    try:
+                        fbuf = "".join(fbuf.split())
+                        line = read_buf(fbuf.split('>')[0])
+                        if line == "": return ""
+                        if line.find('>') > -1:
+                            line = line.split('>')[0]
+                        outputfile = fbuf.split('>')[1]
+                        line = line + ' > ' + outputfile
+                    except:
+                        outputfile = ''
+
+                else:
+                    line = read_buf(fbuf.split()[0])
+                    if line == "" : return ""
+
+
                 self.buff = line
                 print()
                 print(line)
@@ -631,7 +645,7 @@ class easy_or(cmd.Cmd, object):
     def emptyline(self):
         pass
 
-# This function overrides the cmd function to remove some characters from the delimiter
+    # This function overrides the cmd function to remove some characters from the delimiter
     def complete(self, text, state):
         """Return the next possible completion for 'text'.
 
@@ -640,13 +654,14 @@ class easy_or(cmd.Cmd, object):
         """
         if state == 0:
             import readline
-            readline.set_completer_delims(' \t\n`~!@#$%^&*()=[{]}\\|;:\'",<>/?') ##overrides default delimiters
+
+            readline.set_completer_delims(' \t\n`~!@#$%^&*()=[{]}\\|;:\'",<>/?')  # #overrides default delimiters
             origline = readline.get_line_buffer()
             line = origline.lstrip()
             stripped = len(origline) - len(line)
             begidx = readline.get_begidx() - stripped
             endidx = readline.get_endidx() - stripped
-            if begidx>0:
+            if begidx > 0:
                 cmd, args, foo = self.parseline(line)
                 if cmd == '':
                     compfunc = self.completedefault
@@ -839,7 +854,7 @@ class easy_or(cmd.Cmd, object):
                     # ADW: Oracle distinguishes between NaN and Null while pandas 
                     # does not making this replacement confusing...
                     # ##try:
-                    ###    data.fillna('Null', inplace=True)
+                    # ##    data.fillna('Null', inplace=True)
                     ###except:
                     ###    pass
                     print(data)
@@ -1039,7 +1054,7 @@ class easy_or(cmd.Cmd, object):
             # table_list=tnames.values.flatten().tolist()
             # for table in table_list:
             # tn=user.upper()+'.'+table.upper()
-            #    try : self.cache_table_names.index(tn)
+            # try : self.cache_table_names.index(tn)
             #    except: self.cache_table_names.append(tn)
             #self.cache_table_names.sort()
         else:
@@ -1205,17 +1220,35 @@ class easy_or(cmd.Cmd, object):
     def do_loadsql(self, line):
         """
         DB:Loads a sql file with a query and ask whether it should be run
-        There is a shortcut using @, ex : @test.sql
+        There is a shortcut using @, ex : @test.sql  (or @test.sql > myfile.csv to override output file)
 
-        Usage: loadsql <filename>   (use autocompletion)
+        Usage: loadsql <filename with sql statement>   (use autocompletion)
+
+        Optional: loadsql <filename with sql statement> > <output_file> to write to a file, not to the screen
         """
-        newq = read_buf(line)
+
+        if line.find('>') > -1:
+            try:
+                line = "".join(line.split())
+                newq = read_buf(line.split('>')[0])
+                if newq.find('>') > -1:
+                    newq = newq.split('>')[0]
+                outputfile = line.split('>')[1]
+                newq = newq + ' > ' + outputfile
+            except:
+                outputfile = ''
+
+
+        else:
+            newq = read_buf(line)
+
         if newq == "": return
         if self.interactive:
             print()
             print(newq)
             print()
-            if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']): self.default(newq)
+            if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
+                self.default(newq)
         else:
             self.default(newq)
 
@@ -1560,7 +1593,7 @@ class easy_or(cmd.Cmd, object):
         """
         if arg == '':
             return self.do_help('describe_table')
-        arg=arg.replace(';','')
+        arg = arg.replace(';', '')
         arg = " ".join(arg.split())
         tablename = arg.split()[0]
         tablename = tablename.upper()
@@ -1613,11 +1646,11 @@ class easy_or(cmd.Cmd, object):
             """ % ("@" + link if link else "", table)
             ans = self.query_results(q)
             if len(ans) == 1:
-                #resolved one step closer to fundamental definition
+                # resolved one step closer to fundamental definition
                 (schema, table, link) = ans[0]
                 continue
 
-            #failed to find the reference count on the query below to give a null result
+            # failed to find the reference count on the query below to give a null result
             break  # no such table accessible by user
 
         # schema, table and link are now valid.
@@ -1652,9 +1685,8 @@ class easy_or(cmd.Cmd, object):
             order by atc.column_id
             """ % (link, link, schema, table, schema, table)
 
-
-
-        self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user or pattern do not match',
+        self.query_and_print(q, print_time=False,
+                             err_arg='Table does not exist or it is not accessible by user or pattern do not match',
                              extra=comm, clear=clear)
         return
 
@@ -1766,7 +1798,7 @@ class easy_or(cmd.Cmd, object):
 
         # ADW: Removed print statement
         # ## if exists:
-        ###     print '\n Table already exists. Table can be removed with:' \
+        # ##     print '\n Table already exists. Table can be removed with:' \
         ###         '\n  DROP TABLE %s;\n' % table.upper()
         ### else:
         ###     print '\n Table does not exist. Table can be created with:' \
