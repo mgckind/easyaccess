@@ -2,7 +2,8 @@
 
 ## v1.2.0
 #### 2015-XXX-XX
-- Bugfixes (show_index, connection issues when returning error, change display setting without restarting)
+- Added a message when password has not been set in the last 200 days  (added extra columns to whoami as well)
+- Bugfixes (show_index, connection issues after returning error, change display setting without restarting)
 - Added explain option to see the execution plan, i.e. DESDB ~> SELECT * FROM TABLE; < explain
 - Added extra configuration option for column width (useful when printing large text columns)
 - Added optional user/password from command line (using --user <user> and --password <password>)

@@ -2,12 +2,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 __author__ = 'Matias Carrasco Kind'
 __version__ = '1.2.0d'
 from builtins import input
 from builtins import str
 from builtins import range
 import warnings
+
 warnings.filterwarnings("ignore")
 import cmd
 import cx_Oracle
@@ -21,6 +23,7 @@ import time
 import getpass
 import itertools
 import logging
+
 try:
     from termcolor import colored
 except:
@@ -102,7 +105,7 @@ options_out = ['csv', 'tab', 'fits', 'h5']
 options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
-                  'width', 'max_colwidth','color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
+                  'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit', 'explain']
 
@@ -178,7 +181,7 @@ def dtype2oracle(dtype):
 
     if (kind == 'S'):
         # string type
-        return 'VARCHAR2(%d)'%size
+        return 'VARCHAR2(%d)' % size
     elif (kind == 'i'):
         if (size == 1):
             # 1-byte (16 bit) integer
@@ -200,10 +203,10 @@ def dtype2oracle(dtype):
             # 8-byte (64 bit) double
             return 'BINARY_DOUBLE'
         else:
-            msg = "Unsupported float type: %s"%kind
+            msg = "Unsupported float type: %s" % kind
             raise ValueError(msg)
     else:
-        msg = "Unsupported type: %s"%kind
+        msg = "Unsupported type: %s" % kind
         raise ValueError(msg)
 
 
@@ -253,7 +256,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
             thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
 
         # check the size of the current file
-        size = float(os.path.getsize(thisfile))/(2. ** 20)
+        size = float(os.path.getsize(thisfile)) / (2. ** 20)
 
         if (size > fits_max_mb):
             # it's time to increment
@@ -334,6 +337,8 @@ class easy_or(cmd.Cmd, object):
             os._exit(0)
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
+        msg = self.last_pass_changed()
+        if msg: print(msg)
 
 
     def handler(self, signum, frame):
@@ -386,7 +391,7 @@ class easy_or(cmd.Cmd, object):
             if self.intro:
                 if not self.quiet:
                     if self.metadata:
-                        #self.do_clear(None) #not cleaning screen  
+                        # self.do_clear(None) #not cleaning screen
                         print()
                     dl.print_deslogo(color_term)
                     self.stdout.write(str(self.intro) + "\n")
@@ -520,7 +525,7 @@ class easy_or(cmd.Cmd, object):
                 qt = self.cur.execute(query_time)
                 last = qt.fetchall()
                 now = datetime.datetime.now()
-                diff = abs(now - last[0][0]).seconds/(3600.)
+                diff = abs(now - last[0][0]).seconds / (3600.)
                 if diff >= 24: create_metadata = True
             if create_metadata:
                 query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
@@ -633,7 +638,7 @@ class easy_or(cmd.Cmd, object):
                     print(colored('\nTo be done: Submit jobs to the DB cluster', 'cyan'))
                     return
                 elif app.find('explain') > -1:
-                    exquery = 'explain plan for '+ query
+                    exquery = 'explain plan for ' + query
                     try:
                         self.cur.execute(exquery)
                         planquery = 'SELECT PLAN_TABLE_OUTPUT FROM TABLE(DBMS_XPLAN.DISPLAY)'
@@ -707,6 +712,29 @@ class easy_or(cmd.Cmd, object):
 
     # ## QUERY METHODS
 
+
+    def last_pass_changed(self):
+        """
+        Return creation time and last time password was modified
+        """
+        query = """
+        select sysdate-ctime creation, sysdate-ptime passwd from sys.user$ where name = '%s' """ % self.user.upper()
+        try:
+            self.cur.execute(query)
+            TT = self.cur.fetchall()
+            ctime = int(TT[0][0])
+            ptime = int(TT[0][1])
+        except:
+            return None
+        if ptime > 200:
+            msg = colored("*Important* ", "red") + 'Last time password change was ' + colored("%d" % ptime,
+                                                                                              "red") + " days ago"
+            if ptime == ctime: msg += colored(" (Never in your case!)", "red")
+            msg += '\n Please change it soon using the ' + colored("set_password",
+                                                                   "cyan") + ' command and you will get rid of this message\n'
+            return msg
+
+
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
                         clear=True):
         self.cur.arraysize = self.prefetch
@@ -759,7 +787,7 @@ class easy_or(cmd.Cmd, object):
                         print(colored(extra + '\n', "cyan"))
                     # ADW: Oracle distinguishes between NaN and Null while pandas 
                     # does not making this replacement confusing...
-                    ###try:
+                    # ##try:
                     ###    data.fillna('Null', inplace=True)
                     ###except:
                     ###    pass
@@ -864,7 +892,7 @@ class easy_or(cmd.Cmd, object):
                                 thisfile = '%s_%06d.%s' % (fileparts[0], fileindex, mode)
 
                             # check the size of the current file
-                            size = float(os.path.getsize(thisfile))/(2. ** 20)
+                            size = float(os.path.getsize(thisfile)) / (2. ** 20)
 
                             if (size > self.outfile_max_mb):
                                 # it's time to increment
@@ -959,7 +987,7 @@ class easy_or(cmd.Cmd, object):
             # Add tname to cache (no longer needed)
             # table_list=tnames.values.flatten().tolist()
             # for table in table_list:
-            #    tn=user.upper()+'.'+table.upper()
+            # tn=user.upper()+'.'+table.upper()
             #    try : self.cache_table_names.index(tn)
             #    except: self.cache_table_names.append(tn)
             #self.cache_table_names.sort()
@@ -1238,10 +1266,10 @@ class easy_or(cmd.Cmd, object):
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
                     self.config.set(section, key, str(val))
-                    if key == 'loading_bar' : load_bar = True if val == 'yes' else False
+                    if key == 'loading_bar': load_bar = True if val == 'yes' else False
                     self.writeconfig = True
                     break
-            self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')        
+            self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')
             config_mod.write_config(config_file, self.config)
             if key == 'max_columns': pd.set_option('display.max_columns', self.config.getint('display', 'max_columns'))
             if key == 'max_rows': pd.set_option('display.max_rows', self.config.getint('display', 'max_rows'))
@@ -1343,7 +1371,7 @@ class easy_or(cmd.Cmd, object):
             qt = self.cur.execute(query_time)
             last = qt.fetchall()
             now = datetime.datetime.now()
-            diff = abs(now - last[0][0]).seconds/(3600.)
+            diff = abs(now - last[0][0]).seconds / (3600.)
             if verb: print('Updated %.2f hours ago' % diff)
         except:
             pass
@@ -1409,7 +1437,7 @@ class easy_or(cmd.Cmd, object):
 
         Usage: mytables
         """
-        #query = "SELECT table_name FROM user_tables"
+        # query = "SELECT table_name FROM user_tables"
         query = "SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES \
         FROM user_segments s, user_tables t WHERE s.segment_name = t.table_name"
 
@@ -1499,7 +1527,7 @@ class easy_or(cmd.Cmd, object):
                """ % ("@" + link if link else "", schema, table)
             ans = self.query_results(q)
             if ans[0][0] > 0:
-                #found real definition go get meta-data
+                # found real definition go get meta-data
                 break
 
             # check if we are indirect by  synonym of mine
@@ -1508,11 +1536,11 @@ class easy_or(cmd.Cmd, object):
             """ % ("@" + link if link else "", table)
             ans = self.query_results(q)
             if len(ans) == 1:
-                #resolved one step closer to fundamental definition
+                # resolved one step closer to fundamental definition
                 (schema, table, link) = ans[0]
                 continue
 
-            #check if we are indirect by a public synonym
+            # check if we are indirect by a public synonym
             q = """select TABLE_OWNER, TABLE_NAME, DB_LINK from ALL_SYNONYMS%s
                              where SYNONYM_NAME = '%s' AND OWNER = 'PUBLIC'
             """ % ("@" + link if link else "", table)
@@ -1629,7 +1657,7 @@ class easy_or(cmd.Cmd, object):
         return self._complete_tables(text)
 
 
-    def get_filename(self,line):
+    def get_filename(self, line):
         line = line.replace(';', '')
         if line == "":
             print('\nMust include table filename!\n')
@@ -1647,14 +1675,14 @@ class easy_or(cmd.Cmd, object):
 
         return filename
 
-    def check_table_exists(self,table):
+    def check_table_exists(self, table):
         # check table first
         self.cur.execute(
             'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
         exists = self.cur.fetchall()[0][0]
 
         # ADW: Removed print statement
-        ### if exists:
+        # ## if exists:
         ###     print '\n Table already exists. Table can be removed with:' \
         ###         '\n  DROP TABLE %s;\n' % table.upper()
         ### else:
@@ -1664,7 +1692,7 @@ class easy_or(cmd.Cmd, object):
         return exists
 
     def load_data(self, filename):
-        base,format = os.path.basename(filename).split('.')
+        base, format = os.path.basename(filename).split('.')
         if format in ('csv', 'tab'):
             if format == 'csv': sepa = ','
             if format == 'tab': sepa = None
@@ -1686,11 +1714,11 @@ class easy_or(cmd.Cmd, object):
             DF.ea_get_columns = DF[1].get_colnames
             DF.ea_get_values = DF[1].read().tolist
         else:
-            msg = "Format not recognized: %s \nUse 'csv' or 'fits' as extensions\n"%format
+            msg = "Format not recognized: %s \nUse 'csv' or 'fits' as extensions\n" % format
             raise Exception(msg)
         return DF
 
-    def new_table_columns(self,DF,format='csv'):
+    def new_table_columns(self, DF, format='csv'):
         qtable = '( '
         if format in ('csv', 'tab'):
             for col in DF:
@@ -1702,13 +1730,13 @@ class easy_or(cmd.Cmd, object):
                     qtable += col + ' BINARY_DOUBLE,'
                 else:
                     qtable += col + ' NUMBER,'
-        elif format in ('fits','fit'):
+        elif format in ('fits', 'fit'):
             # returns a list of column names
             col_n = DF[1].get_colnames()
             # and the data types
             dtypes = DF[1].get_rec_dtype(vstorage='fixed')[0]
             for i in range(len(col_n)):
-                qtable += '%s %s,' % (col_n[i],dtype2oracle(dtypes[i]))
+                qtable += '%s %s,' % (col_n[i], dtype2oracle(dtypes[i]))
         # cut last , and close paren
         qtable = qtable[:-1] + ')'
 
@@ -1720,13 +1748,13 @@ class easy_or(cmd.Cmd, object):
         self.cur.execute(qdrop)
         if self.autocommit: self.con.commit()
 
-    def create_table(self,table,DF,format='csv'):
+    def create_table(self, table, DF, format='csv'):
         qtable = 'create table %s ' % table
-        qtable += self.new_table_columns(DF,format)
+        qtable += self.new_table_columns(DF, format)
         self.cur.execute(qtable)
         if self.autocommit: self.con.commit()
 
-    def insert_data(self,columns,values,table):
+    def insert_data(self, columns, values, table):
         cols = ','.join(columns)
         vals = ',:'.join(columns)
         vals = ':' + vals
@@ -1760,7 +1788,7 @@ class easy_or(cmd.Cmd, object):
         """
         filename = self.get_filename(line)
         if filename is None: return
-        base,format = os.path.basename(filename).split('.')
+        base, format = os.path.basename(filename).split('.')
 
         if name == '':
             table = base
@@ -1768,9 +1796,9 @@ class easy_or(cmd.Cmd, object):
             table = name
 
         # check table first
-        if self.check_table_exists(table): 
+        if self.check_table_exists(table):
             print('\n Table already exists. Table can be removed with:' \
-                '\n  DROP TABLE %s;\n' % table.upper())
+                  '\n  DROP TABLE %s;\n' % table.upper())
             return
 
         try:
@@ -1778,12 +1806,12 @@ class easy_or(cmd.Cmd, object):
         except:
             print_exception()
             return
-            
+
         columns = DF.ea_get_columns()
         values = DF.ea_get_values()
 
         try:
-            self.create_table(table,DF,format)
+            self.create_table(table, DF, format)
         except:
             print_exception()
             self.drop_table(table)
@@ -1792,13 +1820,13 @@ class easy_or(cmd.Cmd, object):
         del DF
 
         try:
-            self.insert_data(columns,values,table)
+            self.insert_data(columns, values, table)
         except:
             print_exception()
             self.drop_table(table)
             return
 
-        print(colored('\n Table %s loaded successfully.'%table.upper(),"green"))
+        print(colored('\n Table %s loaded successfully.' % table.upper(), "green"))
         print(colored(
             '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
             "cyan"))
@@ -1832,7 +1860,7 @@ class easy_or(cmd.Cmd, object):
 
         filename = self.get_filename(line)
         if filename is None: return
-        base,format = os.path.basename(filename).split('.')
+        base, format = os.path.basename(filename).split('.')
 
         if name == '':
             table = base
@@ -1840,27 +1868,27 @@ class easy_or(cmd.Cmd, object):
             table = name
 
         # check table first 
-        if not self.check_table_exists(table): 
+        if not self.check_table_exists(table):
             print('\n Table does not exist. Table can be created with:' \
-                '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
+                  '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
             DF = self.load_data(filename)
         except:
             print_exception()
             return
-            
+
         columns = DF.ea_get_columns()
         values = DF.ea_get_values()
         del DF
 
         try:
-            self.insert_data(columns,values,table)
+            self.insert_data(columns, values, table)
         except:
             print_exception()
             return
 
-        print(colored('\n Table %s appended successfully.'%table.upper(),"green"))
+        print(colored('\n Table %s appended successfully.' % table.upper(), "green"))
 
 
     def complete_append_table(self, text, line, start_idx, end_idx):
@@ -1959,7 +1987,7 @@ class easy_or(cmd.Cmd, object):
         tut = webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
 
 
-        ##################################################
+        # #################################################
 
 
 def to_pandas(cur):
@@ -2085,8 +2113,9 @@ class MyParser(argparse.ArgumentParser):
 def initial_message(quiet=False, clear=True):
     if not quiet:
         if clear: os.system(['clear', 'cls'][os.name == 'nt'])
-        print(colored("\n*IMPORTANT* : ","red"), "The config.ini file is now located at %s \n" % config_file,
-        colored("(It changed from previous version due to a typo)\n","magenta"))
+        print(colored("\n*IMPORTANT* : ", "red"), "The config.ini file is now located at %s \n" % config_file,
+              colored("(It changed from previous version due to a typo)\n", "magenta"))
+
 
 if __name__ == '__main__':
 
@@ -2123,7 +2152,8 @@ if __name__ == '__main__':
 
     parser = MyParser(
         description='Easy Access to the DES DB. There is a configuration file located in %s for more customizable options' % config_file)
-    parser.add_argument("-v", "--version", dest='version', action="store_true", help="show program's version number and exit")
+    parser.add_argument("-v", "--version", dest='version', action="store_true",
+                        help="show program's version number and exit")
     parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
     parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
@@ -2157,35 +2187,34 @@ if __name__ == '__main__':
             print('Must include password')
             os._exit(0)
         else:
-            desconf.set('db-'+db,'user',args.user)
-            desconf.set('db-'+db,'passwd',args.password) 
-
+            desconf.set('db-' + db, 'user', args.user)
+            desconf.set('db-' + db, 'passwd', args.password)
 
     if args.command is not None:
-        initial_message(args.quiet,clear=False)
+        initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         cmdinterp.onecmd(args.command)
         os._exit(0)
     elif args.loadsql is not None:
-        initial_message(args.quiet,clear=False)
+        initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.loadtable is not None:
-        initial_message(args.quiet,clear=False)
+        initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "load_table " + args.loadtable
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.appendtable is not None:
-        initial_message(args.quiet,clear=False)
+        initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "append_table " + args.appendtable
         cmdinterp.onecmd(linein)
         os._exit(0)
     else:
-        initial_message(args.quiet,clear=True)
+        initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
 
 
