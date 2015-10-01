@@ -1521,8 +1521,18 @@ class easy_or(cmd.Cmd, object):
         """
         if arg == '':
             return self.do_help('describe_table')
-        tablename = arg.upper()
-        tablename = tablename.replace(';', '')
+        arg=arg.replace(';','')
+        arg = " ".join(arg.split())
+        tablename = arg.split()[0]
+        tablename = tablename.upper()
+        pattern = None
+        try:
+            extra = arg.split()[1]
+            if extra.upper() == 'WITH':
+                pattern = arg.split()[2]
+        except:
+            pass
+
         schema = self.user.upper()  # default --- Mine
         link = ""  # default no link
         if "." in tablename: (schema, tablename) = tablename.split(".")
@@ -1579,17 +1589,33 @@ class easy_or(cmd.Cmd, object):
             comment_table = "Table does not exist"
         else:
             comment_table = comment_table[0][0]
-        comm = """Description of %s commented as: '%s'""" % (table, comment_table)
-        q = """
-        select
-          atc.column_name, atc.data_type,
-          atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
-          From all_tab_cols%s atc , all_col_comments%s acc
-           where atc.owner = '%s' and atc.table_name = '%s' and
-           acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name
-           order by atc.column_id
-           """ % (link, link, schema, table, schema, table)
-        self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user',
+
+        if pattern:
+            comm = """Description of %s with pattern %s commented as: '%s'""" % (table, pattern.upper(), comment_table)
+            q = """
+            select
+            atc.column_name, atc.data_type,
+            atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
+            From all_tab_cols%s atc , all_col_comments%s acc
+            where atc.owner = '%s' and atc.table_name = '%s' and
+            acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name and atc.column_name like '%s'
+            order by atc.column_id
+            """ % (link, link, schema, table, schema, table, pattern.upper())
+        else:
+            comm = """Description of %s commented as: '%s'""" % (table, comment_table)
+            q = """
+            select
+            atc.column_name, atc.data_type,
+            atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
+            From all_tab_cols%s atc , all_col_comments%s acc
+            where atc.owner = '%s' and atc.table_name = '%s' and
+            acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name
+            order by atc.column_id
+            """ % (link, link, schema, table, schema, table)
+
+
+
+        self.query_and_print(q, print_time=False, err_arg='Table does not exist or it is not accessible by user or pattern do not match',
                              extra=comm, clear=clear)
         return
 
