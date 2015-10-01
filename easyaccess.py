@@ -631,6 +631,39 @@ class easy_or(cmd.Cmd, object):
     def emptyline(self):
         pass
 
+# This function overrides the cmd function to remove some characters from the delimiter
+    def complete(self, text, state):
+        """Return the next possible completion for 'text'.
+
+        If a command has not been entered, then complete against command list.
+        Otherwise try to call complete_<command> to get list of completions.
+        """
+        if state == 0:
+            import readline
+            readline.set_completer_delims(' \t\n`~!@#$%^&*()=[{]}\\|;:\'",<>/?') ##overrides default delimiters
+            origline = readline.get_line_buffer()
+            line = origline.lstrip()
+            stripped = len(origline) - len(line)
+            begidx = readline.get_begidx() - stripped
+            endidx = readline.get_endidx() - stripped
+            if begidx>0:
+                cmd, args, foo = self.parseline(line)
+                if cmd == '':
+                    compfunc = self.completedefault
+                else:
+                    try:
+                        compfunc = getattr(self, 'complete_' + cmd)
+                    except AttributeError:
+                        compfunc = self.completedefault
+            else:
+                compfunc = self.completenames
+            self.completion_matches = compfunc(text, line, begidx, endidx)
+        try:
+            return self.completion_matches[state]
+        except IndexError:
+            return None
+
+
     def default(self, line):
         fend = line.find(';')
         if fend > -1:
