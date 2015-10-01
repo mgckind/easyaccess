@@ -35,7 +35,7 @@ import datetime
 import fitsio
 import numpy as np
 import argparse
-import config as config_mod
+import config_ea as config_mod
 from eautils import des_logo as dl
 import webbrowser
 import signal
