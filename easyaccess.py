@@ -60,7 +60,7 @@ if os.path.exists(ea_path_old):
         shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/history"), history_file)
     if not os.path.exists(config_file):
         shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/config.ini"), config_file)
-    os.rename(ea_path_old, os.path.join(os.environ["HOME"], ".easyacess_old/"))
+    shutil.move(ea_path_old, os.path.join(os.environ["HOME"], ".easyacess_old/"))
 
 # create files if they don't exist
 if not os.path.exists(history_file):
