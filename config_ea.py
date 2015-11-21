@@ -1,8 +1,13 @@
 from __future__ import print_function
 #from future import standard_library
 #standard_library.install_aliases()
-from builtins import input
-from builtins import range
+
+# For compatibility with old python
+try:
+    from builtins import input, range
+except ImportError:
+    from __builtin__ import input, range
+
 # Config file
 import configparser
 import getpass

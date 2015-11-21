@@ -5,6 +5,8 @@ from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
 __version__ = '1.2.0'
+
+# For compatibility with old python
 try:
     from builtins import input, str, range
 except ImportError:
