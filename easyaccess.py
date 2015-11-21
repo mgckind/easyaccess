@@ -5,9 +5,11 @@ from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
 __version__ = '1.2.0'
-from builtins import input
-from builtins import str
-from builtins import range
+try:
+    from builtins import input, str, range
+except ImportError:
+    from __builtin__ import input, str, range
+
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -336,6 +338,7 @@ class easy_or(cmd.Cmd, object):
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         self.dsn = cx_Oracle.makedsn(**kwargs)
         if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
+        #if not self.quiet: sys.stdout.write('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
         for tries in range(3):
             try:
@@ -1285,8 +1288,9 @@ class easy_or(cmd.Cmd, object):
         """
         # TODO: platform dependent
         # tmp = sp.call('clear', shell=True)
-        tmp = os.system(['clear', 'cls'][os.name == 'nt'])
-
+        sys.stdout.flush()
+        #tmp = os.system(['clear', 'cls'][os.name == 'nt'])
+        pass
 
     def do_config(self, line):
         """
@@ -2307,27 +2311,25 @@ if __name__ == '__main__':
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         cmdinterp.onecmd(args.command)
-        os._exit(0)
+        sys.exit(0) #os._exit(0)
     elif args.loadsql is not None:
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
-        os._exit(0)
+        sys.exit(0) #os._exit(0)
     elif args.loadtable is not None:
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "load_table " + args.loadtable
         cmdinterp.onecmd(linein)
-        os._exit(0)
+        sys.exit(0) #os._exit(0)
     elif args.appendtable is not None:
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "append_table " + args.appendtable
         cmdinterp.onecmd(linein)
-        os._exit(0)
+        sys.exit(0) #os._exit(0)
     else:
         initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
-
-
