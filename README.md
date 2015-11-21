@@ -37,16 +37,24 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - Show the execution plan of a query if required
 - Many more
 
-## Basic use
+
+    
+## Interactive interpreter
+
+Assuming that ```easyaccess``` is in your path, you can enter the interactive interpreter by calling ```easyaccess``` without any command line arguments:
+
+    easyaccess
 
 ### Running SQL commands
-Once inside the interpreter run SQL queries by adding a ; at the end::
+Once inside the interpreter run SQL queries by adding a ";" at the end::
+
         DESDB ~> select ... from ... where ... ;
+
 To save the results into a table add ">" after the end of the query (after ";") and namefile at the end of line
 
         DESDB ~> select ... from ... where ... ; > test.fits
 
-The files supported so far are (.csv, .tab, .fits, .h5) any other extension is ignored
+The file types supported so far are: .csv, .tab, .fits, and .h5. Any other extension is ignored.
 
 ### Load tables
 To load a table it needs to be in a csv format with columns names in the first row
@@ -88,8 +96,14 @@ and to see any particular option (e.g., timeout):
 
         DESDB ~> config timeout show
 
+## Command-line usage
 
-### TODO
+Much of the same functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the "--help" option
+
+    easyaccess --help
+
+
+## TODO
     - There is a bug with some versions of readline
     - Other small changes when loading tables
     - Self-upgrade
