@@ -41,9 +41,7 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 
 ### Running SQL commands
 Once inside the interpreter run SQL queries by adding a ; at the end::
-
         DESDB ~> select ... from ... where ... ;
-
 To save the results into a table add ">" after the end of the query (after ";") and namefile at the end of line
 
         DESDB ~> select ... from ... where ... ; > test.fits
