@@ -43,7 +43,7 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 
 Assuming that ```easyaccess``` is in your path, you can enter the interactive interpreter by calling ```easyaccess``` without any command line arguments:
 
-    easyaccess
+        easyaccess
 
 ### Running SQL commands
 Once inside the interpreter run SQL queries by adding a ";" at the end::
@@ -60,28 +60,22 @@ The file types supported so far are: .csv, .tab, .fits, and .h5. Any other exten
 To load a table it needs to be in a csv format with columns names in the first row
 the name of the table is taken from filename
 
-
         DESDB ~> load_table <filename>
 
 ### Load SQL queries
-To load sql queries just run:
+To load SQL queries just run:
 
         DESDB ~> loadsql <filename.sql>
 or
 
         DESDB ~> @filename.sql
 
-The format is the same as in command line, SQL statement must end with ;
-and to write output files it must be followed by > <output file>
+The query format is the same as the interpreter, SQL statement must end with ";" and to write output files the query must be followed by " > <output file>"
 
 ### Configuration
 
-The configuration file is located at $HOME/.easyaccess/config.ini
+The configuration file is located at $HOME/.easyaccess/config.ini but everything can be configured from inside easyaccess type:
 
-but everything can be configured from inside easyaccess
-
-type:
-   
         DESDB ~> help config
         
 to see the meanings of all the options, and:
@@ -98,10 +92,9 @@ and to see any particular option (e.g., timeout):
 
 ## Command-line usage
 
-Much of the same functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the "--help" option
+Much of the functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the "--help" option
 
-    easyaccess --help
-
+        easyaccess --help
 
 ## TODO
     - There is a bug with some versions of readline
