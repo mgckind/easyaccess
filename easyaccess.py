@@ -359,7 +359,7 @@ class easy_or(cmd.Cmd, object):
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
         msg = self.last_pass_changed()
-        if msg: print(msg)
+        if msg and not self.quiet: print(msg)
 
 
     def handler(self, signum, frame):
@@ -782,7 +782,6 @@ class easy_or(cmd.Cmd, object):
 
     # ## QUERY METHODS
 
-
     def last_pass_changed(self):
         """
         Return creation time and last time password was modified
@@ -800,8 +799,8 @@ class easy_or(cmd.Cmd, object):
             msg = colored("*Important* ", "red") + 'Last time password change was ' + colored("%d" % ptime,
                                                                                               "red") + " days ago"
             if ptime == ctime: msg += colored(" (Never in your case!)", "red")
-            msg += '\n Please change it soon using the ' + colored("set_password",
-                                                                   "cyan") + ' command and you will get rid of this message\n'
+            msg += '\n Please change it using the ' + colored("set_password",
+                                                                   "cyan") + ' command to get rid of this message\n'
             return msg
 
 
@@ -1823,7 +1822,7 @@ class easy_or(cmd.Cmd, object):
                 raise Exception(msg)
             # Monkey patch to grab columns and values
             DF.ea_get_columns = DF.columns.values.tolist
-            DF.eag_get_values = DF.values.tolist
+            DF.ea_get_values = DF.values.tolist
         elif format in ('fits', 'fit'):
             try:
                 DF = fitsio.FITS(filename)
@@ -2196,13 +2195,13 @@ class connect(easy_or):
         """
         List tables in own schema
         """
-        self.do_mytables('', clear=False)
+        self.do_mytables('')
 
     def myquota(self):
         """
         Show quota in current database
         """
-        self.do_myquota('', clear=False)
+        self.do_myquota('')
 
     def load_table(self, table_file, name=''):
         """
