@@ -1579,7 +1579,7 @@ class easy_or(cmd.Cmd, object):
 
     def do_describe_table(self, arg, clear=True):
         """
-        DB:This tool is useful in noting the lack of documentation for the
+        DB: This tool is useful in noting the lack of documentation for the
         columns. If you don't know the full table name you can use tab
         completion on the table name. Tables of usual interest are described
 
@@ -2016,16 +2016,17 @@ class easy_or(cmd.Cmd, object):
 
     def do_add_comment(self, line):
         """
-        DB:Add comments to table and/or columns inside tables
+        DB: Add comments to table and/or columns inside tables
 
         Usage: 
-            - add_comment table <TABLE> 'Comments on table"
-            - add_comment column <TABLE.COLUMN> 'Comments on columns"
+            - add_comment table <TABLE> 'Comments on table'
+            - add_comment column <TABLE.COLUMN> 'Comments on columns'
 
-        Ex:  add_comment table MY_TABLE 'This table contains info"
-             add_comment columns MY_TABLE.ID 'Id for my objects"
+        Ex:  add_comment table MY_TABLE 'This table contains info'
+             add_comment columns MY_TABLE.ID 'Id for my objects'
 
-        This command support smart-autocompletion
+        This command supports smart-autocompletion. No `;` is 
+        necessary (and it will be inserted into comment if used).
 
         """
 
