@@ -74,7 +74,7 @@ The query format is the same as the interpreter, SQL statement must end with ";"
 
 ### Configuration
 
-The configuration file is located at $HOME/.easyaccess/config.ini but everything can be configured from inside easyaccess type:
+The configuration file is located at ```$HOME/.easyaccess/config.ini``` but everything can be configured from inside easyaccess type:
 
         DESDB ~> help config
         
@@ -92,7 +92,7 @@ and to see any particular option (e.g., timeout):
 
 ## Command-line usage
 
-Much of the functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the "--help" option
+Much of the functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the ```--help``` option
 
         easyaccess --help
 
@@ -100,3 +100,4 @@ Much of the functionality provided through the interpreter is also available dir
     - There is a bug with some versions of readline
     - Other small changes when loading tables
     - Self-upgrade
+    - Refactor the code so that it isn't in one huge file

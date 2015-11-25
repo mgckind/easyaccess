@@ -59,7 +59,7 @@ config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
 
 # check if old path is there
 ea_path_old = os.path.join(os.environ["HOME"], ".easyacess/")
-if os.path.exists(ea_path_old):
+if os.path.exists(ea_path_old) and os.path.isdir(ea_path_old):
     if not os.path.exists(history_file):
         shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/history"), history_file)
     if not os.path.exists(config_file):
@@ -2313,25 +2313,25 @@ if __name__ == '__main__':
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         cmdinterp.onecmd(args.command)
-        sys.exit(0) #os._exit(0)
+        os._exit(0)
     elif args.loadsql is not None:
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
-        sys.exit(0) #os._exit(0)
+        os._exit(0)
     elif args.loadtable is not None:
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "load_table " + args.loadtable
         cmdinterp.onecmd(linein)
-        sys.exit(0) #os._exit(0)
+        os._exit(0)
     elif args.appendtable is not None:
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "append_table " + args.appendtable
         cmdinterp.onecmd(linein)
-        sys.exit(0) #os._exit(0)
+        os._exit(0)
     else:
         initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
