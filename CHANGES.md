@@ -2,7 +2,7 @@
 
 ## v1.2.1a
 #### XXXX-XXX-XX
-- Fixes a bug with python2/3 compatibility (see #36)
+- Fixes a bug with python2/3 compatibility (see Pull-request #36)
 
 ## v1.2.0
 #### 2015-OCT-01
