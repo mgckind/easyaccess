@@ -340,7 +340,6 @@ class easy_or(cmd.Cmd, object):
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         self.dsn = cx_Oracle.makedsn(**kwargs)
         if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
-        #if not self.quiet: sys.stdout.write('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
         for tries in range(3):
             try:
