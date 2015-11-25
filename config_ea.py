@@ -1,10 +1,15 @@
 from __future__ import print_function
 #from future import standard_library
 #standard_library.install_aliases()
-from builtins import input
-from builtins import range
-# Config file
-import configparser
+
+# For compatibility with old python
+try:
+    from builtins import input, range
+    import configparser
+except ImportError:
+    from __builtin__ import input, range
+    import ConfigParser as configparser
+
 import getpass
 import sys
 import cx_Oracle

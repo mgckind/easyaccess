@@ -37,10 +37,16 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - Show the execution plan of a query if required
 - Many more
 
-## Basic use
+
+    
+## Interactive interpreter
+
+Assuming that ```easyaccess``` is in your path, you can enter the interactive interpreter by calling ```easyaccess``` without any command line arguments:
+
+        easyaccess
 
 ### Running SQL commands
-Once inside the interpreter run SQL queries by adding a ; at the end::
+Once inside the interpreter run SQL queries by adding a ";" at the end::
 
         DESDB ~> select ... from ... where ... ;
 
@@ -48,34 +54,28 @@ To save the results into a table add ">" after the end of the query (after ";") 
 
         DESDB ~> select ... from ... where ... ; > test.fits
 
-The files supported so far are (.csv, .tab, .fits, .h5) any other extension is ignored
+The file types supported so far are: .csv, .tab, .fits, and .h5. Any other extension is ignored.
 
 ### Load tables
 To load a table it needs to be in a csv format with columns names in the first row
 the name of the table is taken from filename
 
-
         DESDB ~> load_table <filename>
 
 ### Load SQL queries
-To load sql queries just run:
+To load SQL queries just run:
 
         DESDB ~> loadsql <filename.sql>
 or
 
         DESDB ~> @filename.sql
 
-The format is the same as in command line, SQL statement must end with ;
-and to write output files it must be followed by > <output file>
+The query format is the same as the interpreter, SQL statement must end with ";" and to write output files the query must be followed by " > <output file>"
 
 ### Configuration
 
-The configuration file is located at $HOME/.easyaccess/config.ini
+The configuration file is located at ```$HOME/.easyaccess/config.ini``` but everything can be configured from inside easyaccess type:
 
-but everything can be configured from inside easyaccess
-
-type:
-   
         DESDB ~> help config
         
 to see the meanings of all the options, and:
@@ -90,8 +90,14 @@ and to see any particular option (e.g., timeout):
 
         DESDB ~> config timeout show
 
+## Command-line usage
 
-### TODO
+Much of the functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the ```--help``` option
+
+        easyaccess --help
+
+## TODO
     - There is a bug with some versions of readline
     - Other small changes when loading tables
     - Self-upgrade
+    - Refactor the code so that it isn't in one huge file

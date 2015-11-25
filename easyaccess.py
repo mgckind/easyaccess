@@ -5,9 +5,13 @@ from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
 __version__ = '1.2.0'
-from builtins import input
-from builtins import str
-from builtins import range
+
+# For compatibility with old python
+try:
+    from builtins import input, str, range
+except ImportError:
+    from __builtin__ import input, str, range
+
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -55,7 +59,7 @@ config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
 
 # check if old path is there
 ea_path_old = os.path.join(os.environ["HOME"], ".easyacess/")
-if os.path.exists(ea_path_old):
+if os.path.exists(ea_path_old) and os.path.isdir(ea_path_old):
     if not os.path.exists(history_file):
         shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/history"), history_file)
     if not os.path.exists(config_file):
@@ -336,6 +340,7 @@ class easy_or(cmd.Cmd, object):
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         self.dsn = cx_Oracle.makedsn(**kwargs)
         if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
+        #if not self.quiet: sys.stdout.write('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
         for tries in range(3):
             try:
@@ -354,7 +359,7 @@ class easy_or(cmd.Cmd, object):
         self.cur = self.con.cursor()
         self.cur.arraysize = self.prefetch
         msg = self.last_pass_changed()
-        if msg: print(msg)
+        if msg and not self.quiet: print(msg)
 
 
     def handler(self, signum, frame):
@@ -777,7 +782,6 @@ class easy_or(cmd.Cmd, object):
 
     # ## QUERY METHODS
 
-
     def last_pass_changed(self):
         """
         Return creation time and last time password was modified
@@ -795,8 +799,8 @@ class easy_or(cmd.Cmd, object):
             msg = colored("*Important* ", "red") + 'Last time password change was ' + colored("%d" % ptime,
                                                                                               "red") + " days ago"
             if ptime == ctime: msg += colored(" (Never in your case!)", "red")
-            msg += '\n Please change it soon using the ' + colored("set_password",
-                                                                   "cyan") + ' command and you will get rid of this message\n'
+            msg += '\n Please change it using the ' + colored("set_password",
+                                                                   "cyan") + ' command to get rid of this message\n'
             return msg
 
 
@@ -1285,8 +1289,9 @@ class easy_or(cmd.Cmd, object):
         """
         # TODO: platform dependent
         # tmp = sp.call('clear', shell=True)
-        tmp = os.system(['clear', 'cls'][os.name == 'nt'])
-
+        sys.stdout.flush()
+        #tmp = os.system(['clear', 'cls'][os.name == 'nt'])
+        pass
 
     def do_config(self, line):
         """
@@ -1574,7 +1579,7 @@ class easy_or(cmd.Cmd, object):
 
     def do_describe_table(self, arg, clear=True):
         """
-        DB:This tool is useful in noting the lack of documentation for the
+        DB: This tool is useful in noting the lack of documentation for the
         columns. If you don't know the full table name you can use tab
         completion on the table name. Tables of usual interest are described
 
@@ -1817,7 +1822,7 @@ class easy_or(cmd.Cmd, object):
                 raise Exception(msg)
             # Monkey patch to grab columns and values
             DF.ea_get_columns = DF.columns.values.tolist
-            DF.eag_get_values = DF.values.tolist
+            DF.ea_get_values = DF.values.tolist
         elif format in ('fits', 'fit'):
             try:
                 DF = fitsio.FITS(filename)
@@ -2011,16 +2016,17 @@ class easy_or(cmd.Cmd, object):
 
     def do_add_comment(self, line):
         """
-        DB:Add comments to table and/or columns inside tables
+        DB: Add comments to table and/or columns inside tables
 
         Usage: 
-            - add_comment table <TABLE> 'Comments on table"
-            - add_comment column <TABLE.COLUMN> 'Comments on columns"
+            - add_comment table <TABLE> 'Comments on table'
+            - add_comment column <TABLE.COLUMN> 'Comments on columns'
 
-        Ex:  add_comment table MY_TABLE 'This table contains info"
-             add_comment columns MY_TABLE.ID 'Id for my objects"
+        Ex:  add_comment table MY_TABLE 'This table contains info'
+             add_comment columns MY_TABLE.ID 'Id for my objects'
 
-        This command support smart-autocompletion
+        This command supports smart-autocompletion. No `;` is 
+        necessary (and it will be inserted into comment if used).
 
         """
 
@@ -2190,13 +2196,13 @@ class connect(easy_or):
         """
         List tables in own schema
         """
-        self.do_mytables('', clear=False)
+        self.do_mytables('')
 
     def myquota(self):
         """
         Show quota in current database
         """
-        self.do_myquota('', clear=False)
+        self.do_myquota('')
 
     def load_table(self, table_file, name=''):
         """
@@ -2329,5 +2335,3 @@ if __name__ == '__main__':
     else:
         initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
-
-
