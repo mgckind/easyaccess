@@ -1,5 +1,9 @@
 # Changes
 
+## v1.2.1a
+#### XXXX-XXX-XX
+- Fixes a bug with python2/3 compatibility (see #36)
+
 ## v1.2.0
 #### 2015-OCT-01
 - Fixes several issues, like: #35, #34, #30, #26 #25 among others
