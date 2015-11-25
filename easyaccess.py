@@ -1579,7 +1579,7 @@ class easy_or(cmd.Cmd, object):
 
     def do_describe_table(self, arg, clear=True):
         """
-        DB: This tool is useful in noting the lack of documentation for the
+        DB:This tool is useful in noting the lack of documentation for the
         columns. If you don't know the full table name you can use tab
         completion on the table name. Tables of usual interest are described
 
@@ -2016,7 +2016,7 @@ class easy_or(cmd.Cmd, object):
 
     def do_add_comment(self, line):
         """
-        DB: Add comments to table and/or columns inside tables
+        DB:Add comments to table and/or columns inside tables
 
         Usage: 
             - add_comment table <TABLE> 'Comments on table'
