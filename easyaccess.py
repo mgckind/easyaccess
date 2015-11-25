@@ -806,6 +806,8 @@ class easy_or(cmd.Cmd, object):
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
                         clear=False):
+        #to be safe
+        query = query.replace(';','')
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
@@ -894,6 +896,7 @@ class easy_or(cmd.Cmd, object):
         Executes a query and save the results to a file, Supported formats are
         .csv, .tab, .fits and .h5
         """
+        query = query.replace(';','')
         fileformat = fileout.split('.')[-1]
         mode = fileformat
         if fileformat in options_out:
@@ -2167,6 +2170,7 @@ class connect(easy_or):
         cursor = self.con.cursor()
         cursor.arraysize = self.prefetch
         if prefetch != '': cursor.arraysize = prefetch
+        query = query.replace(';' , '')
         temp = cursor.execute(query)
         if temp.description != None:
             data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
