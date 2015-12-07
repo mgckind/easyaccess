@@ -1763,7 +1763,8 @@ class easy_or(cmd.Cmd, object):
         tablename = arg
         tablename = tablename.replace(';', '')
         query_template = """
-        SELECT tab.table_name,icol.column_name,idx.index_type,idx.index_name
+        SELECT UNIQUE tab.table_name,icol.column_name,
+        idx.index_type,idx.index_name
         FROM dba_tables tab
         JOIN dba_indexes idx on idx.table_name = tab.table_name
         JOIN dba_ind_columns icol ON idx.index_name = icol.index_name
