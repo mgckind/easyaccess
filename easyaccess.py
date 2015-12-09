@@ -1585,7 +1585,7 @@ class easy_or(cmd.Cmd, object):
         else:
             return options_users
 
-    def get_real_table(self, tablename):
+    def get_tablename_tuple(self, tablename):
         """
         Return the tuple (schema,table,link) that can be used to
         locate the `real` table requested.
@@ -1677,7 +1677,7 @@ class easy_or(cmd.Cmd, object):
             pass
 
         try: 
-            schema,table,link = self.get_real_table(tablename)
+            schema,table,link = self.get_tablename_tuple(tablename)
             # schema, table and link are now valid.
             link = "@" + link if link else ""
             qcom = """ 
@@ -1782,7 +1782,7 @@ class easy_or(cmd.Cmd, object):
         tablename = tablename.upper()
 
         try: 
-            schema,table,link = self.get_real_table(tablename)
+            schema,table,link = self.get_tablename_tuple(tablename)
             link = "@" + link if link else ""
         except: 
             print(colored("Table not found.", "red"))
