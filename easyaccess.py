@@ -993,9 +993,9 @@ class easy_or(cmd.Cmd, object):
                                                       mode=mode_write, header=header_out)
                         if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False,
                                                       header=header_out)  # , complevel=9,complib='bzip2'
-                        if mode == 'fits': write_to_fits(data, fileout, fileindex, mode=mode_write,
-                                                         listN=list_names,
-                                                         listT=list_type, fits_max_mb=self.outfile_max_mb)
+                        if mode == 'fits': fileindex = write_to_fits(data, fileout, fileindex, mode=mode_write,
+                                                                     listN=list_names,
+                                                                     listT=list_type, fits_max_mb=self.outfile_max_mb)
                         if first:
                             mode_write = 'a'
                             header_out = False
