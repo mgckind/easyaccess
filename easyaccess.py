@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.1a'
+__version__ = '1.2.1b'
 
 # For compatibility with old python
 try:
