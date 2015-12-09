@@ -306,7 +306,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
 
 
 class easy_or(cmd.Cmd, object):
-    """cx_oracle interpreter for DESDM"""
+    """Easy cx_oracle interpreter for DESDM"""
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
@@ -567,10 +567,6 @@ class easy_or(cmd.Cmd, object):
             self.cache_usernames = []
             self.cache_column_names = []
             self.metadata = False
-
-
-
-
 
         # history
         ht = open(history_file, 'r')
@@ -992,9 +988,9 @@ class easy_or(cmd.Cmd, object):
                                                       mode=mode_write, header=header_out)
                         if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False,
                                                       header=header_out)  # , complevel=9,complib='bzip2'
-                        if mode == 'fits': fileindex = write_to_fits(data, fileout, fileindex, mode=mode_write,
-                                                                     listN=list_names,
-                                                                     listT=list_type, fits_max_mb=self.outfile_max_mb)
+                        if mode == 'fits': write_to_fits(data, fileout, fileindex, mode=mode_write,
+                                                         listN=list_names,
+                                                         listT=list_type, fits_max_mb=self.outfile_max_mb)
                         if first:
                             mode_write = 'a'
                             header_out = False
@@ -1438,7 +1434,7 @@ class easy_or(cmd.Cmd, object):
                 self.desconfig.set('db-desoper', 'passwd', pw1)
                 config_mod.write_desconfig(desfile, self.desconfig)
             except:
-                confirm = 'Password could not changed in %s\n' % db.upper()
+                confirm = 'Password could not be changed in %s\n' % db.upper()
                 print(colored(confirm, "red"))
                 print(sys.exc_info())
 
