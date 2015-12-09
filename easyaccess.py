@@ -32,8 +32,8 @@ import logging
 try:
     from termcolor import colored
 except:
-    def colored(line, color):
-        return line
+    def colored(line, color): return line
+        
 import pandas as pd
 import datetime
 import fitsio
@@ -64,7 +64,7 @@ if os.path.exists(ea_path_old) and os.path.isdir(ea_path_old):
         shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/history"), history_file)
     if not os.path.exists(config_file):
         shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/config.ini"), config_file)
-    shutil.move(ea_path_old, os.path.join(os.environ["HOME"], ".easyacess_old/"))
+    #shutil.move(ea_path_old, os.path.join(os.environ["HOME"], ".easyacess_old/"))
 
 # create files if they don't exist
 if not os.path.exists(history_file):
@@ -301,7 +301,8 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
             return fileindex
 
     else:
-        raise Exception("Illegal write mode!")
+        msg = "Illegal write mode!"
+        raise Exception(msg)
 
 
 class easy_or(cmd.Cmd, object):
@@ -340,7 +341,6 @@ class easy_or(cmd.Cmd, object):
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         self.dsn = cx_Oracle.makedsn(**kwargs)
         if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
-        #if not self.quiet: sys.stdout.write('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
         for tries in range(3):
             try:
@@ -1444,7 +1444,10 @@ class easy_or(cmd.Cmd, object):
 
 
     def do_refresh_metadata_cache(self, arg):
-        """DB:Refreshes meta data cache for auto-completion of table names and column names """
+        """
+        DB:Refreshes meta data cache for auto-completion of table
+        names and column names .
+        """
 
         # Meta data access: With the two linked databases, accessing the
         # "truth" via fgetmetadata has become very slow.
@@ -1492,7 +1495,8 @@ class easy_or(cmd.Cmd, object):
         lines = "user: %s\ndb  : %s\nhost: %s\n" % (self.user.upper(), self.dbname.upper(), self.dbhost.upper())
         lines = lines + "\nPersonal links:"
         query = """
-           select owner, db_link, username, host, created from all_db_links where OWNER = '%s'
+        SELECT owner, db_link, username, host, created 
+        FROM all_db_links where OWNER = '%s'
         """ % (self.user.upper())
         self.query_and_print(query, print_time=False, extra=lines, clear=True)
 
@@ -1518,19 +1522,24 @@ class easy_or(cmd.Cmd, object):
 
         Usage: myquota
         """
-        sql_getquota = "select TABLESPACE_NAME,  \
-        MBYTES_USED/1024 as GBYTES_USED, MBYTES_LEFT/1024 as GBYTES_LEFT from myquota"
-        self.query_and_print(sql_getquota, print_time=False, clear=True)
+        query = """
+        SELECT tablespace_name, mbytes_used/1024 as GBYTES_USED, 
+        mbytes_left/1024 as GBYTES_LEFT from myquota
+        """
+        self.query_and_print(query, print_time=False, clear=True)
 
     def do_mytables(self, arg):
         """
-        DB:Lists  table you have made in your 'mydb'
+        DB:Lists tables you have made in your user schema.
 
         Usage: mytables
         """
         # query = "SELECT table_name FROM user_tables"
-        query = "SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES \
-        FROM user_segments s, user_tables t WHERE s.segment_name = t.table_name"
+        query = """
+        SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES 
+        FROM user_segments s, user_tables t 
+        WHERE s.segment_name = t.table_name
+        """
 
         self.query_and_print(query, print_time=False, extra="List of my tables", clear=True)
 
@@ -1580,11 +1589,72 @@ class easy_or(cmd.Cmd, object):
         else:
             return options_users
 
+    def get_tablename_tuple(self, tablename):
+        """
+        Return the tuple (schema,table,link) that can be used to
+        locate the `real` table requested.
+        """
+        table = tablename
+        schema = self.user.upper()  # default --- Mine
+        link = ""  # default no link
+        
+        if "." in table: (schema, table) = table.split(".")
+        if "@" in table: (table, link) = table.split("@")
+
+        # Loop until we find a fundamental definition OR determine there is
+        # no reachable fundamental definition, follow links and resolve
+        # schema names. Rely on how the DES database is constructed we log
+        # into our own schema, and rely on synonyms for a "simple" view of
+        # common schema.
+
+        while (1):
+            # check for fundamental definition  e.g. schema.table@link
+            q = """
+            select count(*) from ALL_TAB_COLUMNS%s
+            where OWNER = '%s' 
+            and TABLE_NAME = '%s'
+            """ % ("@" + link if link else "", schema, table)
+            ans = self.query_results(q)
+            if ans[0][0] > 0:
+                # found real definition return the tuple
+                return (schema,table,link)
+
+            # check if we are indirect by  synonym of mine
+            q = """
+            select TABLE_OWNER, TABLE_NAME, DB_LINK from USER_SYNONYMS%s
+            where SYNONYM_NAME = '%s'
+            """ % ("@" + link if link else "", table)
+            ans = self.query_results(q)
+            if len(ans) == 1:
+                # resolved one step closer to fundamental definition
+                (schema, table, link) = ans[0]
+                continue
+
+            # check if we are indirect by a public synonym
+            q = """
+            select TABLE_OWNER, TABLE_NAME, DB_LINK from ALL_SYNONYMS%s
+            where SYNONYM_NAME = '%s' AND OWNER = 'PUBLIC'
+            """ % ("@" + link if link else "", table)
+            ans = self.query_results(q)
+            if len(ans) == 1:
+                # resolved one step closer to fundamental definition
+                (schema, table, link) = ans[0]
+                continue
+
+            # failed to find the reference to the table
+            # no such table accessible by user
+            break
+
+        msg = "No table found for: %s"%tablename
+        raise Exception(msg)
+
+
     def do_describe_table(self, arg, clear=True):
         """
-        DB:This tool is useful in noting the lack of documentation for the
-        columns. If you don't know the full table name you can use tab
-        completion on the table name. Tables of usual interest are described
+        DB:This tool is useful for noting the lack of documentation
+        for columns. If you don't know the full table name you can
+        use tab completion on the table name. Tables of usual interest
+        are described.
 
         Usage: describe_table <table_name>
         Describes the columns in <table-name> as
@@ -1595,8 +1665,6 @@ class easy_or(cmd.Cmd, object):
 
         describe_table Y1A1_COADD_OBJECTS with MAG%
         will describe only columns starting with MAG in that table
-
-
         """
         if arg == '':
             return self.do_help('describe_table')
@@ -1608,89 +1676,49 @@ class easy_or(cmd.Cmd, object):
         try:
             extra = arg.split()[1]
             if extra.upper() == 'WITH':
-                pattern = arg.split()[2]
+                pattern = arg.split()[2].upper()
         except:
             pass
 
-        schema = self.user.upper()  # default --- Mine
-        link = ""  # default no link
-        if "." in tablename: (schema, tablename) = tablename.split(".")
-        if "@" in tablename: (tablename, link) = tablename.split("@")
-        table = tablename
+        try: 
+            schema,table,link = self.get_tablename_tuple(tablename)
+            # schema, table and link are now valid.
+            link = "@" + link if link else ""
+            qcom = """ 
+            select comments from all_tab_comments%s atc 
+            where atc.table_name = '%s'""" % (link, table)
+            comment_table = self.query_results(qcom)[0][0]
+        except: 
+            print(colored("Table not found.", "red"))
+            return
 
-        #
-        # loop until we find a fundamental definition OR determine there is
-        # no reachable fundamental definition, floow links and resolving
-        # schema names. Rely on how the DES database is constructed we log
-        # into our own schema, and rely on synonyms for a "simple" view of
-        # common schema.
-        #
-        while (1):
-            # check for fundamental definition  e.g. schema.table@link
-            q = """
-            select count(*) from all_tab_columns%s
-               where OWNER = '%s' and
-               TABLE_NAME = '%s'
-               """ % ("@" + link if link else "", schema, table)
-            ans = self.query_results(q)
-            if ans[0][0] > 0:
-                # found real definition go get meta-data
-                break
-
-            # check if we are indirect by  synonym of mine
-            q = """select TABLE_OWNER, TABLE_NAME, DB_LINK from USER_SYNONYMS%s
-                            where SYNONYM_NAME= '%s'
-            """ % ("@" + link if link else "", table)
-            ans = self.query_results(q)
-            if len(ans) == 1:
-                # resolved one step closer to fundamental definition
-                (schema, table, link) = ans[0]
-                continue
-
-            # check if we are indirect by a public synonym
-            q = """select TABLE_OWNER, TABLE_NAME, DB_LINK from ALL_SYNONYMS%s
-                             where SYNONYM_NAME = '%s' AND OWNER = 'PUBLIC'
-            """ % ("@" + link if link else "", table)
-            ans = self.query_results(q)
-            if len(ans) == 1:
-                # resolved one step closer to fundamental definition
-                (schema, table, link) = ans[0]
-                continue
-
-            # failed to find the reference count on the query below to give a null result
-            break  # no such table accessible by user
-
-        # schema, table and link are now valid.
-        link = "@" + link if link else ""
-        qcom = """ select comments from all_tab_comments%s atc where atc.table_name = '%s'""" % (link, table)
-        comment_table = self.query_results(qcom)
-        if len(comment_table) == 0:
-            comment_table = "Table does not exist"
-        else:
-            comment_table = comment_table[0][0]
-
+        # String formatting parameters
+        params = dict(schema=schema, table=table, link=link,
+                      pattern=pattern, comment=comment_table)
+                      
         if pattern:
-            comm = """Description of %s with pattern %s commented as: '%s'""" % (table, pattern.upper(), comment_table)
+            comm = """Description of %(table)s with pattern %(pattern)s commented as: '%(comment)s'""" % params
             q = """
-            select
-            atc.column_name, atc.data_type,
+            select atc.column_name, atc.data_type,
             atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
-            From all_tab_cols%s atc , all_col_comments%s acc
-            where atc.owner = '%s' and atc.table_name = '%s' and
-            acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name and atc.column_name like '%s'
+            from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
+            where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
+            and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
+            and acc.column_name = atc.column_name 
+            and atc.column_name like '%(pattern)s'
             order by atc.column_id
-            """ % (link, link, schema, table, schema, table, pattern.upper())
+            """ % params
         else:
-            comm = """Description of %s commented as: '%s'""" % (table, comment_table)
+            comm = """Description of %(table)s commented as: '%(comment)s'""" % params
             q = """
-            select
-            atc.column_name, atc.data_type,
+            select atc.column_name, atc.data_type,
             atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
-            From all_tab_cols%s atc , all_col_comments%s acc
-            where atc.owner = '%s' and atc.table_name = '%s' and
-            acc.owner = '%s' and acc.table_name='%s' and acc.column_name = atc.column_name
+            from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
+            where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
+            and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
+            and acc.column_name = atc.column_name
             order by atc.column_id
-            """ % (link, link, schema, table, schema, table)
+            """ % params
 
         self.query_and_print(q, print_time=False,
                              err_arg='Table does not exist or it is not accessible by user or pattern do not match',
@@ -1716,8 +1744,8 @@ class easy_or(cmd.Cmd, object):
 
 
     def do_find_tables_with_column(self, arg):
-        """                                                                                
-        DB:Finds tables having a column name matching column-name-string
+        """           
+        DB:Finds tables having a column name matching column-name-string.
         
         Usage: find_tables_with_column  <column-name-substring>                                                                 
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG 
@@ -1725,22 +1753,15 @@ class easy_or(cmd.Cmd, object):
         # query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
         if arg == '': return self.do_help('find_tables_with_column')
         query = """
-           SELECT 
-               table_name, column_name 
-           FROM 
-                fgottenmetadata 
-           WHERE 
-             column_name LIKE '%s'  
+           SELECT table_name, column_name 
+           FROM fgottenmetadata 
+           WHERE column_name LIKE '%s'  
            UNION
            SELECT LOWER(owner) || '.' || table_name, column_name 
-            FROM 
-                all_tab_cols
-            WHERE 
-                 column_name LIKE '%s'
-             AND
-                 owner NOT LIKE '%%SYS'
-             AND 
-                 owner not in ('XDB','SYSTEM')
+           FROM all_tab_cols
+           WHERE column_name LIKE '%s'
+           AND owner NOT LIKE '%%SYS'
+           AND owner not in ('XDB','SYSTEM')
            """ % (arg.upper(), arg.upper())
 
         self.query_and_print(query)
@@ -1757,27 +1778,38 @@ class easy_or(cmd.Cmd, object):
          Usage: describe_index <table_name>
         """
 
+        if arg == '':
+            return self.do_help('show_index')
+        arg = arg.replace(';', '')
+        arg = " ".join(arg.split())
+        tablename = arg.split()[0]
+        tablename = tablename.upper()
+
+        try: 
+            schema,table,link = self.get_tablename_tuple(tablename)
+            link = "@" + link if link else ""
+        except: 
+            print(colored("Table not found.", "red"))
+            return
+
         # Parse tablename for simple name or owner.tablename.
         # If owner present, then add owner where clause.
-        arg = arg.upper().strip()
-        if not arg:
-            print("table name required")
-            return
-        tablename = arg
-        tablename = tablename.replace(';', '')
-        query_template = """select
-             a.table_name, a.column_name, b.index_type, b.index_name, b.ityp_name from
-             all_ind_columns a, all_indexes b
-             where
-             a.table_name LIKE '%s' and a.table_name like b.table_name
-             """
-        query = query_template % (tablename)
+
+        params = dict(schema=schema,table=table,link=link)
+        query = """
+        SELECT UNIQUE tab.table_name,icol.column_name,
+        idx.index_type,idx.index_name
+        FROM all_tables%(link)s tab
+        JOIN all_indexes%(link)s idx on idx.table_name = tab.table_name
+        JOIN all_ind_columns%(link)s icol on idx.index_name = icol.index_name
+        WHERE tab.table_name='%(table)s' and tab.owner = '%(schema)s'
+        ORDER BY icol.column_name,idx.index_name
+        """ % params
         nresults = self.query_and_print(query)
         return
 
     def complete_show_index(self, text, line, begidx, lastidx):
         return self._complete_tables(text)
-
 
     def get_filename(self, line):
         line = line.replace(';', '')
@@ -1802,15 +1834,6 @@ class easy_or(cmd.Cmd, object):
         self.cur.execute(
             'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
         exists = self.cur.fetchall()[0][0]
-
-        # ADW: Removed print statement
-        # ## if exists:
-        # ##     print '\n Table already exists. Table can be removed with:' \
-        # ##         '\n  DROP TABLE %s;\n' % table.upper()
-        ### else:
-        ###     print '\n Table does not exist. Table can be created with:' \
-        ###         '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper()
-
         return exists
 
     def load_data(self, filename):
@@ -1877,6 +1900,8 @@ class easy_or(cmd.Cmd, object):
         if self.autocommit: self.con.commit()
 
     def insert_data(self, columns, values, table):
+        """ Insert data columns into DB table.
+        """
         cols = ','.join(columns)
         vals = ',:'.join(columns)
         vals = ':' + vals
@@ -2255,36 +2280,42 @@ if __name__ == '__main__':
 
     color_term = True
     if not conf.getboolean('display', 'color_terminal'):
-        def colored(line, color):
-            return line
-
+        # Careful, this is duplicated from imports at the top of the file
+        def colored(line, color): return line
         color_term = False
+
+    # ADW: What about all the readline imports in the code?
     try:
         import readline
-
         readline_present = True
     except:
         readline_present = False
 
-    if readline_present == True:
+    if readline_present:
         try:
             readline.read_history_file(history_file)
             readline.set_history_length(conf.getint('easyaccess', 'histcache'))
         except:
-            'Print readline might give problems accessing the history of commands'
+            print(colored('readline might have problems accessing history', 'red'))
 
     parser = MyParser(
-        description='Easy Access to the DES DB. There is a configuration file located in %s for more customizable options' % config_file)
+        description='Easy access to the DES database. There is a configuration file located in %s for more customizable options' % config_file)
     parser.add_argument("-v", "--version", dest='version', action="store_true",
                         help="show program's version number and exit")
-    parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
-    parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
-    parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
-    csv, tab or fits format and getting name from filename")
-    parser.add_argument("-at", "--append_table", dest='appendtable', help="Appends to a table in the DB, using \
-    csv, tab or fits format and getting name from filename")
-    parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
-    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization, no loading bar")
+    parser.add_argument("-c", "--command", dest='command', 
+                        help="Executes command and exit")
+    parser.add_argument("-l", "--loadsql", dest='loadsql', 
+                        help="Loads a sql command, execute it and exit")
+    parser.add_argument("-lt", "--load_table", dest='loadtable', 
+                        help="Loads data from a csv, tab, or fits formatted file \
+                        into a DB table using the filename as the table name")
+    parser.add_argument("-at", "--append_table", dest='appendtable', 
+                        help="Appends data from a csv, tab, or fits formatted file \
+                        into a DB table using the filename as the table name")
+    parser.add_argument("-s", "--db",dest='db', #choices=[...]?
+                        help="Override database name [dessci,desoper,destest]")
+    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
+                        help="Silence initialization, no loading bar")
     parser.add_argument("-u", "--user", dest='user', help="username")
     parser.add_argument("-p", "--password", dest='password', help="password")
     args = parser.parse_args()
