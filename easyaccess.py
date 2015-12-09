@@ -686,7 +686,7 @@ class easy_or(cmd.Cmd, object):
             # filebuf.write(self.buff)
             query = line[:fend]
             if line[fend:].find('<') > -1:
-                app = line[fend:].split('<')[1].strip().split()[0]
+                app = line[fend:].split('<')[1].strip().split()[0].lower()
                 if app.find('check') > -1:
                     print('\nChecking statement...')
                     try:
