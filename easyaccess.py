@@ -1495,7 +1495,7 @@ class easy_or(cmd.Cmd, object):
         lines = "user: %s\ndb  : %s\nhost: %s\n" % (self.user.upper(), self.dbname.upper(), self.dbhost.upper())
         lines = lines + "\nPersonal links:"
         query = """
-        SELECT owner, db_link, username, host, created 
+        SELECT owner, db_link, username, host, created
         FROM all_db_links where OWNER = '%s'
         """ % (self.user.upper())
         self.query_and_print(query, print_time=False, extra=lines, clear=True)
