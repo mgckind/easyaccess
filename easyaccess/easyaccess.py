@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.1c'
+__version__ = '1.2.1d'
 
 # For compatibility with old python
 try:
@@ -22,7 +22,7 @@ import os
 import shutil
 import stat
 import re
-import eautils.dircache as dircache
+import easyaccess.eautils.dircache as dircache
 import threading
 import time
 import getpass
@@ -40,7 +40,7 @@ import fitsio
 import numpy as np
 import argparse
 import config_ea as config_mod
-from eautils import des_logo as dl
+from easyaccess.eautils import des_logo as dl
 import webbrowser
 import signal
 
