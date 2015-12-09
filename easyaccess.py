@@ -32,8 +32,8 @@ import logging
 try:
     from termcolor import colored
 except:
-    def colored(line, color):
-        return line
+    def colored(line, color): return line
+        
 import pandas as pd
 import datetime
 import fitsio
@@ -64,7 +64,7 @@ if os.path.exists(ea_path_old) and os.path.isdir(ea_path_old):
         shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/history"), history_file)
     if not os.path.exists(config_file):
         shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/config.ini"), config_file)
-    shutil.move(ea_path_old, os.path.join(os.environ["HOME"], ".easyacess_old/"))
+    #shutil.move(ea_path_old, os.path.join(os.environ["HOME"], ".easyacess_old/"))
 
 # create files if they don't exist
 if not os.path.exists(history_file):
@@ -340,7 +340,6 @@ class easy_or(cmd.Cmd, object):
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
         self.dsn = cx_Oracle.makedsn(**kwargs)
         if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
-        #if not self.quiet: sys.stdout.write('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
         for tries in range(3):
             try:
@@ -1595,8 +1594,6 @@ class easy_or(cmd.Cmd, object):
 
         describe_table Y1A1_COADD_OBJECTS with MAG%
         will describe only columns starting with MAG in that table
-
-
         """
         if arg == '':
             return self.do_help('describe_table')
@@ -1716,8 +1713,8 @@ class easy_or(cmd.Cmd, object):
 
 
     def do_find_tables_with_column(self, arg):
-        """                                                                                
-        DB:Finds tables having a column name matching column-name-string
+        """           
+        DB:Finds tables having a column name matching column-name-string.
         
         Usage: find_tables_with_column  <column-name-substring>                                                                 
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG 
@@ -1765,19 +1762,21 @@ class easy_or(cmd.Cmd, object):
             return
         tablename = arg
         tablename = tablename.replace(';', '')
-        query_template = """select
-             a.table_name, a.column_name, b.index_type, b.index_name, b.ityp_name from
-             all_ind_columns a, all_indexes b
-             where
-             a.table_name LIKE '%s' and a.table_name like b.table_name
-             """
+        query_template = """
+        SELECT UNIQUE tab.table_name,icol.column_name,
+        idx.index_type,idx.index_name
+        FROM dba_tables tab
+        JOIN dba_indexes idx on idx.table_name = tab.table_name
+        JOIN dba_ind_columns icol ON idx.index_name = icol.index_name
+        WHERE tab.table_name='%s'
+        ORDER BY icol.column_name,idx.index_name
+        """
         query = query_template % (tablename)
         nresults = self.query_and_print(query)
         return
 
     def complete_show_index(self, text, line, begidx, lastidx):
         return self._complete_tables(text)
-
 
     def get_filename(self, line):
         line = line.replace(';', '')
@@ -1802,15 +1801,6 @@ class easy_or(cmd.Cmd, object):
         self.cur.execute(
             'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
         exists = self.cur.fetchall()[0][0]
-
-        # ADW: Removed print statement
-        # ## if exists:
-        # ##     print '\n Table already exists. Table can be removed with:' \
-        # ##         '\n  DROP TABLE %s;\n' % table.upper()
-        ### else:
-        ###     print '\n Table does not exist. Table can be created with:' \
-        ###         '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper()
-
         return exists
 
     def load_data(self, filename):
@@ -1877,6 +1867,8 @@ class easy_or(cmd.Cmd, object):
         if self.autocommit: self.con.commit()
 
     def insert_data(self, columns, values, table):
+        """ Insert data columns into DB table.
+        """
         cols = ','.join(columns)
         vals = ',:'.join(columns)
         vals = ':' + vals
@@ -2255,36 +2247,42 @@ if __name__ == '__main__':
 
     color_term = True
     if not conf.getboolean('display', 'color_terminal'):
-        def colored(line, color):
-            return line
-
+        # Careful, this is duplicated from imports at the top of the file
+        def colored(line, color): return line
         color_term = False
+
+    # ADW: What about all the readline imports in the code?
     try:
         import readline
-
         readline_present = True
     except:
         readline_present = False
 
-    if readline_present == True:
+    if readline_present:
         try:
             readline.read_history_file(history_file)
             readline.set_history_length(conf.getint('easyaccess', 'histcache'))
         except:
-            'Print readline might give problems accessing the history of commands'
+            print(colored('readline might have problems accessing history', 'red'))
 
     parser = MyParser(
-        description='Easy Access to the DES DB. There is a configuration file located in %s for more customizable options' % config_file)
+        description='Easy access to the DES database. There is a configuration file located in %s for more customizable options' % config_file)
     parser.add_argument("-v", "--version", dest='version', action="store_true",
                         help="show program's version number and exit")
-    parser.add_argument("-c", "--command", dest='command', help="Executes command and exit")
-    parser.add_argument("-l", "--loadsql", dest='loadsql', help="Loads a sql command, execute it and exit")
-    parser.add_argument("-lt", "--load_table", dest='loadtable', help="Loads a table directly into DB, using \
-    csv, tab or fits format and getting name from filename")
-    parser.add_argument("-at", "--append_table", dest='appendtable', help="Appends to a table in the DB, using \
-    csv, tab or fits format and getting name from filename")
-    parser.add_argument("-s", "--db", dest='db', help="bypass database name, [dessci, desoper or destest]")
-    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', help="quiet initialization, no loading bar")
+    parser.add_argument("-c", "--command", dest='command', 
+                        help="Executes command and exit")
+    parser.add_argument("-l", "--loadsql", dest='loadsql', 
+                        help="Loads a sql command, execute it and exit")
+    parser.add_argument("-lt", "--load_table", dest='loadtable', 
+                        help="Loads data from a csv, tab, or fits formatted file \
+                        into a DB table using the filename as the table name")
+    parser.add_argument("-at", "--append_table", dest='appendtable', 
+                        help="Appends data from a csv, tab, or fits formatted file \
+                        into a DB table using the filename as the table name")
+    parser.add_argument("-s", "--db",dest='db', #choices=[...]?
+                        help="Override database name [dessci,desoper,destest]")
+    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
+                        help="Silence initialization, no loading bar")
     parser.add_argument("-u", "--user", dest='user', help="username")
     parser.add_argument("-p", "--password", dest='password', help="password")
     args = parser.parse_args()
