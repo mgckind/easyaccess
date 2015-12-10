@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.1rc1'
+__version__ = '1.2.1rc2'
 
 # For compatibility with old python
 try:
@@ -39,7 +39,7 @@ import datetime
 import fitsio
 import numpy as np
 import argparse
-import config_ea as config_mod
+import easyaccess.config_ea as config_mod
 from easyaccess.eautils import des_logo as dl
 import webbrowser
 import signal
