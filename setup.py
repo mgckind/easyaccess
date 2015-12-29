@@ -13,9 +13,10 @@ extra_link_args = []
 libraries = []
 library_dirs = []
 include_dirs = []
+exec(open('easyaccess/version.py').read())
 setup(
     name='easyaccess',
-    version='1.2.1rc2',
+    version=__version__,
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['bin/easyaccess'],

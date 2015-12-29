@@ -4,7 +4,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.1rc2'
+from easyaccess.version import __version__
+version=__version__
 
 # For compatibility with old python
 try:
@@ -2370,3 +2371,5 @@ if __name__ == '__main__':
     else:
         initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
+
+
