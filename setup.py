@@ -20,7 +20,7 @@ setup(
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['bin/easyaccess'],
-    py_modules=['easyaccess','easyaccess.eautils'],
+    py_modules=['easyaccess','easyaccess.eautils', 'easyaccess.version'],
     #packages=find_packages(),
     packages=['easyaccess','easyaccess.eautils'],
     license='LICENSE.txt',
