@@ -306,7 +306,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
 
 
 class easy_or(cmd.Cmd, object):
-    """cx_oracle interpreter for DESDM"""
+    """Easy cx_oracle interpreter for DESDM"""
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
@@ -363,6 +363,9 @@ class easy_or(cmd.Cmd, object):
 
 
     def handler(self, signum, frame):
+        """
+        Executed with ^Z (Ctrl+Z) is pressed.
+        """
         print('Ctrl+Z pressed')
         print('Job = %d Stopped' % pid)
         print(colored(' * Type bg to send this job to the background *', 'cyan'))
@@ -448,7 +451,9 @@ class easy_or(cmd.Cmd, object):
                     pass
 
     def do_help(self, arg):
-        'List available commands with "help" or detailed help with "help cmd".'
+        """
+        List available commands with "help" or detailed help with "help cmd".
+        """
         if arg:
             # XXX check arg syntax
             try:
@@ -568,10 +573,6 @@ class easy_or(cmd.Cmd, object):
             self.cache_column_names = []
             self.metadata = False
 
-
-
-
-
         # history
         ht = open(history_file, 'r')
         Allq = ht.readlines()
@@ -690,7 +691,7 @@ class easy_or(cmd.Cmd, object):
             # filebuf.write(self.buff)
             query = line[:fend]
             if line[fend:].find('<') > -1:
-                app = line[fend:].split('<')[1].strip().split()[0]
+                app = line[fend:].split('<')[1].strip().split()[0].lower()
                 if app.find('check') > -1:
                     print('\nChecking statement...')
                     try:
@@ -761,7 +762,7 @@ class easy_or(cmd.Cmd, object):
                 return _complete_path(line)
             if line[qstop:].find('<') > -1:
                 if text:
-                    return [option for option in options_app if option.startswith(text)]
+                    return [option for option in options_app if option.startswith(text.lower())]
                 else:
                     return options_app
 
@@ -1438,7 +1439,7 @@ class easy_or(cmd.Cmd, object):
                 self.desconfig.set('db-desoper', 'passwd', pw1)
                 config_mod.write_desconfig(desfile, self.desconfig)
             except:
-                confirm = 'Password could not changed in %s\n' % db.upper()
+                confirm = 'Password could not be changed in %s\n' % db.upper()
                 print(colored(confirm, "red"))
                 print(sys.exc_info())
 
@@ -2114,9 +2115,9 @@ class easy_or(cmd.Cmd, object):
 
     # UNDOCCUMENTED DO METHODS
 
-
     def do_EOF(self, line):
-        # exit program on ^D
+        # Exit program on ^D (Ctrl+D)
+        print() # For some reason this is missing...
         self.do_exit(line)
 
     def do_quit(self, line):
@@ -2135,7 +2136,7 @@ class easy_or(cmd.Cmd, object):
         tut = webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
 
 
-        # #################################################
+##################################################
 
 
 def to_pandas(cur):
