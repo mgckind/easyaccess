@@ -4,6 +4,8 @@
 #### XXXX-XXX-XX
 - Fixes a bug with python2/3 compatibility (see Pull-request #36)
 - Removes ; from query for python API (query_* functions) issue #37
+- Fix show_index and describe_table commands and queries (no more repeated rows) (see PR #42 and #43)
+- Case insensitive options (PR #45)
 
 ## v1.2.0
 #### 2015-OCT-01
