@@ -7,6 +7,8 @@
 - Added execproc to run sql/pl procedures, see help execproc for more information (see PR #48)
 - Fix show_index and describe_table commands and queries (no more repeated rows) (see PR #42 and #43)
 - Case insensitive options (PR #45)
+- Reorganization of the structure of the code, this way is much simpler to develop (PR #49)
+
 
 ## v1.2.0
 #### 2015-OCT-01
