@@ -1116,6 +1116,8 @@ class easy_or(cmd.Cmd, object):
 
 
     # # DO METHODS
+
+
     def do_prefetch(self, line):
         """
         Shows, sets or sets to default the number of prefetch rows from Oracle
@@ -1395,6 +1397,48 @@ class easy_or(cmd.Cmd, object):
 
 
     # DO METHODS FOR DB
+
+    def do_execproc(self,line):
+        """
+        DB:Execute procedures in the DB, arguments can be floating numbers or strings
+
+        Usage:
+            execproc PROCEDURE('arg1', 'arg2', 10, 20, 'arg5', etc...)
+
+        To see list of positional arguments and their data types use:
+            execproc PROCEDURE() describe
+        """
+        if line == '': return self.do_help('execproc')
+        line = line.replace(';','')
+        line = "".join(line.split())
+        proc_name = line[0:line.index('(')]
+        argument_list = line[line.index('(')+1:line.index(')')].split(',')
+        arguments = []
+        for arg in argument_list:
+            if  arg.startswith(("\"","\'")):
+                arg = arg[1:-1]
+            else:
+                try:
+                    arg = float(arg)
+                except ValueError:
+                    pass
+            arguments.append(arg)
+        if line[line.index(')'):].find('describe') > -1:
+            comm="""\n Description of procedure '%s' """ % proc_name
+            query="""select argument_name, data_type,position,in_out from all_arguments where object_name = '%s' order by position""" % proc_name.upper()
+            self.query_and_print(query, print_time=False, clear=True, extra=comm, err_arg="Procedure does not exist")
+            return
+        try:
+            outproc=self.cur.callproc(proc_name, arguments)
+            print(colored('Done!', "green"))
+        except:
+            (type, value, traceback) = sys.exc_info()
+            print()
+            print(colored(type, "red"))
+            print(colored(value, "red"))
+
+
+
 
     def do_set_password(self, arg):
         """
