@@ -4,6 +4,7 @@
 #### XXXX-XXX-XX
 - Fixes a bug with python2/3 compatibility (see Pull-request #36)
 - Removes ; from query for python API (query_* functions) issue #37
+- Added execproc to run sql/pl procedures, see help execproc for more information
 
 ## v1.2.0
 #### 2015-OCT-01
