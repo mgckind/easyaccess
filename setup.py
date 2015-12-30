@@ -13,15 +13,16 @@ extra_link_args = []
 libraries = []
 library_dirs = []
 include_dirs = []
+exec(open('easyaccess/version.py').read())
 setup(
     name='easyaccess',
-    version='1.2.1b',
+    version=__version__,
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
-    scripts=['easyaccess'],
-    py_modules=['easyaccess','config_ea','eautils.des_logo','eautils.dircache'],
+    scripts=['bin/easyaccess'],
+    py_modules=['easyaccess','easyaccess.eautils', 'easyaccess.version'],
     #packages=find_packages(),
-    packages=['eautils'],
+    packages=['easyaccess','easyaccess.eautils'],
     license='LICENSE.txt',
     description='Easy access to access DES DB. Command line interpreter client for DESDM',
     long_description=read('README.md'),

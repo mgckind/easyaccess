@@ -1,6 +1,6 @@
 # Changes
 
-## v1.2.1a
+## v1.2.1b
 #### XXXX-XXX-XX
 - Fixes a bug with python2/3 compatibility (see Pull-request #36)
 - Removes ; from query for python API (query_* functions) issue #37

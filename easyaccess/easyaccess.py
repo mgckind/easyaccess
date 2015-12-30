@@ -4,7 +4,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
-__version__ = '1.2.1b'
+from easyaccess.version import __version__
+version=__version__
 
 # For compatibility with old python
 try:
@@ -22,7 +23,7 @@ import os
 import shutil
 import stat
 import re
-import eautils.dircache as dircache
+import easyaccess.eautils.dircache as dircache
 import threading
 import time
 import getpass
@@ -39,8 +40,8 @@ import datetime
 import fitsio
 import numpy as np
 import argparse
-import config_ea as config_mod
-from eautils import des_logo as dl
+import easyaccess.config_ea as config_mod
+from easyaccess.eautils import des_logo as dl
 import webbrowser
 import signal
 
@@ -2415,3 +2416,5 @@ if __name__ == '__main__':
     else:
         initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
+
+
