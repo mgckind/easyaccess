@@ -1562,6 +1562,9 @@ class easy_or(cmd.Cmd, object):
 
         Usage: whoami
         """
+        # It might be useful to print user roles as well
+        # select GRANTED_ROLE from USER_ROLE_PRIVS
+
         if self.dbname in ('dessci', 'desoper'):
             sql_getUserDetails = """
             select d.username, d.email, d.firstname as first, d.lastname as last, trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
@@ -1648,7 +1651,7 @@ class easy_or(cmd.Cmd, object):
     def get_tablename_tuple(self, tablename):
         """
         Return the tuple (schema,table,link) that can be used to
-        locate the `real` table requested.
+        locate the fundamental definition of the table requested.
         """
         table = tablename
         schema = self.user.upper()  # default --- Mine
@@ -1667,15 +1670,14 @@ class easy_or(cmd.Cmd, object):
             # check for fundamental definition  e.g. schema.table@link
             q = """
             select count(*) from ALL_TAB_COLUMNS%s
-            where OWNER = '%s' 
-            and TABLE_NAME = '%s'
+            where OWNER = '%s' and TABLE_NAME = '%s'
             """ % ("@" + link if link else "", schema, table)
             ans = self.query_results(q)
             if ans[0][0] > 0:
                 # found real definition return the tuple
                 return (schema,table,link)
 
-            # check if we are indirect by  synonym of mine
+            # check if we are indirect by synonym of user
             q = """
             select TABLE_OWNER, TABLE_NAME, DB_LINK from USER_SYNONYMS%s
             where SYNONYM_NAME = '%s'
