@@ -4,7 +4,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 __author__ = 'Matias Carrasco Kind'
-from easyaccess.version import __version__
+import os
+import sys
+try:
+    from easyaccess.version import __version__
+except ImportError:
+    from version import __version__
 version=__version__
 
 # For compatibility with old python
@@ -18,12 +23,19 @@ import warnings
 warnings.filterwarnings("ignore")
 import cmd
 import cx_Oracle
-import sys
-import os
 import shutil
 import stat
 import re
-import easyaccess.eautils.dircache as dircache
+
+try:
+    import easyaccess.eautils.dircache as dircache
+    import easyaccess.config_ea as config_mod
+    from easyaccess.eautils import des_logo as dl
+except ImportError:
+    import eautils.dircache as dircache
+    import config_ea as config_mod
+    from eautils import des_logo as dl
+    
 import threading
 import time
 import getpass
@@ -40,8 +52,6 @@ import datetime
 import fitsio
 import numpy as np
 import argparse
-import easyaccess.config_ea as config_mod
-from easyaccess.eautils import des_logo as dl
 import webbrowser
 import signal
 
