@@ -30,11 +30,13 @@ import re
 try:
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
-    from easyaccess.eautils import des_logo as dl
+    import easyaccess.eautils.des_logo as dl
+    import easyaccess.eautils.dtypes as eatypes
 except ImportError:
     import eautils.dircache as dircache
     import config_ea as config_mod
-    from eautils import des_logo as dl
+    import eautils.des_logo as dl
+    import eautils.dtypes as eatypes
     
 import threading
 import time
@@ -206,39 +208,39 @@ def change_type(info):
         return ""
 
 
-def dtype2oracle(dtype):
-    kind = dtype.kind
-    size = dtype.itemsize
-
-    if (kind == 'S'):
-        # string type
-        return 'VARCHAR2(%d)' % size
-    elif (kind == 'i'):
-        if (size == 1):
-            # 1-byte (16 bit) integer
-            return 'NUMBER(2,0)'
-        elif (size == 2):
-            # 2-byte (16 bit) integer
-            return 'NUMBER(6,0)'
-        elif (size == 4):
-            # 4-byte (32 bit) integer
-            return 'NUMBER(11,0)'
-        else:
-            # 8-byte (64 bit) integer
-            return 'NUMBER'
-    elif (kind == 'f'):
-        if (size == 4):
-            # 4-byte (32 bit) float
-            return 'BINARY_FLOAT'
-        elif (size == 8):
-            # 8-byte (64 bit) double
-            return 'BINARY_DOUBLE'
-        else:
-            msg = "Unsupported float type: %s" % kind
-            raise ValueError(msg)
-    else:
-        msg = "Unsupported type: %s" % kind
-        raise ValueError(msg)
+#def dtype2oracle(dtype):
+#    kind = dtype.kind
+#    size = dtype.itemsize
+# 
+#    if (kind == 'S'):
+#        # string type
+#        return 'VARCHAR2(%d)' % size
+#    elif (kind == 'i'):
+#        if (size == 1):
+#            # 1-byte (16 bit) integer
+#            return 'NUMBER(2,0)'
+#        elif (size == 2):
+#            # 2-byte (16 bit) integer
+#            return 'NUMBER(6,0)'
+#        elif (size == 4):
+#            # 4-byte (32 bit) integer
+#            return 'NUMBER(11,0)'
+#        else:
+#            # 8-byte (64 bit) integer
+#            return 'NUMBER'
+#    elif (kind == 'f'):
+#        if (size == 4):
+#            # 4-byte (32 bit) float
+#            return 'BINARY_FLOAT'
+#        elif (size == 8):
+#            # 8-byte (64 bit) double
+#            return 'BINARY_DOUBLE'
+#        else:
+#            msg = "Unsupported float type: %s" % kind
+#            raise ValueError(msg)
+#    else:
+#        msg = "Unsupported type: %s" % kind
+#        raise ValueError(msg)
 
 
 def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
@@ -1890,34 +1892,59 @@ class easy_or(cmd.Cmd, object):
     def check_table_exists(self, table):
         # check table first
         self.cur.execute(
-            'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
+            "select count(table_name) from user_tables where table_name = \'%s\'" % table.upper())
         exists = self.cur.fetchall()[0][0]
         return exists
 
     def load_data(self, filename):
-        base, format = os.path.basename(filename).split('.')
-        if format in ('csv', 'tab'):
-            if format == 'csv': sepa = ','
-            if format == 'tab': sepa = None
+        """Load data from a file into a pandas data frame or fitsio FITS
+        object. We return the object itself, since it might be
+        useful. We also monkey patch on three functions to access the data
+        as lists directly for upload to the DB
+
+        data.ea_get_columns = get the column name list
+        data.ea_get_values  = get the data value list
+        data.ea_get_dtypes  = get the numpy dtype list
+
+        Parameters:
+        -----------
+        filename : Input file name.
+
+        Returns:
+        --------
+        data : A pandas data frame or fitsio FITS object
+        """
+        base, ext = os.path.basename(filename).split('.')
+        if ext in ('csv', 'tab'):
+            if ext == 'csv': sepa = ','
+            if ext == 'tab': sepa = None
             try:
                 DF = pd.read_csv(filename, sep=sepa)
             except:
                 msg = 'Problem reading %s\n' % filename
                 raise Exception(msg)
             # Monkey patch to grab columns and values
+            # List comprehension is faster but less readable
+            dtypes = [ DF[c].dtype if DF[c].dtype.kind != 'O' 
+                       else np.dtype('S'+str(max(DF[c].str.len())))
+                       for i,c in enumerate(DF) ]
             DF.ea_get_columns = DF.columns.values.tolist
-            DF.ea_get_values = DF.values.tolist
-        elif format in ('fits', 'fit'):
+            DF.ea_get_values  = DF.values.tolist
+            DF.ea_get_dtypes  = lambda: dtypes
+        elif ext in ('fits', 'fit'):
             try:
                 DF = fitsio.FITS(filename)
             except:
                 msg = 'Problems reading %s\n' % filename
                 raise Exception(msg)
             # Monkey patch to grab columns and values
+            dtype = DF[1].get_rec_dtype(vstorage='fixed')[0]
+            dtypes = [dtype[i] for i,d in enumerate(dtype.descr)]
             DF.ea_get_columns = DF[1].get_colnames
             DF.ea_get_values = DF[1].read().tolist
+            DF.ea_get_dtypes = lambda: dtypes
         else:
-            msg = "Format not recognized: %s \nUse 'csv' or 'fits' as extensions\n" % format
+            msg = "Format not recognized: %s \nUse 'csv' or 'fits' as extensions\n" % ext
             raise Exception(msg)
         return DF
 
@@ -1939,16 +1966,44 @@ class easy_or(cmd.Cmd, object):
             # and the data types
             dtypes = DF[1].get_rec_dtype(vstorage='fixed')[0]
             for i in range(len(col_n)):
-                qtable += '%s %s,' % (col_n[i], dtype2oracle(dtypes[i]))
+                qtable += '%s %s,' % (col_n[i], eatypes.numpy2oracle(dtypes[i]))
         # cut last , and close paren
         qtable = qtable[:-1] + ')'
 
         return qtable
 
+    def new_table_columns2(self, columns, dtypes):
+        """
+        Create the SQL query to create a new table from a list of column names and numpy dtypes.
+
+        Parameters:
+        -----------
+        columns : List of column names
+        dtypes  : List of numpy dtypes
+
+        Returns:
+        --------
+        query   : SQL query string
+        """
+        # Start the table columns
+        qtable = '( '
+
+        for column,dtype in zip(columns,dtypes):
+            qtable += '%s %s,' % (column, eatypes.numpy2oracle(dtype))
+
+        # cut last ',' and close paren
+        qtable = qtable[:-1] + ')'
+        
+        return qtable
+
     def drop_table(self, table):
         # Do we want to add a PURGE to this query?
         qdrop = "DROP TABLE %s" % table.upper()
-        self.cur.execute(qdrop)
+        try:
+            self.cur.execute(qdrop)
+        except cx_Oracle.DatabaseError:
+            print(colored(
+                "\n Couldn't drop '%s' (doesn't exist)."%(table.upper()),'red'))
         if self.autocommit: self.con.commit()
 
     def create_table(self, table, DF, format='csv'):
@@ -1957,12 +2012,41 @@ class easy_or(cmd.Cmd, object):
         self.cur.execute(qtable)
         if self.autocommit: self.con.commit()
 
+    def create_table2(self, table, columns, dtypes):
+        """
+        Create a DB table from a list of columns and numpy dtypes.
+        
+        Parameters:
+        ----------
+        table   : Name of the Oracle table to create
+        columns : List of column names
+        dtypes  : List of numpy dtypes
+
+        Returns:
+        --------
+        None
+        """
+        qtable = 'create table %s ' % table
+        qtable += self.new_table_columns2(columns,dtypes)
+        self.cur.execute(qtable)
+        if self.autocommit: self.con.commit()
+
     def insert_data(self, columns, values, table):
-        """ Insert data columns into DB table.
+        """Insert data into a DB table. Because of the way `executemany`
+        works, input needs to by python lists.
+        
+        Parameters:
+        -----------
+        columns : List of column names.
+        values  : List of values
+
+        Returns:
+        --------
+        None
+
         """
         cols = ','.join(columns)
-        vals = ',:'.join(columns)
-        vals = ':' + vals
+        vals = ':' + ',:'.join(columns)
         qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
 
         t1 = time.time()
@@ -2013,16 +2097,19 @@ class easy_or(cmd.Cmd, object):
             return
 
         columns = DF.ea_get_columns()
-        values = DF.ea_get_values()
+        values  = DF.ea_get_values()
+        dtypes  = DF.ea_get_dtypes()
+        # Clean up the original object
+        del DF
 
         try:
-            self.create_table(table, DF, format)
+            #self.create_table(table, DF, format)
+            print('create_table2')
+            self.create_table2(table, columns, dtypes)
         except:
             print_exception()
             self.drop_table(table)
-            del DF
             return
-        del DF
 
         try:
             self.insert_data(columns, values, table)
@@ -2084,7 +2171,8 @@ class easy_or(cmd.Cmd, object):
             return
 
         columns = DF.ea_get_columns()
-        values = DF.ea_get_values()
+        values  = DF.ea_get_values()
+        values  = DF.ea_get_dtypes()
         del DF
 
         try:
