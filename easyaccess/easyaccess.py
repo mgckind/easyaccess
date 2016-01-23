@@ -170,7 +170,7 @@ def _complete_path(line):
 
 def read_buf(fbuf):
     """
-    Read SQL files, sql statement should end with ; if parsing to a file to write
+    Read SQL files, sql statement should end with ';' if parsing to a file to write.
     """
     try:
         with open(fbuf) as f:
@@ -206,41 +206,6 @@ def change_type(info):
             return "float64"
     else:
         return ""
-
-
-#def dtype2oracle(dtype):
-#    kind = dtype.kind
-#    size = dtype.itemsize
-# 
-#    if (kind == 'S'):
-#        # string type
-#        return 'VARCHAR2(%d)' % size
-#    elif (kind == 'i'):
-#        if (size == 1):
-#            # 1-byte (16 bit) integer
-#            return 'NUMBER(2,0)'
-#        elif (size == 2):
-#            # 2-byte (16 bit) integer
-#            return 'NUMBER(6,0)'
-#        elif (size == 4):
-#            # 4-byte (32 bit) integer
-#            return 'NUMBER(11,0)'
-#        else:
-#            # 8-byte (64 bit) integer
-#            return 'NUMBER'
-#    elif (kind == 'f'):
-#        if (size == 4):
-#            # 4-byte (32 bit) float
-#            return 'BINARY_FLOAT'
-#        elif (size == 8):
-#            # 8-byte (64 bit) double
-#            return 'BINARY_DOUBLE'
-#        else:
-#            msg = "Unsupported float type: %s" % kind
-#            raise ValueError(msg)
-#    else:
-#        msg = "Unsupported type: %s" % kind
-#        raise ValueError(msg)
 
 
 def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
@@ -1912,7 +1877,7 @@ class easy_or(cmd.Cmd, object):
 
         Returns:
         --------
-        data : A pandas data frame or fitsio FITS object
+        data : A pandas 'DataFrame' or fitsio 'FITS' object
         """
         base, ext = os.path.basename(filename).split('.')
         if ext in ('csv', 'tab'):
@@ -1944,35 +1909,11 @@ class easy_or(cmd.Cmd, object):
             DF.ea_get_values = DF[1].read().tolist
             DF.ea_get_dtypes = lambda: dtypes
         else:
-            msg = "Format not recognized: %s \nUse 'csv' or 'fits' as extensions\n" % ext
+            msg = "Format not recognized: %s \nUse 'csv', 'tab' or 'fits' as extensions\n" % ext
             raise Exception(msg)
         return DF
 
-    def new_table_columns(self, DF, format='csv'):
-        qtable = '( '
-        if format in ('csv', 'tab'):
-            for col in DF:
-                if DF[col].dtype.name == 'object':
-                    qtable += col + ' ' + 'VARCHAR2(' + str(max(DF[col].str.len())) + '),'
-                elif DF[col].dtype.name.find('int') > -1:
-                    qtable += col + ' INT,'
-                elif DF[col].dtype.name.find('float') > -1:
-                    qtable += col + ' BINARY_DOUBLE,'
-                else:
-                    qtable += col + ' NUMBER,'
-        elif format in ('fits', 'fit'):
-            # returns a list of column names
-            col_n = DF[1].get_colnames()
-            # and the data types
-            dtypes = DF[1].get_rec_dtype(vstorage='fixed')[0]
-            for i in range(len(col_n)):
-                qtable += '%s %s,' % (col_n[i], eatypes.numpy2oracle(dtypes[i]))
-        # cut last , and close paren
-        qtable = qtable[:-1] + ')'
-
-        return qtable
-
-    def new_table_columns2(self, columns, dtypes):
+    def new_table_columns(self, columns, dtypes):
         """
         Create the SQL query to create a new table from a list of column names and numpy dtypes.
 
@@ -2006,13 +1947,7 @@ class easy_or(cmd.Cmd, object):
                 "\n Couldn't drop '%s' (doesn't exist)."%(table.upper()),'red'))
         if self.autocommit: self.con.commit()
 
-    def create_table(self, table, DF, format='csv'):
-        qtable = 'create table %s ' % table
-        qtable += self.new_table_columns(DF, format)
-        self.cur.execute(qtable)
-        if self.autocommit: self.con.commit()
-
-    def create_table2(self, table, columns, dtypes):
+    def create_table(self, table, columns, dtypes):
         """
         Create a DB table from a list of columns and numpy dtypes.
         
@@ -2027,7 +1962,7 @@ class easy_or(cmd.Cmd, object):
         None
         """
         qtable = 'create table %s ' % table
-        qtable += self.new_table_columns2(columns,dtypes)
+        qtable += self.new_table_columns(columns,dtypes)
         self.cur.execute(qtable)
         if self.autocommit: self.con.commit()
 
@@ -2096,16 +2031,16 @@ class easy_or(cmd.Cmd, object):
             print_exception()
             return
 
+        # Get the data in a way that Oracle understands
         columns = DF.ea_get_columns()
         values  = DF.ea_get_values()
         dtypes  = DF.ea_get_dtypes()
+
         # Clean up the original object
         del DF
 
         try:
-            #self.create_table(table, DF, format)
-            print('create_table2')
-            self.create_table2(table, columns, dtypes)
+            self.create_table(table, columns, dtypes)
         except:
             print_exception()
             self.drop_table(table)
