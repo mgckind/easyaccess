@@ -124,13 +124,6 @@ def loading():
         pass
 
 
-or_n = cx_Oracle.NUMBER
-or_s = cx_Oracle.STRING
-or_f = cx_Oracle.NATIVE_FLOAT
-or_o = cx_Oracle.OBJECT
-or_ov = cx_Oracle.OBJECT
-or_dt = cx_Oracle.DATETIME
-
 options_prefetch = ['show', 'set', 'default']
 options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
@@ -141,8 +134,6 @@ options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout
                   'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit', 'explain']
-
-type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
 
 
 def _complete_path(line):
@@ -187,29 +178,9 @@ def read_buf(fbuf):
     return newquery
 
 
-def change_type(info):
-    if info[1] == or_n:
-        if info[5] == 0 and info[4] >= 10:
-            return "int64"
-        elif info[5] == 0 and info[4] >= 3:
-            return "int32"
-        elif info[5] == 0 and info[4] >= 1:
-            return "int8"
-        elif 0 < info[5] <= 5:
-            return "float32"
-        else:
-            return "float64"
-    elif info[1] == or_f:
-        if info[3] == 4:
-            return "float32"
-        else:
-            return "float64"
-    else:
-        return ""
-
-
 def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
     # build the dtypes...
+    # ADW: It would be nice to avoid the special cases here...
     dtypes = []
     for col in df:
         if col in listN:
@@ -914,25 +885,31 @@ class easy_or(cmd.Cmd, object):
                     com_it += 1
                     if first:
                         fileindex = 1  # 1-indexed for backwards compatibility
+                        # Special treatment of several Oracle types
+                        # ADW: It would be nice to get rid of this...
                         list_names = []
                         list_type = []
                         for inf in info:
-                            if inf[1] == or_s:
+                            if inf[1] == eatypes.or_s:
+                                # Necessary because pandas types strings as objects
                                 list_names.append(inf[0])
-                                # list_type.append(str(inf[3]) + 'A') #pyfits uses A, fitsio S
+                                # pyfits uses 'A'; fitsio uses 'S'
                                 list_type.append('S' + str(inf[3]))
-                            if inf[1] == or_ov:
+                            if inf[1] == eatypes.or_o:
+                                # ADW: For dealing with vector objects(?)
                                 list_names.append(inf[0])
                                 list_type.append('FLOAT')
-                            if inf[1] == or_dt:
+                            if inf[1] in [eatypes.or_dt,eatypes.or_ts]:
+                                # Converting datetimes to strings
                                 list_names.append(inf[0])
+                                # ADW: 'S50' might be a bit overkill...
                                 list_type.append('S50')
 
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
                         for jj, col in enumerate(data):
-                            nt = change_type(info[jj])
+                            nt = eatypes.oracle2numpy(info[jj])
                             if nt != "": data[col] = data[col].astype(nt)
 
                         if mode_write == 'a' and mode in ('csv', 'tab', 'h5'):
@@ -1884,6 +1861,7 @@ class easy_or(cmd.Cmd, object):
             if ext == 'csv': sepa = ','
             if ext == 'tab': sepa = None
             try:
+                # ADW: Pandas does a pretty terrible job of automatic typing
                 DF = pd.read_csv(filename, sep=sepa)
             except:
                 msg = 'Problem reading %s\n' % filename

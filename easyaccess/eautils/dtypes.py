@@ -11,23 +11,25 @@ FITS: https://heasarc.gsfc.nasa.gov/docs/software/fitsio/c/c_user/node20.html
 Also, can double check agains Erin Sheldon's DESDB module:
 https://github.com/esheldon/desdb
 
-A few conventions...
-- With numpy, stick to array-protocol type strings
-
+Numpy datetimes:
+http://docs.scipy.org/doc/numpy-1.10.0/reference/arrays.datetime.html
 """
+
 import cx_Oracle
 import numpy as np
 
+# Oracle data types
 or_n  = cx_Oracle.NUMBER
 or_s  = cx_Oracle.STRING
 or_f  = cx_Oracle.NATIVE_FLOAT
 or_o  = cx_Oracle.OBJECT
 or_dt = cx_Oracle.DATETIME
+or_ts = cx_Oracle.TIMESTAMP
 
 def oracle2numpy(desc):
     """Takes an Oracle data type and converts to a numpy dtype string.
 
-    TODO: Vectorize...
+    TODO: Vectorize?
     
     Parameters:
     ----------
@@ -60,31 +62,27 @@ def oracle2numpy(desc):
             elif digits <= 15:
                 return "f8"
             else:
-                # (yeah, I didn't know it existed either...)
+                # I didn't know this existed...
                 return "f16" 
     elif otype == or_f:
+        # Native floats
         if size == 4:
             return "f4"
         elif size == 8:
             return "f8"
     elif otype == or_s:
         return "S" + str(size)
-    elif otype == or_dt:
-        # Datetime
-        # http://docs.scipy.org/doc/numpy-1.10.0/reference/arrays.datetime.html
-        return "M8"
-    elif otype == or_o:
-        return 'O'
     else:
+        # Ignore other Oracle types for now
         return ""
-        msg = "Unsupported Oracle type: %s" % otype
-        raise ValueError(msg)
+        #msg = "Unsupported Oracle type: %s" % otype
+        #raise ValueError(msg)
 
 def numpy2oracle(dtype):
     """Takes a numpy dtype object and converts to an Oracle data type
     string.
 
-    TODO: Vectorize...
+    TODO: Vectorize?
     
     Parameters:
     ----------
@@ -126,11 +124,12 @@ def numpy2oracle(dtype):
     elif (kind == 'M'):
         return 'DATETIME'
     elif (kind == 'O'):
+        # Careful pandas creates objects for strings...
         return 'OBJECT'
     else:
         return ""
-        msg = "Unsupported numpy dtype: %s" % dtype
-        raise ValueError(msg)
+        #msg = "Unsupported numpy dtype: %s" % dtype
+        #raise ValueError(msg)
 
 
 if __name__ == "__main__":
