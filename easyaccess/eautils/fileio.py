@@ -18,10 +18,25 @@ try:
 except ImportError:
     import eautils.dtypes as eatypes
 
+PANDAS_EXTS = ('.csv','.tab','.h5')
+FITS_EXTS = ('.fits',)
+FILE_EXTS = PANDAS_EXTS + FITS_EXTS
+
+def unrecognized_filetype(ext,types):
+    msg  = "Unrecognized file type: '%s'\n"%ext
+    msg += "Accepted filetypes: %s"%types
+    return msg
+
+def check_filetype(ext,types):
+    if ext not in types:
+        msg = unrecognized_filetype(ext,types)
+        raise IOError(msg)
+    else:
+        return True
+
 
 def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
-    """
-    Write a pandas DataFrame to a file. Append to existing file as
+    """Write a pandas DataFrame to a file. Append to existing file as
     long as smaller than specified size.  Create a new file (and
     increment fileindex) when file grows too large.
 
@@ -39,9 +54,11 @@ def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
     Returns:
     fileindex: The (possibly incremented) fileindex.
     """
-    fileout = filename
     base,ext = os.path.splitext(filename)
+    check_filetype(ext,FILE_EXTS)
 
+    fileout = filename
+        
     if mode == 'w':
         header = True
     if mode == 'a':
@@ -71,20 +88,16 @@ def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
             fileout = thisfile
             header = False
 
-    if ext in ('.csv','.tab','.h5'):
+    if ext in PANDAS_EXTS:
         write_pandas(fileout, data, fileindex, mode=mode, header=header)
-    elif ext == '.fits': 
+    if ext == FITS_EXTS: 
         write_fitsio(fileout, data, desc, fileindex, mode=mode)
-    else:
-        msg = "Unrecognized file type: '%s'"%mode
-        raise IOError(msg)
 
     return fileindex
 
 def write_pandas(filename, df, fileindex, mode='w', header=True):
-    """
-    Write a pandas DataFrame to a file. Accepted extensions are:
-    '.csv', '.tab', '.h5'
+    """Write a pandas DataFrame to a file. Accepted file extension are
+    defined by 'PANDAS_EXTS'.
 
     Parameters:
     -----------
@@ -99,24 +112,21 @@ def write_pandas(filename, df, fileindex, mode='w', header=True):
     None
     """
     base,ext = os.path.splitext(filename)
+    check_filetype(ext,PANDAS_EXTS)
 
     if ext == '.csv': 
         df.to_csv(filename, index=False, float_format='%.8f', sep=',',
                   mode=mode, header=header)
-    elif ext == '.tab':
+    if ext == '.tab':
         df.to_csv(filename, index=False, float_format='%.8f', sep=' ',
                   mode=mode, header=header)
-    elif ext == '.h5':
+    if ext == '.h5':
         df.to_hdf(filename, 'data', mode=mode, index=False,
                   header=header)  # , complevel=9,complib='bzip2'
-    else:
-        msg = "Unrecognized file type: '%s'"%ext
-        raise IOError(msg)
 
 
 def write_fitsio(filename, df, desc, fileindex, mode='w'):
-    """
-    Write a pandas DataFrame to a FITS binary table using fitsio.
+    """Write a pandas DataFrame to a FITS binary table using fitsio.
 
     Parameters:
     -----------
@@ -130,6 +140,9 @@ def write_fitsio(filename, df, desc, fileindex, mode='w'):
     --------
     None
     """
+    base,ext = os.path.splitext(filename)
+    check_filetype(ext,FITS_EXT)
+
     # Create the proper recarray dtypes
     dtypes = []
     for d in desc:
@@ -165,6 +178,95 @@ def write_fitsio(filename, df, desc, fileindex, mode='w'):
         msg = "Illegal write mode!"
         raise Exception(msg)
 
+def read_file(filename):
+    """
+    Read an input file with pandas or fitsio. Accepted file
+    extensions are defined by 'FILE_EXTS'.
+
+    Parameters:
+    ----------
+    filename : Input filename
+    
+    Returns:
+    --------
+    df : DataFrame object
+    """
+    base,ext = os.path.splitext(filename)
+    check_filetype(ext,FILE_EXTS)
+    
+    if ext in PANDAS_EXTS:
+        DF = read_pandas(filename)
+    elif ext in FITS_EXTS:
+        DF = read_fitsio(filename)
+    else:
+        raise IOError()
+    return DF
+
+def read_pandas(filename):
+    """
+    Read an input file into a pandas DataFrame.  Accepted file
+    extension defined by 'PANDAS_EXTS'.
+
+    Parameters:
+    ----------
+    filename : Input filename
+    
+    Returns:
+    --------
+    df : DataFrame object
+    """
+    # ADW: Pandas does a pretty terrible job of automatic typing
+    base,ext = os.path.splitext(filename)
+    check_filetype(ext,PANDAS_EXTS)
+
+    try:
+        if ext in ('.csv','.tab'):
+            if ext == '.csv': sepa = ','
+            if ext == '.tab': sepa = None
+            DF = pd.read_csv(filename, sep=sepa)
+        elif ext in ('.h5'):
+            DF = pd.read_hdf(filename, key='data')
+    except:
+        msg = 'Problem reading %s\n' % filename
+        raise IOError(msg)
+
+    # Monkey patch to grab columns and values
+    # List comprehension is faster but less readable
+    dtypes = [ DF[c].dtype if DF[c].dtype.kind != 'O' 
+               else np.dtype('S'+str(max(DF[c].str.len())))
+               for i,c in enumerate(DF) ]
+    DF.ea_get_columns = DF.columns.values.tolist
+    DF.ea_get_values  = DF.values.tolist
+    DF.ea_get_dtypes  = lambda: dtypes
+
+    return DF
+
+def read_fitsio(filename):
+    """Read an input FITS file into a numpy recarray. Accepted file
+    extensions defined by 'FITS_EXTS'.
+
+    Parameters:
+    ----------
+    filename : Input filename
+    
+    Returns:
+    --------
+    df : numpy recarray
+    """
+    try:
+        DF = fitsio.FITS(filename)
+    except:
+        msg = 'Problem reading %s\n' % filename
+        raise IOError(msg)
+    # Monkey patch to grab columns and values
+    dtype = DF[1].get_rec_dtype(vstorage='fixed')[0]
+    dtypes = [dtype[i] for i,d in enumerate(dtype.descr)]
+    DF.ea_get_columns = DF[1].get_colnames
+    DF.ea_get_values = DF[1].read().tolist
+    DF.ea_get_dtypes = lambda: dtypes
+
+    return DF
+    
 if __name__ == "__main__":
     import argparse
     description = __doc__
