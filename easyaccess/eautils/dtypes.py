@@ -5,6 +5,7 @@ Oracle, python, numpy, FITS, pandas, ...
 
 Some useful documentation:
 Oracle: https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm
+cx_Oracle: https://cx-oracle.readthedocs.org/en/latest/
 numpy: http://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html
 FITS: https://heasarc.gsfc.nasa.gov/docs/software/fitsio/c/c_user/node20.html
 
@@ -22,9 +23,10 @@ import numpy as np
 or_n  = cx_Oracle.NUMBER
 or_s  = cx_Oracle.STRING
 or_f  = cx_Oracle.NATIVE_FLOAT
-or_o  = cx_Oracle.OBJECT
 or_dt = cx_Oracle.DATETIME
 or_ts = cx_Oracle.TIMESTAMP
+# This is actually OBJECTVAR (hence 'or_ov')
+or_ov  = cx_Oracle.OBJECT
 
 def oracle2numpy(desc):
     """Takes an Oracle data type and converts to a numpy dtype string.
@@ -77,6 +79,29 @@ def oracle2numpy(desc):
         return ""
         #msg = "Unsupported Oracle type: %s" % otype
         #raise ValueError(msg)
+
+def oracle2fitsio(desc):
+    """Takes an Oracle data type and converts to a numpy dtype
+    suitable for writing with fitsio.
+
+    Parameters:
+    ----------
+    info: Oracle column descriptor
+
+    Returns:
+    dtype: Numpy dtype string
+    """
+    name = desc[0]
+    otype = desc[1]
+    size = desc[3]
+    digits = desc[4]
+    scale = desc[5]
+    
+    if (otype == or_dt) or (otype == or_ts):
+        return "S50"
+    else:
+        return oracle2numpy(desc)
+
 
 def numpy2oracle(dtype):
     """Takes a numpy dtype object and converts to an Oracle data type
