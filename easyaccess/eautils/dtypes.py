@@ -114,6 +114,7 @@ def numpy2oracle(dtype):
     dtype: Numpy dtype object
 
     Returns:
+    --------
     otype: Oracle data type string
     """
     kind = dtype.kind
@@ -156,6 +157,53 @@ def numpy2oracle(dtype):
         #msg = "Unsupported numpy dtype: %s" % dtype
         #raise ValueError(msg)
 
+
+def numpy2desdm(desc):
+    """
+    This is an experimental function for following some of the DESDM
+    'conventions' for defining column types. The 'conventions' come
+    mostly from the Y1A1_OBJECTS table.
+    
+    This function is NOT comprehensive.
+
+    Parameters:
+    ----------
+    desc : numpy dtype descriptor (i.e., np.dtype.descr)
+
+    Returns:
+    --------
+    otype: Oracle data type string
+    """
+    name = desc[0].upper()
+    dtype = np.dtype(desc[1])
+
+    # Integer values
+    if name.startswith(('CCDNUM')):
+        return "NUMBER(2,0)"
+    elif name.startswith(('FLAGS_','OBSERVED_','MODEST_CLASS')):
+        return "NUMBER(3,0)"
+    elif name.startswith(('NEPOCHS')):
+        return "NUMBER(4,0)"
+    elif name.startswith(('HPIX','EXPNUM')):
+        return "NUMBER(10,0)"
+    elif name.endswith(('OBJECTS_ID','OBJECT_ID')):
+        return "NUMBER(11,0)"
+    # Float values
+    elif name.startswith(("CLASS_STAR","MAGERR_","WAVG_MAGERR_")):
+        return "NUMBER(5,4)"
+    elif name.startswith(("MAG_","WAVG_MAG_","WAVGCALIB_MAG_")):
+        return "NUMBER(6,4)"
+    elif name.startswith(('SLR_SHIFT','DESDM_ZP','DESDM_ZPERR')):
+        return "NUMBER(6,4)"
+    elif name.startswith(("SPREAD_","SPREADERR_","WAVG_SPREAD_")):
+        return "NUMBER(6,5)"
+    elif name in ['RA','DEC','RADEG','DECDEG','L','B']:
+        return "NUMBER(9,6)"
+    # String values
+    elif name in ['BAND']:
+        return "VARCHAR2(5)"
+    else:
+        return numpy2oracle(dtype)
 
 if __name__ == "__main__":
     import argparse
