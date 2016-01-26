@@ -96,8 +96,10 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
 
-def print_exception():
+def print_exception(pload=None):
     (type, value, traceback) = sys.exc_info()
+    if pload and (pload.pid is not None):
+        os.kill(pload.pid, signal.SIGKILL)
     print()
     print(colored(type, "red"))
     print(colored(value, "red"))
@@ -574,11 +576,7 @@ class easy_or(cmd.Cmd, object):
                         print(colored('Ok!\n', 'green'))
                         return
                     except:
-                        (type, value, traceback) = sys.exc_info()
-                        print()
-                        print(colored(type, "red"))
-                        print(colored(value, "red"))
-                        print()
+                        print_exception()
                         return
                 elif app.find('submit') > -1:
                     print(colored('\nTo be done: Submit jobs to the DB cluster', 'cyan'))
@@ -790,8 +788,8 @@ class easy_or(cmd.Cmd, object):
         t1 = time.time()
         if self.loading_bar: self.pload = Process(target=loading)
         if self.loading_bar: self.pload.start()
-        #try:
-        if True:
+        #if True:
+        try:
             self.cur.execute(query)
             if self.cur.description != None:
                 header = [columns[0] for columns in self.cur.description]
@@ -842,15 +840,15 @@ class easy_or(cmd.Cmd, object):
             else:
                 pass
             print()
-        #except:
-        #    (type, value, traceback) = sys.exc_info()
-        #    if self.loading_bar:
-        #        # self.pload.terminate()
-        #        if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
-        #    print()
-        #    print(colored(type, "red"))
-        #    print(colored(value, "red"))
-        #    print()
+        except:
+            (type, value, traceback) = sys.exc_info()
+            if self.loading_bar:
+                # self.pload.terminate()
+                if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
+            print()
+            print(colored(type, "red"))
+            print(colored(value, "red"))
+            print()
 
 
     def query_results(self, query):
@@ -1261,12 +1259,7 @@ class easy_or(cmd.Cmd, object):
             outproc=self.cur.callproc(proc_name, arguments)
             print(colored('Done!', "green"))
         except:
-            (type, value, traceback) = sys.exc_info()
-            print()
-            print(colored(type, "red"))
-            print(colored(value, "red"))
-
-
+            print_exception()
 
 
     def do_set_password(self, arg):
