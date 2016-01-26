@@ -1722,39 +1722,7 @@ class easy_or(cmd.Cmd, object):
         --------
         data : A pandas 'DataFrame' or fitsio 'FITS' object
         """
-        base, ext = os.path.basename(filename).split('.')
-        if ext in ('csv', 'tab'):
-            if ext == 'csv': sepa = ','
-            if ext == 'tab': sepa = None
-            try:
-                # ADW: Pandas does a pretty terrible job of automatic typing
-                DF = pd.read_csv(filename, sep=sepa)
-            except:
-                msg = 'Problem reading %s\n' % filename
-                raise Exception(msg)
-            # Monkey patch to grab columns and values
-            # List comprehension is faster but less readable
-            dtypes = [ DF[c].dtype if DF[c].dtype.kind != 'O' 
-                       else np.dtype('S'+str(max(DF[c].str.len())))
-                       for i,c in enumerate(DF) ]
-            DF.ea_get_columns = DF.columns.values.tolist
-            DF.ea_get_values  = DF.values.tolist
-            DF.ea_get_dtypes  = lambda: dtypes
-        elif ext in ('fits', 'fit'):
-            try:
-                DF = fitsio.FITS(filename)
-            except:
-                msg = 'Problems reading %s\n' % filename
-                raise Exception(msg)
-            # Monkey patch to grab columns and values
-            dtype = DF[1].get_rec_dtype(vstorage='fixed')[0]
-            dtypes = [dtype[i] for i,d in enumerate(dtype.descr)]
-            DF.ea_get_columns = DF[1].get_colnames
-            DF.ea_get_values = DF[1].read().tolist
-            DF.ea_get_dtypes = lambda: dtypes
-        else:
-            msg = "Format not recognized: %s \nUse 'csv', 'tab' or 'fits' as extensions\n" % ext
-            raise Exception(msg)
+        DF = eafile.read_file(filename)
         return DF
 
     def new_table_columns(self, columns, dtypes):
@@ -1865,8 +1833,8 @@ class easy_or(cmd.Cmd, object):
 
         # check table first
         if self.check_table_exists(table):
-            print('\n Table already exists. Table can be removed with:' \
-                  '\n  DROP TABLE %s;\n' % table.upper())
+            print(colored('\n Table already exists. Table can be removed with:','red'))
+            print(colored(' DESDB ~> DROP TABLE %s;\n' % table.upper(),'red'))
             return
 
         try:
@@ -1897,13 +1865,13 @@ class easy_or(cmd.Cmd, object):
             self.drop_table(table)
             return
 
-        print(colored('\n Table %s loaded successfully.' % table.upper(), "green"))
-        print(colored(
-            '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
-            "cyan"))
+        print(colored('\n Table %s loaded successfully.\n' % table.upper(), "green"))
+        print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion',"cyan:"))
+        print(colored(' DESDB ~> refresh_metadata_cache;',"cyan"))
+
         print()
-        print(colored('To make this table public run:', "blue"), '\n')
-        print(colored('   grant select on %s to DES_READER; ' % table.upper(), "blue"), '\n')
+        print(colored(' To make this table public run:', "blue"))
+        print(colored(' DESDB ~> grant select on %s to DES_READER;' % table.upper(), "blue"), '\n')
         return
 
 
@@ -1941,7 +1909,7 @@ class easy_or(cmd.Cmd, object):
         # check table first 
         if not self.check_table_exists(table):
             print('\n Table does not exist. Table can be created with:' \
-                  '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
+                  '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
             DF = self.load_data(filename)
