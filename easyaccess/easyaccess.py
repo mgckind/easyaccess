@@ -180,84 +180,8 @@ def read_buf(fbuf):
     return newquery
 
 
-def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
-    # build the dtypes...
-    # ADW: It would be nice to avoid the special cases here...
-    dtypes = []
-    for col in df:
-        if col in listN:
-            fmt = listT[listN.index(col)]
-        else:
-            fmt = df[col].dtype.name
-
-        if fmt == 'FLOAT':  # fot objects -- some --
-            dtypes.append((col, 'f8', len(df[col].values[0])))
-        else:
-            dtypes.append((col, fmt))
-
-
-    # create the numpy array to write
-    arr = np.zeros(len(df.index), dtype=dtypes)
-
-    # fill array
-    for col in df:
-        if col in listN:
-            fmt = listT[listN.index(col)]
-            if fmt == 'FLOAT':
-                temp_arr = np.array(df[col].values.tolist())
-                arr[col] = temp_arr
-            else:
-                arr[col][:] = df[col].values
-        else:
-            arr[col][:] = df[col].values
-
-    # write or append...
-    if mode == 'w':
-        # assume that this is smaller than the max size!
-        if os.path.exists(fitsfile): os.remove(fitsfile)
-        fitsio.write(fitsfile, arr, clobber=True)
-        return fileindex
-    elif mode == 'a':
-        # what is the actual name of the current file?
-        fileparts = fitsfile.split('.fits')
-
-        if (fileindex == 1):
-            thisfile = fitsfile
-        else:
-            thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
-
-        # check the size of the current file
-        size = float(os.path.getsize(thisfile)) / (2. ** 20)
-
-        if (size > fits_max_mb):
-            # it's time to increment
-            if (fileindex == 1):
-                # this is the first one ... it needs to be moved
-                # we're doing a 1-index thing here, because...
-                os.rename(fitsfile, '%s_%06d.fits' % (fileparts[0], fileindex))
-
-            # and make a new filename, after incrementing
-            fileindex += 1
-
-            thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
-
-            if os.path.exists(thisfile): os.remove(thisfile)
-            fitsio.write(thisfile, arr, clobber=True)
-            return fileindex
-        else:
-            # just append
-            fits = fitsio.FITS(thisfile, mode='rw')
-            fits[1].append(arr)
-            fits.close()
-            return fileindex
-
-    else:
-        msg = "Illegal write mode!"
-        raise Exception(msg)
-
-
 class easy_or(cmd.Cmd, object):
-    """Easy cx_oracle interpreter for DESDM"""
+    """Easy cx_Oracle interpreter for DESDM."""
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
@@ -2257,7 +2181,7 @@ class connect(easy_or):
 
 
 # #################################################
-
+# ADW: Add this to a separate 'parser' module?
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
         print('\n*****************')
@@ -2306,10 +2230,12 @@ if __name__ == '__main__':
         except:
             print(colored('readline might have problems accessing history', 'red'))
 
+    # ADW: Add this to a separate 'parser' module?
     parser = MyParser(
         description='Easy access to the DES database. There is a configuration file located in %s for more customizable options' % config_file)
-    parser.add_argument("-v", "--version", dest='version', action="store_true",
-                        help="show program's version number and exit")
+    parser.add_argument("-v", "--version", action = "version", 
+                        version = '%(prog)s ' + __version__,
+                        help="print version number and exit")
     parser.add_argument("-c", "--command", dest='command', 
                         help="Executes command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql', 
@@ -2327,10 +2253,6 @@ if __name__ == '__main__':
     parser.add_argument("-u", "--user", dest='user', help="username")
     parser.add_argument("-p", "--password", dest='password', help="password")
     args = parser.parse_args()
-
-    if args.version:
-        print('version: %s' % __version__)
-        os._exit(0)
 
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
@@ -2378,5 +2300,3 @@ if __name__ == '__main__':
     else:
         initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
-
-
