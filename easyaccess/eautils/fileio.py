@@ -21,14 +21,16 @@ except ImportError:
 
 def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
     """
-    Write data to a file. Append to existing file as long as smaller
-    than specified size.  Create a new file (and increment fileindex)
-    when file grows too large.
+    Write a pandas DataFrame to a file. Append to existing file as
+    long as smaller than specified size.  Create a new file (and
+    increment fileindex) when file grows too large.
+
+    'fileindex' is 1-indexed for backwards compatibility
 
     Parameters:
     -----------
     filename : Output base filename (incremented by 'fileindex')
-    data :     The data to write to the file
+    data :     The DataFrame to write to the file
     desc :     The Oracle data descriptor
     fileindex: The index of the file to write.
     mode :     The write-mode: 'w'=write new file, 'a'=append to existing file
@@ -37,19 +39,11 @@ def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
     Returns:
     fileindex: The (possibly incremented) fileindex.
     """
-    # 'fileindex' is 1-indexed for backwards compatibility
     fileout = filename
-    mode_write = mode
-
-    for i, col in enumerate(data):
-        nt = eatypes.oracle2numpy(desc[i])
-        if nt != "": data[col] = data[col].astype(nt)
-
-    fileparts = os.path.splitext(filename)
-    base,ext = fileparts
+    base,ext = os.path.splitext(filename)
 
     if mode == 'w':
-        header_out = True
+        header = True
     if mode == 'a':
         if (fileindex == 1):
             thisfile = filename
@@ -64,7 +58,7 @@ def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
             if (fileindex == 1):
                 # this is the first one ... it needs to be moved
                 lastfile = base+'_%06d'%fileindex+ext
-                os.rename(filename, )
+                os.rename(filename,lastfile)
 
             # and make a new filename, after incrementing
             fileindex += 1
@@ -72,13 +66,13 @@ def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
             thisfile = base+'_%06d'%fileindex+ext 
             fileout = thisfile
             mode = 'w'
-            header_out = True
+            header = True
         else:
             fileout = thisfile
-            header_out = False
+            header = False
 
     if ext in ('.csv','.tab','.h5'):
-        write_pandas(fileout, data, fileindex, mode=mode, header=header_out)
+        write_pandas(fileout, data, fileindex, mode=mode, header=header)
     elif ext == '.fits': 
         write_fitsio(fileout, data, desc, fileindex, mode=mode)
     else:
@@ -94,9 +88,15 @@ def write_pandas(filename, df, fileindex, mode='w', header=True):
 
     Parameters:
     -----------
-    
+    filename:  Output filename: '.csv','.tab','.h5'
+    df :       DataFrame object
+    fileindex: Index of this file (modifies filename based on maxfilesize)
+    mode :     Write mode: 'w'=write, 'a'=append
+    header :   Write header information
+
     Returns:
     --------
+    None
     """
     base,ext = os.path.splitext(filename)
 
@@ -114,7 +114,7 @@ def write_pandas(filename, df, fileindex, mode='w', header=True):
         raise IOError(msg)
 
 
-def write_fitsio(filename, df, desc, fileindex, mode='w', max_mb=1000):
+def write_fitsio(filename, df, desc, fileindex, mode='w'):
     """
     Write a pandas DataFrame to a FITS binary table using fitsio.
 
@@ -125,11 +125,10 @@ def write_fitsio(filename, df, desc, fileindex, mode='w', max_mb=1000):
     desc :     Oracle descriptor object
     fileindex: Index of this file (modifies filename based on maxfilesize)
     mode :     Write mode: 'w'=write, 'a'=append
-    maxmb :    Maximum filesize in MB.
 
     Returns:
     --------
-    returns : None
+    None
     """
     # Create the proper recarray dtypes
     dtypes = []
