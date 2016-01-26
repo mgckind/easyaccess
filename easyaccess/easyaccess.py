@@ -32,11 +32,13 @@ try:
     import easyaccess.config_ea as config_mod
     import easyaccess.eautils.des_logo as dl
     import easyaccess.eautils.dtypes as eatypes
+    import easyaccess.eautils.fileio as eafile
 except ImportError:
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
     import eautils.dtypes as eatypes
+    import eautils.fileio as eafile
     
 import threading
 import time
@@ -842,6 +844,88 @@ class easy_or(cmd.Cmd, object):
 
 
     def query_and_save(self, query, fileout, print_time=True):
+        """
+        Executes a query and save the results to a file, Supported
+        formats are: '.csv', '.tab', '.h5', and '.fits'
+        """
+        query = query.replace(';','')
+        fileformat = fileout.split('.')[-1]
+        mode = fileformat
+        if fileformat in options_out:
+            pass
+        else:
+            print(colored('\nFile format not valid.\n', 'red'))
+            print('Supported formats:\n')
+            for jj, ff in enumerate(options_out): print('%5s  %s' % (ff, options_def[jj]))
+            return
+        if mode != fileout.split('.')[-1]:
+            print(colored(' fileout extension and mode do not match! \n', "red"))
+            return
+        fileout_original = fileout
+        self.cur.arraysize = self.prefetch
+        t1 = time.time()
+        if self.loading_bar: self.pload = Process(target=loading)
+        if self.loading_bar: self.pload.start()
+        #try:
+        if True:
+            self.cur.execute(query)
+            if self.cur.description != None:
+                header = [columns[0] for columns in self.cur.description]
+                htypes = [columns[1] for columns in self.cur.description]
+                info = [rec[0:6] for rec in self.cur.description]
+                first = True
+                mode_write = 'w'
+                header_out = True
+                com_it = 0
+                while True:
+                    data = pd.DataFrame(self.cur.fetchmany())
+                    rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
+                        self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
+                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
+                    if self.loading_bar: sys.stdout.flush()
+                    if self.loading_bar: sys.stdout.write('\b' * len(rowline))
+                    if self.loading_bar: sys.stdout.flush()
+                    com_it += 1
+                    # 1-indexed for backwards compatibility
+                    if first: fileindex = 1  
+
+                    if not data.empty:
+                        data.columns = header
+                        data.fillna(self.nullvalue, inplace=True)
+
+                        fileindex = eafile.write_file(fileout,data,info,fileindex,
+                                                      mode_write,max_mb=self.outfile_max_mb)
+                        
+                        if first:
+                            mode_write = 'a'
+                            header_out = False
+                            first = False
+                    else:
+                        break
+                t2 = time.time()
+                if self.loading_bar:
+                    # self.pload.terminate()
+                    if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
+                elapsed = '%.1f seconds' % (t2 - t1)
+                print()
+                if print_time: print(colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
+                    self.cur.rowcount, fileout, (t2 - t1), com_it - 1), "green"))
+                if print_time: print()
+            else:
+                pass
+            print()
+        #except Exception, e:
+        #    raise e
+        #    (type, value, traceback) = sys.exc_info()
+        #    if self.loading_bar:
+        #        # self.pload.terminate()
+        #        if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
+        #    print()
+        #    print(colored(type, "red"))
+        #    print(colored(value, "red"))
+        #    print()
+
+    def query_and_save2(self, query, fileout, print_time=True):
         """
         Executes a query and save the results to a file, Supported formats are
         .csv, .tab, .fits and .h5
