@@ -892,9 +892,13 @@ class easy_or(cmd.Cmd, object):
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
+                        for i, col in enumerate(data):
+                            nt = eatypes.oracle2numpy(info[i])
+                            if nt != "": data[col] = data[col].astype(nt)
 
                         fileindex = eafile.write_file(fileout,data,info,fileindex,
-                                                      mode_write,max_mb=self.outfile_max_mb)
+                                                      mode_write,
+                                                      max_mb=self.outfile_max_mb)
                         
                         if first:
                             mode_write = 'a'
@@ -914,8 +918,7 @@ class easy_or(cmd.Cmd, object):
             else:
                 pass
             print()
-        #except Exception, e:
-        #    raise e
+        #except:
         #    (type, value, traceback) = sys.exc_info()
         #    if self.loading_bar:
         #        # self.pload.terminate()
@@ -924,144 +927,6 @@ class easy_or(cmd.Cmd, object):
         #    print(colored(type, "red"))
         #    print(colored(value, "red"))
         #    print()
-
-    def query_and_save2(self, query, fileout, print_time=True):
-        """
-        Executes a query and save the results to a file, Supported formats are
-        .csv, .tab, .fits and .h5
-        """
-        query = query.replace(';','')
-        fileformat = fileout.split('.')[-1]
-        mode = fileformat
-        if fileformat in options_out:
-            pass
-        else:
-            print(colored('\nFile format not valid.\n', 'red'))
-            print('Supported formats:\n')
-            for jj, ff in enumerate(options_out): print('%5s  %s' % (ff, options_def[jj]))
-            return
-        if mode != fileout.split('.')[-1]:
-            print(colored(' fileout extension and mode do not match! \n', "red"))
-            return
-        fileout_original = fileout
-        self.cur.arraysize = self.prefetch
-        t1 = time.time()
-        if self.loading_bar: self.pload = Process(target=loading)
-        if self.loading_bar: self.pload.start()
-        try:
-            self.cur.execute(query)
-            if self.cur.description != None:
-                header = [columns[0] for columns in self.cur.description]
-                htypes = [columns[1] for columns in self.cur.description]
-                info = [rec[0:6] for rec in self.cur.description]
-                first = True
-                mode_write = 'w'
-                header_out = True
-                com_it = 0
-                while True:
-                    data = pd.DataFrame(self.cur.fetchmany())
-                    rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
-                        self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
-                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
-                    if self.loading_bar: sys.stdout.flush()
-                    if self.loading_bar: sys.stdout.write('\b' * len(rowline))
-                    if self.loading_bar: sys.stdout.flush()
-                    com_it += 1
-                    if first:
-                        fileindex = 1  # 1-indexed for backwards compatibility
-                        # Special treatment of several Oracle types
-                        # ADW: It would be nice to get rid of this...
-                        list_names = []
-                        list_type = []
-                        for inf in info:
-                            if inf[1] == eatypes.or_s:
-                                # Necessary because pandas types strings as objects
-                                list_names.append(inf[0])
-                                # pyfits uses 'A'; fitsio uses 'S'
-                                list_type.append('S' + str(inf[3]))
-                            if inf[1] == eatypes.or_o:
-                                # ADW: For dealing with vector objects(?)
-                                list_names.append(inf[0])
-                                list_type.append('FLOAT')
-                            if inf[1] in [eatypes.or_dt,eatypes.or_ts]:
-                                # Converting datetimes to strings
-                                list_names.append(inf[0])
-                                # ADW: 'S50' might be a bit overkill...
-                                list_type.append('S50')
-
-                    if not data.empty:
-                        data.columns = header
-                        data.fillna(self.nullvalue, inplace=True)
-                        for jj, col in enumerate(data):
-                            nt = eatypes.oracle2numpy(info[jj])
-                            if nt != "": data[col] = data[col].astype(nt)
-
-                        if mode_write == 'a' and mode in ('csv', 'tab', 'h5'):
-                            fileparts = fileout_original.split('.' + mode)
-                            if (fileindex == 1):
-                                thisfile = fileout_original
-                            else:
-                                thisfile = '%s_%06d.%s' % (fileparts[0], fileindex, mode)
-
-                            # check the size of the current file
-                            size = float(os.path.getsize(thisfile)) / (2. ** 20)
-
-                            if (size > self.outfile_max_mb):
-                                # it's time to increment
-                                if (fileindex == 1):
-                                    # this is the first one ... it needs to be moved
-                                    # we're doing a 1-index thing here, because...
-                                    os.rename(fileout_original, '%s_%06d.%s' % ( fileparts[0], fileindex, mode))
-
-                                # and make a new filename, after incrementing
-                                fileindex += 1
-
-                                thisfile = '%s_%06d.%s' % (fileparts[0], fileindex, mode)
-                                fileout = thisfile
-                                mode_write = 'w'
-                                header_out = True
-                                first = True
-
-                            else:
-                                fileout = thisfile
-                                header_out = False
-
-                        if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.8f', sep=',',
-                                                      mode=mode_write, header=header_out)
-                        if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.8f', sep=' ',
-                                                      mode=mode_write, header=header_out)
-                        if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False,
-                                                      header=header_out)  # , complevel=9,complib='bzip2'
-                        if mode == 'fits': fileindex = write_to_fits(data, fileout, fileindex, mode=mode_write,
-                                                                     listN=list_names,
-                                                                     listT=list_type, fits_max_mb=self.outfile_max_mb)
-                        if first:
-                            mode_write = 'a'
-                            header_out = False
-                            first = False
-                    else:
-                        break
-                t2 = time.time()
-                if self.loading_bar:
-                    # self.pload.terminate()
-                    if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
-                elapsed = '%.1f seconds' % (t2 - t1)
-                print()
-                if print_time: print(colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
-                    self.cur.rowcount, fileout, (t2 - t1), com_it - 1), "green"))
-                if print_time: print()
-            else:
-                pass
-            print()
-        except:
-            (type, value, traceback) = sys.exc_info()
-            if self.loading_bar:
-                # self.pload.terminate()
-                if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
-            print()
-            print(colored(type, "red"))
-            print(colored(value, "red"))
-            print()
 
 
     def query_results(self, query):
