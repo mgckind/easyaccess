@@ -1,1 +1,1 @@
-__all__=["des_logo", "dircache"]
+__all__=["des_logo", "dircache","dtypes"]
