@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """
-Module for dealing with file input/output with
-pandas, fitsio, ...
+Module for file input/output with pandas, fitsio, ...
 
 Some useful documentation:
 fitsio: https://github.com/esheldon/fitsio
@@ -18,16 +17,56 @@ try:
 except ImportError:
     import eautils.dtypes as eatypes
 
+PANDAS_DEFS = ('comma separated text', 'space separated tex', 'HDF5 format')
 PANDAS_EXTS = ('.csv','.tab','.h5')
+
+FITS_DEFS = ('FITS format',) 
 FITS_EXTS = ('.fits',)
+
+FILE_DEFS = PANDAS_DEFS + FITS_DEFS
 FILE_EXTS = PANDAS_EXTS + FITS_EXTS
 
-def unrecognized_filetype(ext,types):
+def unrecognized_filetype(filename,types=None):
+    """
+    Return message about unrecognized file type.
+
+    Parameters:
+    -----------
+    filename : File name (or extension)
+    
+    Returns:
+    --------
+    msg : Unrecognized file message
+    """
+    if types is None: types = FILE_EXTS
+    # Try to split the filename
+    base,ext = os.path.splitext(filename)
+    # Also allow just the file extension
+    if ext == '': ext = base
+    
     msg  = "Unrecognized file type: '%s'\n"%ext
-    msg += "Accepted filetypes: %s"%types
+    msg += "Supported filetypes:\n"
+    msg += ' '+', '.join("'%s'"%t for t in types)
     return msg
 
-def check_filetype(ext,types):
+def check_filetype(filename,types=None):
+    """
+    Check file extension against allowed types.
+
+    Parameters:
+    -----------
+    filename : Name (or extension) of file
+    
+    Returns:
+    --------
+    True : (Or raises IOError)
+    """
+    if types is None: types = FILE_EXTS
+    # Try to split the filename
+    base,ext = os.path.splitext(filename)
+    # Also allow just the file extension
+    if ext == '': ext = base
+
     if ext not in types:
         msg = unrecognized_filetype(ext,types)
         raise IOError(msg)
@@ -56,7 +95,7 @@ def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
     fileindex: The (possibly incremented) fileindex.
     """
     base,ext = os.path.splitext(filename)
-    check_filetype(ext,FILE_EXTS)
+    check_filetype(filename,FILE_EXTS)
 
     fileout = filename
         
@@ -91,7 +130,7 @@ def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
 
     if ext in PANDAS_EXTS:
         write_pandas(fileout, data, fileindex, mode=mode, header=header)
-    if ext == FITS_EXTS: 
+    if ext in FITS_EXTS: 
         write_fitsio(fileout, data, desc, fileindex, mode=mode)
 
     return fileindex
@@ -114,7 +153,7 @@ def write_pandas(filename, df, fileindex, mode='w', header=True):
     None
     """
     base,ext = os.path.splitext(filename)
-    check_filetype(ext,PANDAS_EXTS)
+    check_filetype(filename,PANDAS_EXTS)
 
     if ext == '.csv': 
         df.to_csv(filename, index=False, float_format='%.8f', sep=',',
@@ -131,6 +170,9 @@ def write_fitsio(filename, df, desc, fileindex, mode='w'):
     """
     Write a pandas DataFrame to a FITS binary table using fitsio.
 
+    It is necessary to convert the pandas.DataFrame to a numpy.array
+    before writing, which leads to some hit in performance.
+
     Parameters:
     -----------
     filename:  Base output FITS filename (over-write if already exists).
@@ -143,8 +185,7 @@ def write_fitsio(filename, df, desc, fileindex, mode='w'):
     --------
     None
     """
-    base,ext = os.path.splitext(filename)
-    check_filetype(ext,FITS_EXT)
+    check_filetype(filename,FITS_EXTS)
 
     # Create the proper recarray dtypes
     dtypes = []
@@ -152,7 +193,9 @@ def write_fitsio(filename, df, desc, fileindex, mode='w'):
         name,otype = d[0:2]
         if otype == eatypes.or_ov:
             # Assume that Oracle OBJECTVARs are 'f8'
+            # Could this be better addressed elsewhere?
             dtypes.append((name,'f8',len(df[name].values[0])))
+            print(d,dtypes[-1])
         else:
             dtypes.append((name,eatypes.oracle2fitsio(d)))
 
@@ -163,7 +206,7 @@ def write_fitsio(filename, df, desc, fileindex, mode='w'):
     for d in desc:
         name,otype = d[0:2]
         if otype == eatypes.or_ov:
-            arr[name] = np.array(df[name].values.tolist)
+            arr[name] = np.array(df[name].values.tolist())
         else:
             arr[name][:] = df[name].values
 
@@ -224,7 +267,7 @@ def read_pandas(filename):
     """
     # ADW: Pandas does a pretty terrible job of automatic typing
     base,ext = os.path.splitext(filename)
-    check_filetype(ext,PANDAS_EXTS)
+    check_filetype(filename,PANDAS_EXTS)
 
     try:
         if ext in ('.csv','.tab'):
@@ -261,6 +304,7 @@ def read_fitsio(filename):
     --------
     fits : fitsio.FITS object
     """
+    check_filetype(filename,FITS_EXTS)
     try:
         fits = fitsio.FITS(filename)
     except:

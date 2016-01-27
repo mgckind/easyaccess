@@ -131,8 +131,8 @@ def loading():
 options_prefetch = ['show', 'set', 'default']
 options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
-options_out = ['csv', 'tab', 'fits', 'h5']
-options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
+options_out = eafile.FILE_EXTS
+options_def = eafile.FILE_DEFS
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
                   'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
@@ -562,6 +562,17 @@ class easy_or(cmd.Cmd, object):
 
 
     def default(self, line):
+        """
+        Default function called for line execution.
+
+        Parameters:
+        -----------
+        line : The input line.
+
+        Returns:
+        --------
+        None
+        """
         fend = line.find(';')
         if fend > -1:
             # with open('easy.buf', 'w') as filebuf:
@@ -596,20 +607,17 @@ class easy_or(cmd.Cmd, object):
             if line[fend:].find('>') > -1:
                 try:
                     fileout = line[fend:].split('>')[1].strip().split()[0]
-                    fileformat = fileout.split('.')[-1]
-                    if fileformat in options_out:
-                        print('\nFetching data and saving it to %s ...' % fileout + '\n')
-                        self.query_and_save(query, fileout)
-                    else:
-                        print(colored('\nFile format not valid.\n', 'red'))
-                        print('Supported formats:\n')
-                        for jj, ff in enumerate(options_out): print('%5s  %s' % (ff, options_def[jj]))
+                    print('\nFetching data and saving it to %s ...' % fileout + '\n')
+                    eafile.check_filetype(fileout)
+                    self.query_and_save(query, fileout)
                 except KeyboardInterrupt or EOFError:
                     print(colored('\n\nAborted \n', "red"))
-                except:
+                except IndexError:
                     print(colored('\nMust indicate output file\n', "red"))
                     print('Format:\n')
-                    print('select ... from ... where ... ; > example.csv \n')
+                    print('DESDB ~> select ... from ... where ... ; > example.csv \n')
+                except:
+                    print_exception()
             else:
                 try:
                     self.query_and_print(query)
@@ -619,7 +627,6 @@ class easy_or(cmd.Cmd, object):
                     except:
                         pass
                     print(colored('\n\nAborted \n', "red"))
-
 
         else:
             print()
@@ -730,12 +737,12 @@ class easy_or(cmd.Cmd, object):
                     data.index += 1
                     if extra != "":
                         print(colored(extra + '\n', "cyan"))
-                    # ADW: Oracle distinguishes between NaN and Null while pandas 
-                    # does not making this replacement confusing...
-                    # ##try:
-                    # ##    data.fillna('Null', inplace=True)
-                    # ##except:
-                    ###    pass
+                    ## # ADW: Oracle distinguishes between NaN and Null while pandas 
+                    ## # does not making this replacement confusing...
+                    ## try:
+                    ##     data.fillna('Null', inplace=True)
+                    ## except:
+                    ##     pass
                     print(data)
             else:
                 t2 = time.time()
@@ -770,19 +777,10 @@ class easy_or(cmd.Cmd, object):
         Executes a query and save the results to a file, Supported
         formats are: '.csv', '.tab', '.h5', and '.fits'
         """
+        # to be safe
         query = query.replace(';','')
-        fileformat = fileout.split('.')[-1]
-        mode = fileformat
-        if fileformat in options_out:
-            pass
-        else:
-            print(colored('\nFile format not valid.\n', 'red'))
-            print('Supported formats:\n')
-            for jj, ff in enumerate(options_out): print('%5s  %s' % (ff, options_def[jj]))
-            return
-        if mode != fileout.split('.')[-1]:
-            print(colored(' fileout extension and mode do not match! \n', "red"))
-            return
+        eafile.check_filetype(fileout)
+
         fileout_original = fileout
         self.cur.arraysize = self.prefetch
         t1 = time.time()
@@ -1680,6 +1678,7 @@ class easy_or(cmd.Cmd, object):
         return self._complete_tables(text)
 
     def get_filename(self, line):
+        # Good to move some of this into eautils.fileio
         line = line.replace(';', '')
         if line == "":
             print('\nMust include table filename!\n')
@@ -1692,6 +1691,7 @@ class easy_or(cmd.Cmd, object):
         basename = os.path.basename(filename)
         alls = basename.split('.')
         if len(alls) > 2:
+            # Oracle tables cannot contain a '.'
             print("\nDo not use extra '.' in filename\n")
             return
 
@@ -1824,7 +1824,7 @@ class easy_or(cmd.Cmd, object):
         """
         filename = self.get_filename(line)
         if filename is None: return
-        base, format = os.path.basename(filename).split('.')
+        base, ext = os.path.splitext(os.path.basename(filename))
 
         if name == '':
             table = base
@@ -1899,7 +1899,7 @@ class easy_or(cmd.Cmd, object):
 
         filename = self.get_filename(line)
         if filename is None: return
-        base, format = os.path.basename(filename).split('.')
+        base, ext = os.path.splitext(os.path.basename(filename))
 
         if name == '':
             table = base
