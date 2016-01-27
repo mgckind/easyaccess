@@ -1745,7 +1745,7 @@ class easy_or(cmd.Cmd, object):
 
         for column,dtype in zip(columns,dtypes):
             if self.desdm_coldefs:
-                qtable += '%s %s,' % (column, eatypes.desdm2oracle(dtype))
+                qtable += '%s %s,' % (column, eatypes.numpy2desdm(dtype))
             else:
                 qtable += '%s %s,' % (column, eatypes.numpy2oracle(dtype))
 
