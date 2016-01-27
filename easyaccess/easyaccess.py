@@ -1705,14 +1705,14 @@ class easy_or(cmd.Cmd, object):
         return exists
 
     def load_data(self, filename):
-        """Load data from a file into a pandas data frame or fitsio FITS
-        object. We return the object itself, since it might be
-        useful. We also monkey patch on three functions to access the data
-        as lists directly for upload to the DB
+        """Load data from a file into a pandas.DataFrame or
+        fitsio.FITS object. We return the object itself, since it
+        might be useful. We also monkey patch three functions to
+        access the data as lists directly for upload to the DB.
 
-        data.ea_get_columns = get the column name list
-        data.ea_get_values  = get the data value list
-        data.ea_get_dtypes  = get the numpy dtype list
+        data.ea_get_columns = list of column names
+        data.ea_get_values  = list of column values
+        data.ea_get_dtypes  = list of column numpy dtypes
 
         Parameters:
         -----------
@@ -1720,10 +1720,10 @@ class easy_or(cmd.Cmd, object):
 
         Returns:
         --------
-        data : A pandas 'DataFrame' or fitsio 'FITS' object
+        data : A pandas.DataFrame or fitsio.FITS object
         """
-        DF = eafile.read_file(filename)
-        return DF
+        data = eafile.read_file(filename)
+        return data
 
     def new_table_columns(self, columns, dtypes):
         """
@@ -1838,18 +1838,18 @@ class easy_or(cmd.Cmd, object):
             return
 
         try:
-            DF = self.load_data(filename)
+            data = self.load_data(filename)
         except:
             print_exception()
             return
 
         # Get the data in a way that Oracle understands
-        columns = DF.ea_get_columns()
-        values  = DF.ea_get_values()
-        dtypes  = DF.ea_get_dtypes()
+        columns = data.ea_get_columns()
+        values  = data.ea_get_values()
+        dtypes  = data.ea_get_dtypes()
 
         # Clean up the original object
-        del DF
+        del data
 
         try:
             self.create_table(table, columns, dtypes)
@@ -1912,15 +1912,15 @@ class easy_or(cmd.Cmd, object):
                   '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
-            DF = self.load_data(filename)
+            data = self.load_data(filename)
         except:
             print_exception()
             return
 
-        columns = DF.ea_get_columns()
-        values  = DF.ea_get_values()
-        values  = DF.ea_get_dtypes()
-        del DF
+        columns = data.ea_get_columns()
+        values  = data.ea_get_values()
+        dtypes  = data.ea_get_dtypes()
+        del data
 
         try:
             self.insert_data(columns, values, table)
