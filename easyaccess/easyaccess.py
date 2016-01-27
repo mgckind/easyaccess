@@ -7,10 +7,6 @@ __author__ = 'Matias Carrasco Kind'
 import os
 import sys
 try:
-    from easyaccess.version import __version__
-except ImportError:
-    from version import __version__
-version=__version__
 
 # For compatibility with old python
 try:
@@ -19,8 +15,8 @@ except ImportError:
     from __builtin__ import input, str, range
 
 import warnings
-
 warnings.filterwarnings("ignore")
+
 import cmd
 import cx_Oracle
 import shutil
@@ -28,18 +24,20 @@ import stat
 import re
 
 try:
+    from easyaccess.version import __version__
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     import easyaccess.eautils.des_logo as dl
     import easyaccess.eautils.dtypes as eatypes
     import easyaccess.eautils.fileio as eafile
 except ImportError:
+    from version import __version__
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
     import eautils.dtypes as eatypes
     import eautils.fileio as eafile
-    
+
 import threading
 import time
 import getpass
@@ -1778,22 +1776,37 @@ class easy_or(cmd.Cmd, object):
         self.cur.execute(qtable)
         if self.autocommit: self.con.commit()
 
-    def insert_data(self, columns, values, table):
-        """Insert data into a DB table. Because of the way `executemany`
-        works, input needs to by python lists.
+    def insert_data(self, table, columns, values, dtypes=None):
+        """Insert data into a DB table. 
+
+        Trim trailing whitespace from string columns. Because of the
+        way `executemany` works, input needs to by python lists.
         
         Parameters:
         -----------
+        table   : Name of the table to insert into
         columns : List of column names.
         values  : List of values
+        dtypes  : List of numpy dtypes
 
         Returns:
         --------
         None
 
         """
+        if dtypes is None: len(columns)*[None]
+
+        # Remove trailing whitespace from string values
+        cvals = []
+        for column,dtype in zip(columns,dtypes):
+            if dtype.kind == 'S':
+                cvals.append('TRIM(TRAILING FROM :%s)'%column)
+            else:
+                cvals.append(':%s'%column)
+            
         cols = ','.join(columns)
-        vals = ':' + ',:'.join(columns)
+        vals = ','.join(cvals)
+
         qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
 
         t1 = time.time()
@@ -1859,14 +1872,14 @@ class easy_or(cmd.Cmd, object):
             return
 
         try:
-            self.insert_data(columns, values, table)
+            self.insert_data(table, columns, values, dtypes)
         except:
             print_exception()
             self.drop_table(table)
             return
 
         print(colored('\n Table %s loaded successfully.\n' % table.upper(), "green"))
-        print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion',"cyan:"))
+        print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion',"cyan"))
         print(colored(' DESDB ~> refresh_metadata_cache;',"cyan"))
 
         print()
@@ -1923,7 +1936,7 @@ class easy_or(cmd.Cmd, object):
         del data
 
         try:
-            self.insert_data(columns, values, table)
+            self.insert_data(table, columns, values, dtypes)
         except:
             print_exception()
             return
