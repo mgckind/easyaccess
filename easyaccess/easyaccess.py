@@ -130,6 +130,7 @@ options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
 options_out = eafile.FILE_EXTS
 options_def = eafile.FILE_DEFS
+# ADW: It would be better to grab these from the config object
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
                   'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
@@ -191,6 +192,7 @@ class easy_or(cmd.Cmd, object):
         self.config = conf
         self.quiet = quiet
         self.desconfig = desconf
+        # ADW: It would be better to set these automatically...
         self.editor = os.getenv('EDITOR', self.config.get('easyaccess', 'editor'))
         self.timeout = self.config.getint('easyaccess', 'timeout')
         self.prefetch = self.config.getint('easyaccess', 'prefetch')
@@ -198,6 +200,9 @@ class easy_or(cmd.Cmd, object):
         self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
         self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
         self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
+        self.desdm_coldefs = self.config.getboolean('easyaccess', 'desdm_coldefs')
+        self.trim_whitespace = self.config.getboolean('easyaccess', 'trim_whitespace')
+
         self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
@@ -1739,7 +1744,10 @@ class easy_or(cmd.Cmd, object):
         qtable = '( '
 
         for column,dtype in zip(columns,dtypes):
-            qtable += '%s %s,' % (column, eatypes.numpy2oracle(dtype))
+            if self.desdm_coldefs:
+                qtable += '%s %s,' % (column, eatypes.desdm2oracle(dtype))
+            else:
+                qtable += '%s %s,' % (column, eatypes.numpy2oracle(dtype))
 
         # cut last ',' and close paren
         qtable = qtable[:-1] + ')'
@@ -1798,7 +1806,7 @@ class easy_or(cmd.Cmd, object):
         # Remove trailing whitespace from string values
         cvals = []
         for column,dtype in zip(columns,dtypes):
-            if dtype.kind == 'S':
+            if dtype.kind == 'S' and self.trim_whitespace:
                 cvals.append('TRIM(TRAILING FROM :%s)'%column)
             else:
                 cvals.append(':%s'%column)
@@ -2060,8 +2068,17 @@ color_term = True
 class connect(easy_or):
     def __init__(self, section='', quiet=False):
         """
-        Creates a connection to the DB ans easyaccess commands, section is obtained frmo
+        Creates a connection to the DB as easyaccess commands, section is obtained from
         config file, can be bypass here, e.g., section = desoper
+
+        Parameters:
+        -----------
+        section :  DB connection : dessci, desoper, destest
+        quiet   :  Don't print much
+
+        Returns:
+        --------
+        easy_or object
         """
         self.quiet = quiet
         conf = config_mod.get_config(config_file)
