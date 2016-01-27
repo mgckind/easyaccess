@@ -7,10 +7,6 @@ __author__ = 'Matias Carrasco Kind'
 import os
 import sys
 try:
-    from easyaccess.version import __version__
-except ImportError:
-    from version import __version__
-version=__version__
 
 # For compatibility with old python
 try:
@@ -19,8 +15,8 @@ except ImportError:
     from __builtin__ import input, str, range
 
 import warnings
-
 warnings.filterwarnings("ignore")
+
 import cmd
 import cx_Oracle
 import shutil
@@ -28,18 +24,20 @@ import stat
 import re
 
 try:
+    from easyaccess.version import __version__
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     import easyaccess.eautils.des_logo as dl
     import easyaccess.eautils.dtypes as eatypes
     import easyaccess.eautils.fileio as eafile
 except ImportError:
+    from version import __version__
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
     import eautils.dtypes as eatypes
     import eautils.fileio as eafile
-    
+
 import threading
 import time
 import getpass
