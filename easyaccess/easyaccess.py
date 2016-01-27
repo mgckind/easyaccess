@@ -6,7 +6,6 @@ from __future__ import absolute_import
 __author__ = 'Matias Carrasco Kind'
 import os
 import sys
-try:
 
 # For compatibility with old python
 try:
