@@ -36,7 +36,8 @@ def check_filetype(ext,types):
 
 
 def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
-    """Write a pandas DataFrame to a file. Append to existing file as
+    """
+    Write a pandas DataFrame to a file. Append to existing file as
     long as smaller than specified size.  Create a new file (and
     increment fileindex) when file grows too large.
 
@@ -96,7 +97,8 @@ def write_file(filename, data, desc, fileindex=1, mode='w',max_mb=1000):
     return fileindex
 
 def write_pandas(filename, df, fileindex, mode='w', header=True):
-    """Write a pandas DataFrame to a file. Accepted file extension are
+    """
+    Write a pandas DataFrame to a file. Accepted file extension are
     defined by 'PANDAS_EXTS'.
 
     Parameters:
@@ -126,7 +128,8 @@ def write_pandas(filename, df, fileindex, mode='w', header=True):
 
 
 def write_fitsio(filename, df, desc, fileindex, mode='w'):
-    """Write a pandas DataFrame to a FITS binary table using fitsio.
+    """
+    Write a pandas DataFrame to a FITS binary table using fitsio.
 
     Parameters:
     -----------
@@ -180,8 +183,12 @@ def write_fitsio(filename, df, desc, fileindex, mode='w'):
 
 def read_file(filename):
     """
-    Read an input file with pandas or fitsio. Accepted file
-    extensions are defined by 'FILE_EXTS'.
+    Read an input file with pandas or fitsio. 
+
+    Unfortunately, the conversion between pandas and numpy is too slow
+    to put data into a consistent framework.  
+
+    Accepted file extensions are defined by 'FILE_EXTS'.
 
     Parameters:
     ----------
@@ -189,18 +196,18 @@ def read_file(filename):
     
     Returns:
     --------
-    df : DataFrame object
+    data    : pandas.DataFrame or fitsio.FITS object
     """
     base,ext = os.path.splitext(filename)
     check_filetype(ext,FILE_EXTS)
     
     if ext in PANDAS_EXTS:
-        DF = read_pandas(filename)
+        data = read_pandas(filename)
     elif ext in FITS_EXTS:
-        DF = read_fitsio(filename)
+        data = read_fitsio(filename)
     else:
         raise IOError()
-    return DF
+    return data
 
 def read_pandas(filename):
     """
@@ -213,7 +220,7 @@ def read_pandas(filename):
     
     Returns:
     --------
-    df : DataFrame object
+    df : pandas.DataFrame object
     """
     # ADW: Pandas does a pretty terrible job of automatic typing
     base,ext = os.path.splitext(filename)
@@ -223,23 +230,24 @@ def read_pandas(filename):
         if ext in ('.csv','.tab'):
             if ext == '.csv': sepa = ','
             if ext == '.tab': sepa = None
-            DF = pd.read_csv(filename, sep=sepa)
+            df = pd.read_csv(filename, sep=sepa)
         elif ext in ('.h5'):
-            DF = pd.read_hdf(filename, key='data')
+            df = pd.read_hdf(filename, key='data')
     except:
         msg = 'Problem reading %s\n' % filename
         raise IOError(msg)
 
     # Monkey patch to grab columns and values
     # List comprehension is faster but less readable
-    dtypes = [ DF[c].dtype if DF[c].dtype.kind != 'O' 
-               else np.dtype('S'+str(max(DF[c].str.len())))
-               for i,c in enumerate(DF) ]
-    DF.ea_get_columns = DF.columns.values.tolist
-    DF.ea_get_values  = DF.values.tolist
-    DF.ea_get_dtypes  = lambda: dtypes
+    dtypes = [ df[c].dtype if df[c].dtype.kind != 'O' 
+               else np.dtype('S'+str(max(df[c].str.len())))
+               for i,c in enumerate(df) ]
 
-    return DF
+    df.ea_get_columns = df.columns.values.tolist
+    df.ea_get_values  = df.values.tolist
+    df.ea_get_dtypes  = lambda: dtypes
+    
+    return df
 
 def read_fitsio(filename):
     """Read an input FITS file into a numpy recarray. Accepted file
@@ -251,21 +259,22 @@ def read_fitsio(filename):
     
     Returns:
     --------
-    df : numpy recarray
+    fits : fitsio.FITS object
     """
     try:
-        DF = fitsio.FITS(filename)
+        fits = fitsio.FITS(filename)
     except:
         msg = 'Problem reading %s\n' % filename
         raise IOError(msg)
     # Monkey patch to grab columns and values
-    dtype = DF[1].get_rec_dtype(vstorage='fixed')[0]
+    dtype = fits[1].get_rec_dtype(vstorage='fixed')[0]
     dtypes = [dtype[i] for i,d in enumerate(dtype.descr)]
-    DF.ea_get_columns = DF[1].get_colnames
-    DF.ea_get_values = DF[1].read().tolist
-    DF.ea_get_dtypes = lambda: dtypes
 
-    return DF
+    fits.ea_get_columns = fits[1].get_colnames
+    fits.ea_get_values = fits[1].read().tolist
+    fits.ea_get_dtypes = lambda: dtypes
+
+    return fits
     
 if __name__ == "__main__":
     import argparse
