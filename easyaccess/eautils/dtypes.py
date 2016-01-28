@@ -160,11 +160,13 @@ def numpy2oracle(dtype):
 
 def numpy2desdm(desc):
     """
-    This is an experimental function for following some of the DESDM
+    Impose DESDM typing conventions based on column name.
+
+    This is an experimental function for imposing some of the DESDM
     'conventions' for defining column types. The 'conventions' come
-    mostly from the Y1A1_OBJECTS table.
+    mostly from the existing Y1A1 and PROD tables.
     
-    This function is NOT comprehensive.
+    This function is NOT comprehensive. 
 
     Parameters:
     ----------
@@ -177,31 +179,48 @@ def numpy2desdm(desc):
     name = desc[0].upper()
     dtype = np.dtype(desc[1])
 
+    # It would be better to do this with a lookup dictionary rather
+    # than 'if/elif' clauses. However, it is hard to do 'startswith'
+    # when searching dictionary keys. It would also be more flexible
+    # to use regexs.
+
     # Integer values
-    if name.startswith(('CCDNUM')):
+    if name.startswith(('CCDNUM')) or name in ['ATTNUM']:
         return "NUMBER(2,0)"
     elif name.startswith(('FLAGS_','OBSERVED_','MODEST_CLASS')):
         return "NUMBER(3,0)"
     elif name.startswith(('NEPOCHS')):
         return "NUMBER(4,0)"
+    elif name in ['REQNUM']:
+        return "NUMBER(7,0)"
     elif name.startswith(('HPIX','EXPNUM')):
         return "NUMBER(10,0)"
-    elif name.endswith(('OBJECTS_ID','OBJECT_ID')):
+    elif name in ['COADD_OBJECTS_ID','COADD_OBJECT_ID']:
         return "NUMBER(11,0)"
-    # Float values
-    elif name.startswith(("CLASS_STAR","MAGERR_","WAVG_MAGERR_")):
+    elif name in ['QUICK_OBJECT_ID']:
+        return "NUMBER(15,0)"
+    # Floating point values
+    elif name.startswith(("CLASS_STAR",)):
         return "NUMBER(5,4)"
-    elif name.startswith(("MAG_","WAVG_MAG_","WAVGCALIB_MAG_")):
+    elif name.strip('WAVG_').startswith(("MAG_","MAGERR_","CALIB_MAG_")):
+        # I think MAGERR should be (6,4), though often defined as (5,4)
         return "NUMBER(6,4)"
     elif name.startswith(('SLR_SHIFT','DESDM_ZP','DESDM_ZPERR')):
         return "NUMBER(6,4)"
-    elif name.startswith(("SPREAD_","SPREADERR_","WAVG_SPREAD_")):
-        return "NUMBER(6,5)"
+    elif name.strip('WAVG_').startswith(("SPREAD_","SPREADERR_")):
+        return "NUMBER(7,5)"
     elif name in ['RA','DEC','RADEG','DECDEG','L','B']:
         return "NUMBER(9,6)"
     # String values
     elif name in ['BAND']:
+        # Needs to fit 'VR' and 'block'
         return "VARCHAR2(5)"
+    elif name in ['UNITNAME']:
+        # Why is this so large? Usually "D%8d" = VARCHAR2(9)
+        return "VARCHAR2(20)"
+    elif name in ['FILENAME']:
+        # This is VARCHAR2(60) in prod.se_object, but seems like overkill
+        return "VARCHAR2(50)"
     else:
         return numpy2oracle(dtype)
 
