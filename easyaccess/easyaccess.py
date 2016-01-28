@@ -186,7 +186,7 @@ class easy_or(cmd.Cmd, object):
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
         self.intro = colored(
-            "\neasyaccess  %s. The DESDM Database shell. \n* Type help or ? to list commands. *\n" % __version__,
+            "\neasyaccess  %s. The DESDM Database shell. \n* Type 'help' or '?' to list commands. *\n" % __version__,
             "cyan")
         self.writeconfig = False
         self.config = conf
@@ -632,8 +632,8 @@ class easy_or(cmd.Cmd, object):
 
         else:
             print()
-            print('Invalid command or missing ; at the end of query.')
-            print('Type help or ? to list commands')
+            print("Invalid command or missing ';' at the end of query.")
+            print("Type 'help' or '?' to list commands")
             print()
 
     def completedefault(self, text, line, begidx, lastidx):
@@ -1745,7 +1745,7 @@ class easy_or(cmd.Cmd, object):
 
         for column,dtype in zip(columns,dtypes):
             if self.desdm_coldefs:
-                qtable += '%s %s,' % (column, eatypes.numpy2desdm(dtype))
+                qtable += '%s %s,' % (column, eatypes.numpy2desdm([column,dtype]))
             else:
                 qtable += '%s %s,' % (column, eatypes.numpy2oracle(dtype))
 
@@ -1816,10 +1816,18 @@ class easy_or(cmd.Cmd, object):
 
         qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
 
-        t1 = time.time()
-        self.cur.executemany(qinsert, values)
-        t2 = time.time()
-        if self.autocommit: self.con.commit()
+        try: 
+            t1 = time.time()
+            self.cur.executemany(qinsert, values)
+            t2 = time.time()
+            if self.autocommit: self.con.commit()
+        except cx_Oracle.DatabaseError, e:
+            if self.desdm_coldefs:
+                msg  = str(e)
+                msg += "\n If you are sure, you can disable DESDM column typing: \n"
+                msg += " DESDB ~> config desdm_coldefs set no"
+            raise cx_Oracle.DatabaseError(msg)
+                
         print(colored(
             '\n Inserted %d rows and %d columns into table %s in %.2f seconds' % (
                 len(values), len(columns), table.upper(), t2 - t1), "green"))
