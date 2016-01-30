@@ -148,6 +148,7 @@ def numpy2oracle(dtype):
             msg = "Unsupported float type: %s" % kind
             raise ValueError(msg)
     elif (kind == 'M'):
+        # Should test on CREATED_DATE from PROD.PROCTAG@DESOPER
         return 'DATETIME'
     elif (kind == 'O'):
         # Careful pandas creates objects for strings...
@@ -218,6 +219,8 @@ def numpy2desdm(desc):
     elif name in ['UNITNAME']:
         # Why is this so large? Usually "D%8d" = VARCHAR2(9)
         return "VARCHAR2(20)"
+    elif name in ['TAG']:
+        return "VARCHAR2(30)"
     elif name in ['FILENAME']:
         # This is VARCHAR2(60) in prod.se_object, but seems like overkill
         return "VARCHAR2(50)"
