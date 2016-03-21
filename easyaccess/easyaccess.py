@@ -31,10 +31,12 @@ try:
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     from easyaccess.eautils import des_logo as dl
+    from easyaccess.eautils.fun_utils import *
 except ImportError:
     import eautils.dircache as dircache
     import config_ea as config_mod
     from eautils import des_logo as dl
+    from eautils.fun_utils import *
     
 import threading
 import time
@@ -701,6 +703,10 @@ class easy_or(cmd.Cmd, object):
             # with open('easy.buf', 'w') as filebuf:
             # filebuf.write(self.buff)
             query = line[:fend]
+            # PARSE QUERY HERE
+            query, funs, args, names = parseQ(query)
+            extra_func = [funs, args, names]
+            if funs is None : extra_func = None
             if line[fend:].find('<') > -1:
                 app = line[fend:].split('<')[1].strip().split()[0].lower()
                 if app.find('check') > -1:
@@ -750,7 +756,7 @@ class easy_or(cmd.Cmd, object):
                     print('select ... from ... where ... ; > example.csv \n')
             else:
                 try:
-                    self.query_and_print(query)
+                    self.query_and_print(query, extra_func=extra_func)
                 except:
                     try:
                         self.con.cancel()
@@ -817,9 +823,13 @@ class easy_or(cmd.Cmd, object):
 
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
-                        clear=False):
+                        clear=False, extra_func=None):
         #to be safe
         query = query.replace(';','')
+        if extra_func is not None:
+            p_functions = extra_func[0]
+            p_args = extra_func[1]
+            p_names = extra_func[2]
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
@@ -833,17 +843,23 @@ class easy_or(cmd.Cmd, object):
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[1:6] for rec in self.cur.description]
                 # data = pd.DataFrame(self.cur.fetchall())
-                data = pd.DataFrame(self.cur.fetchmany())
+                data = pd.DataFrame(self.cur.fetchmany(), columns=header)
                 while True:
                     if data.empty: break
+                    if extra_func is not None:
+                        for kf in range(len(p_functions)):
+                            updateDF(data,p_functions,p_args,p_names,kf)
                     rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
                     if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
                     if self.loading_bar: sys.stdout.flush()
                     if self.loading_bar: sys.stdout.write('\b' * len(rowline))
                     if self.loading_bar: sys.stdout.flush()
-                    temp = pd.DataFrame(self.cur.fetchmany())
+                    temp = pd.DataFrame(self.cur.fetchmany(), columns=header)
                     if not temp.empty:
+                        if extra_func is not None:
+                            for kf in range(len(p_functions)):
+                                updateDF(temp,p_functions,p_args,p_names,kf)
                         data = data.append(temp, ignore_index=True)
                     else:
                         break
@@ -864,7 +880,7 @@ class easy_or(cmd.Cmd, object):
                     print(fline)
                     print(colored(err_arg, "red"))
                 else:
-                    data.columns = header
+                    #data.columns = header
                     data.index += 1
                     if extra != "":
                         print(colored(extra + '\n', "cyan"))
