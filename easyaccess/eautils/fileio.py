@@ -318,6 +318,14 @@ def read_fitsio(filename):
     fits.ea_get_values = fits[1].read().tolist
     fits.ea_get_dtypes = lambda: dtypes
 
+    ### # Hack to just get a subset of columns
+    ### x1,x2 = 25,37
+    ###  
+    ### fits.ea_get_columns = lambda: fits[1].get_colnames()[x1:x2]
+    ### print fits.ea_get_columns()
+    ### fits.ea_get_values = lambda: fits[1].read(columns=fits.ea_get_columns()).tolist()
+    ### fits.ea_get_dtypes = lambda: dtypes[x1:x2]
+
     return fits
     
 if __name__ == "__main__":
