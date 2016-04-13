@@ -56,6 +56,7 @@ import numpy as np
 import argparse
 import webbrowser
 import signal
+import importlib
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -2205,6 +2206,29 @@ class easy_or(cmd.Cmd, object):
 
     def do_online_tutorial(self, line):
         tut = webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
+
+    def do_import(self, line):
+        line.replace(';','')
+        line = ' '.join(line.split())
+        line = line.split()
+        if len(line) == 3 and line[1] == 'as':
+            mod = line[0]
+            modname = line[-1]
+        elif len(line) == 1:
+            mod = line[0]
+            modname = line[0]
+        else:
+            print(colored('Use: import module OR import module as name',"red"))
+            return
+        command = modname + ' = importlib.import_module(\''+mod+'\')'
+        try:
+            exec(command ,globals())
+            print(colored('Done!',"green"))
+            _ = globals()[modname]
+        except:
+            print_exception()
+            return
+
 
 
 ##################################################

@@ -4,6 +4,7 @@ import inspect
 import re
 import healpy as hp
 from functools import wraps
+import importlib
 #import easyaccess as ea
 #con = ea.connect()
 
@@ -66,11 +67,10 @@ def parseQ(query):
             except:
                 name=None
             temp = "".join(e.split())
-            print e
             f = temp[:temp.find('(')]
             if name is None: name=f.lower()
             ar = temp[temp.find('(')+1:temp.find(')')]
-            funs.append(f.lower())
+            funs.append(f)  # f.lower()
             all_args = ar.split(',')
             positional=[]
             optional=[]
@@ -92,16 +92,25 @@ def parseQ(query):
 
 
 def updateDF(D, f, a, n, idx):
-    ii=np.where(D.columns.values=='F'+str(idx)+'ARG0')[0][0]
-    H = globals()[f[idx]]
-    args=[]
-    kwargs={}
+    ii = np.where(D.columns.values=='F'+str(idx)+'ARG0')[0][0]
+    func = f[idx]
+    if func.find('.') > -1 :
+        mod_name, func_name = func.rsplit('.',1)
+        mod = importlib.import_module(mod_name)
+        H = getattr(mod, func_name)
+        #modname,func_name = func.split('.')
+        #HM = globals()[modname]
+        #H = getattr(HM, func_name)
+    else:
+        H = globals()[func]
+    args = []
+    kwargs = {}
     for j in range(a[idx][1]):
         args.append(D['F'+str(idx)+'ARG'+str(j)])
     for sa in a[idx][0]:
         key,value = sa.split('=')
-        kwargs[key]=value
-    temp=H(*args,**kwargs)
+        kwargs[key] = value
+    temp = H(*args,**kwargs)
     D.insert(ii,n[idx].upper(),temp)
     for j in range(a[idx][1]):
         D.drop('F'+str(idx)+'ARG'+str(j),1,inplace=True)
