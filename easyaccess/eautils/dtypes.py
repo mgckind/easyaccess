@@ -45,17 +45,15 @@ def oracle2numpy(desc):
     size = desc[3]
     digits = desc[4]
     scale = desc[5]
-    
+
     if otype == or_n:
-        if scale == 0:
+        if scale == 0 and digits != 0:
             # Nothing after the decimal; integers
-            if digits == 0:
-                return "i8"
-            elif digits <= 4:
+            if digits <= 4:
                 return "i2"
             elif digits <= 9:
                 return "i4"
-            # This is sloppy... since coverting i8 to NUMBER(22,0)
+            # This is sloppy...
             else:
                 return "i8"
         else:
@@ -138,7 +136,7 @@ def numpy2oracle(dtype):
             # 8-byte (64 bit) integer
             # This is sloppy...
             # 'i8' is 19 digits; 'u8' is 20 digits
-            return 'NUMBER(22,0)'
+            return 'NUMBER(20,0)'
     elif (kind == 'f'):
         if (size == 4):
             # 4-byte (32 bit) float
