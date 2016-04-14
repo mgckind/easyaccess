@@ -31,12 +31,14 @@ try:
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     from easyaccess.eautils import des_logo as dl
-    from easyaccess.eautils.fun_utils import *
+    import easyaccess.eautils.fun_utils as fun_utils
+    from easyaccess.eautils.import_utils import Import
 except ImportError:
     import eautils.dircache as dircache
     import config_ea as config_mod
     from eautils import des_logo as dl
-    from eautils.fun_utils import *
+    import eautils.fun_utils as fun_utils
+    from eautils.import_utils import Import
     
 import threading
 import time
@@ -56,7 +58,8 @@ import numpy as np
 import argparse
 import webbrowser
 import signal
-import importlib
+
+fun_utils.init_func()
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -319,7 +322,7 @@ def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_ma
         raise Exception(msg)
 
 
-class easy_or(cmd.Cmd, object):
+class easy_or(cmd.Cmd, Import, object):
     """Easy cx_oracle interpreter for DESDM"""
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
@@ -705,7 +708,11 @@ class easy_or(cmd.Cmd, object):
             # filebuf.write(self.buff)
             query = line[:fend]
             # PARSE QUERY HERE
-            query, funs, args, names = parseQ(query)
+            try:
+                query, funs, args, names = fun_utils.parseQ(query)
+            except:
+                print_exception()
+                return
             extra_func = [funs, args, names]
             if funs is None : extra_func = None
             if line[fend:].find('<') > -1:
@@ -849,7 +856,7 @@ class easy_or(cmd.Cmd, object):
                     if data.empty: break
                     if extra_func is not None:
                         for kf in range(len(p_functions)):
-                            updateDF(data,p_functions,p_args,p_names,kf)
+                            fun_utils.updateDF(data,p_functions,p_args,p_names,kf)
                     rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
                     if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
@@ -860,7 +867,7 @@ class easy_or(cmd.Cmd, object):
                     if not temp.empty:
                         if extra_func is not None:
                             for kf in range(len(p_functions)):
-                                updateDF(temp,p_functions,p_args,p_names,kf)
+                                fun_utils.updateDF(temp,p_functions,p_args,p_names,kf)
                         data = data.append(temp, ignore_index=True)
                     else:
                         break
@@ -2207,27 +2214,7 @@ class easy_or(cmd.Cmd, object):
     def do_online_tutorial(self, line):
         tut = webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
 
-    def do_import(self, line):
-        line.replace(';','')
-        line = ' '.join(line.split())
-        line = line.split()
-        if len(line) == 3 and line[1] == 'as':
-            mod = line[0]
-            modname = line[-1]
-        elif len(line) == 1:
-            mod = line[0]
-            modname = line[0]
-        else:
-            print(colored('Use: import module OR import module as name',"red"))
-            return
-        command = modname + ' = importlib.import_module(\''+mod+'\')'
-        try:
-            exec(command ,globals())
-            print(colored('Done!',"green"))
-            _ = globals()[modname]
-        except:
-            print_exception()
-            return
+
 
 
 

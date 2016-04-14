@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 import inspect
@@ -5,8 +6,15 @@ import re
 import healpy as hp
 from functools import wraps
 import importlib
-#import easyaccess as ea
-#con = ea.connect()
+try:
+    from termcolor import colored
+except:
+    def colored(line, color): return line
+
+def init_func():
+    global ea_func_dictionary
+    ea_func_dictionary = {}
+
 
 def toeasyaccess(custom):
     @wraps(custom)
@@ -19,35 +27,26 @@ def toeasyaccess(custom):
             ndef = 0
         #print 'This function uses %d arguments' % (nargs-ndef)
         return custom(*args, **kwargs)
+    
+    check = inspect.getargspec(custom)
+    try:
+        n_def = len(check.defaults)
+    except:
+        n_def = 0
+    head = '('
+    for j,ag in enumerate(check.args):
+        if j < len(check.args) - n_def: head += ag+', '
+        else: head+=ag+'='+str(check.defaults[j-n_def])+', '
+    head = head[:-1]
+    if head[-1] == ',': head = head[:-1]
+    head += ')'
+
     temp = easy_function
+    temp.__doc1__ = head
     temp.in_easyaccess = True
-    temp.__doc__ = 'EAF:'+custom.__doc__ 
+    temp.__doc__ = custom.__doc__ 
             
     return temp
-        
-    
-@toeasyaccess
-def my_sum(a,b, min_value= None, max_value=None):
-    """
-    Sum two colums, if max_values is defined the values are clipped
-    to that value
-    """
-    c = abs(a) + abs(b)
-    if min_value is None: min_value = np.min(c)
-    if max_value is None: max_value = np.max(c)
-    return np.clip(c, float(min_value), float(max_value))
-
-
-@toeasyaccess
-def ang2hpix(ra,dec, nside=None, nest='False'):
-    """
-    Converts from ra and dec to Hpix index with a given nside and nested schema
-    """
-    phi = ra/180.*np.pi
-    theta = (90.-dec)/180.*np.pi
-    nside = int(nside)
-    nest = nest.lower() in ("yes", "true", "t", "1")
-    return hp.ang2pix(nside, theta, phi, nest)
 
 
 
@@ -86,6 +85,14 @@ def parseQ(query):
             b=[j+' as F'+str(nf)+'arg'+str(i) for i,j in enumerate(positional)]
             query = query.replace('/*p:'+e+'*/', ",".join(b))
             nf+=1
+        for f in funs:
+            modname = f
+            if f.find('.') > -1: modname,func_name = f.split('.')
+            try:
+                _ = ea_func_dictionary[f]
+            except:
+                print(colored("\n\nYou might need to import %s" % modname,"red"))
+                raise
     return query, funs, args, names
 
 
@@ -95,14 +102,17 @@ def updateDF(D, f, a, n, idx):
     ii = np.where(D.columns.values=='F'+str(idx)+'ARG0')[0][0]
     func = f[idx]
     if func.find('.') > -1 :
-        mod_name, func_name = func.rsplit('.',1)
-        mod = importlib.import_module(mod_name)
-        H = getattr(mod, func_name)
-        #modname,func_name = func.split('.')
-        #HM = globals()[modname]
+        modname,func_name = func.split('.')
+        try:
+            HM = ea_func_dictionary[func]  # globals()[modname]
+        except:
+            print(colored("\n\nYou might need to import %s" % modname,"red"))
+            raise
         #H = getattr(HM, func_name)
+        H = HM
     else:
-        H = globals()[func]
+        #H = globals()[func]
+        H = ea_func_dictionary[func]
     args = []
     kwargs = {}
     for j in range(a[idx][1]):
