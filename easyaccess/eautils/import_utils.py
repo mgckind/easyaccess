@@ -1,6 +1,9 @@
 import sys
 import importlib
-import fun_utils
+try:
+    import fun_utils
+except ImportError:
+    import eautils.fun_utils as fun_utils
 from inspect import getmembers, isfunction
 try:
     from termcolor import colored

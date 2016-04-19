@@ -26,30 +26,22 @@ try:
     from easyaccess.version import __version__
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
-<<<<<<< HEAD
     from easyaccess.eautils import des_logo as dl
-    import easyaccess.eautils.fun_utils as fun_utils
-    from easyaccess.eautils.import_utils import Import
-=======
-    import easyaccess.eautils.des_logo as dl
     import easyaccess.eautils.dtypes as eatypes
     import easyaccess.eautils.fileio as eafile
->>>>>>> master
+    import easyaccess.eautils.fun_utils as fun_utils
+    from easyaccess.eautils.import_utils import Import
+
 except ImportError:
     from version import __version__
     import eautils.dircache as dircache
     import config_ea as config_mod
-<<<<<<< HEAD
-    from eautils import des_logo as dl
-    import eautils.fun_utils as fun_utils
-    from eautils.import_utils import Import
-    
-=======
     import eautils.des_logo as dl
     import eautils.dtypes as eatypes
     import eautils.fileio as eafile
+    import eautils.fun_utils as fun_utils
+    from eautils.import_utils import Import
 
->>>>>>> master
 import threading
 import time
 import getpass
@@ -195,144 +187,8 @@ def read_buf(fbuf):
     return newquery
 
 
-<<<<<<< HEAD
-def change_type(info):
-    if info[1] == or_n:
-        if info[5] == 0 and info[4] >= 10:
-            return "int64"
-        elif info[5] == 0 and info[4] >= 3:
-            return "int32"
-        elif info[5] == 0 and info[4] >= 1:
-            return "int8"
-        elif 0 < info[5] <= 5:
-            return "float32"
-        else:
-            return "float64"
-    elif info[1] == or_f:
-        if info[3] == 4:
-            return "float32"
-        else:
-            return "float64"
-    else:
-        return ""
-
-
-def dtype2oracle(dtype):
-    kind = dtype.kind
-    size = dtype.itemsize
-
-    if (kind == 'S'):
-        # string type
-        return 'VARCHAR2(%d)' % size
-    elif (kind == 'i'):
-        if (size == 1):
-            # 1-byte (16 bit) integer
-            return 'NUMBER(2,0)'
-        elif (size == 2):
-            # 2-byte (16 bit) integer
-            return 'NUMBER(6,0)'
-        elif (size == 4):
-            # 4-byte (32 bit) integer
-            return 'NUMBER(11,0)'
-        else:
-            # 8-byte (64 bit) integer
-            return 'NUMBER'
-    elif (kind == 'f'):
-        if (size == 4):
-            # 4-byte (32 bit) float
-            return 'BINARY_FLOAT'
-        elif (size == 8):
-            # 8-byte (64 bit) double
-            return 'BINARY_DOUBLE'
-        else:
-            msg = "Unsupported float type: %s" % kind
-            raise ValueError(msg)
-    else:
-        msg = "Unsupported type: %s" % kind
-        raise ValueError(msg)
-
-
-def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
-    # build the dtypes...
-    dtypes = []
-    for col in df:
-        if col in listN:
-            fmt = listT[listN.index(col)]
-        else:
-            fmt = df[col].dtype.name
-
-        if fmt == 'FLOAT':  # fot objects -- some --
-            dtypes.append((col, 'f8', len(df[col].values[0])))
-        else:
-            dtypes.append((col, fmt))
-
-
-    # create the numpy array to write
-    arr = np.zeros(len(df.index), dtype=dtypes)
-
-    # fill array
-    for col in df:
-        if col in listN:
-            fmt = listT[listN.index(col)]
-            if fmt == 'FLOAT':
-                temp_arr = np.array(df[col].values.tolist())
-                arr[col] = temp_arr
-            else:
-                arr[col][:] = df[col].values
-        else:
-            arr[col][:] = df[col].values
-
-    # write or append...
-    if mode == 'w':
-        # assume that this is smaller than the max size!
-        if os.path.exists(fitsfile): os.remove(fitsfile)
-        fitsio.write(fitsfile, arr, clobber=True)
-        return fileindex
-    elif mode == 'a':
-        # what is the actual name of the current file?
-        fileparts = fitsfile.split('.fits')
-
-        if (fileindex == 1):
-            thisfile = fitsfile
-        else:
-            thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
-
-        # check the size of the current file
-        size = float(os.path.getsize(thisfile)) / (2. ** 20)
-
-        if (size > fits_max_mb):
-            # it's time to increment
-            if (fileindex == 1):
-                # this is the first one ... it needs to be moved
-                # we're doing a 1-index thing here, because...
-                os.rename(fitsfile, '%s_%06d.fits' % (fileparts[0], fileindex))
-
-            # and make a new filename, after incrementing
-            fileindex += 1
-
-            thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
-
-            if os.path.exists(thisfile): os.remove(thisfile)
-            fitsio.write(thisfile, arr, clobber=True)
-            return fileindex
-        else:
-            # just append
-            fits = fitsio.FITS(thisfile, mode='rw')
-            fits[1].append(arr)
-            fits.close()
-            return fileindex
-
-    else:
-        msg = "Illegal write mode!"
-        raise Exception(msg)
-
-
 class easy_or(cmd.Cmd, Import, object):
-    """Easy cx_oracle interpreter for DESDM"""
-=======
-class easy_or(cmd.Cmd, object):
     """Easy cx_Oracle interpreter for DESDM."""
->>>>>>> master
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
