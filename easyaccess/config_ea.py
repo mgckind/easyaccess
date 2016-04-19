@@ -20,7 +20,7 @@ configcomment = """#
 # 
 # database       : Default is dessci, change to desoper, destest and others
 #                  Make sure the db-"database" section is in the .desservices.ini
-# editor         : Deafault editor to open from inside easyaccess if $EDITOR is not set
+# editor         : Default editor to open from inside easyaccess if $EDITOR is not set
 # prefetch       : Prefetch number of rows to get from oracle (not the number of total rows)
 #                : This determine the number of trips to the DB to get all results from query
 # histcache      : The number of line in the history cache (when possible)
@@ -65,6 +65,12 @@ def get_config(configfile):
                                                                                          '1000')
     if not config.has_option('easyaccess', 'autocommit'): configwrite = True;config.set('easyaccess', 'autocommit',
                                                                                         'yes')
+    if not config.has_option('easyaccess', 'trim_whitespace'): configwrite = True;config.set('easyaccess',
+                                                                                             'trim_whitespace',
+                                                                                             'yes')
+    if not config.has_option('easyaccess', 'desdm_coldefs'): configwrite = True;config.set('easyaccess',
+                                                                                           'desdm_coldefs',
+                                                                                           'yes')
 
     if not config.has_section('display'):
         configwrite = True
