@@ -1821,7 +1821,7 @@ class easy_or(cmd.Cmd, object):
             self.cur.executemany(qinsert, values)
             t2 = time.time()
             if self.autocommit: self.con.commit()
-        except cx_Oracle.DatabaseError, e:
+        except cx_Oracle.DatabaseError as e:
             if self.desdm_coldefs:
                 msg  = str(e)
                 msg += "\n If you are sure, you can disable DESDM column typing: \n"
