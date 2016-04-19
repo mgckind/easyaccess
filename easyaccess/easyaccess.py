@@ -6,11 +6,6 @@ from __future__ import absolute_import
 __author__ = 'Matias Carrasco Kind'
 import os
 import sys
-try:
-    from easyaccess.version import __version__
-except ImportError:
-    from version import __version__
-version=__version__
 
 # For compatibility with old python
 try:
@@ -19,8 +14,8 @@ except ImportError:
     from __builtin__ import input, str, range
 
 import warnings
-
 warnings.filterwarnings("ignore")
+
 import cmd
 import cx_Oracle
 import shutil
@@ -28,14 +23,20 @@ import stat
 import re
 
 try:
+    from easyaccess.version import __version__
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
-    from easyaccess.eautils import des_logo as dl
+    import easyaccess.eautils.des_logo as dl
+    import easyaccess.eautils.dtypes as eatypes
+    import easyaccess.eautils.fileio as eafile
 except ImportError:
+    from version import __version__
     import eautils.dircache as dircache
     import config_ea as config_mod
-    from eautils import des_logo as dl
-    
+    import eautils.des_logo as dl
+    import eautils.dtypes as eatypes
+    import eautils.fileio as eafile
+
 import threading
 import time
 import getpass
@@ -92,8 +93,10 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
 
-def print_exception():
+def print_exception(pload=None):
     (type, value, traceback) = sys.exc_info()
+    if pload and (pload.pid is not None):
+        os.kill(pload.pid, signal.SIGKILL)
     print()
     print(colored(type, "red"))
     print(colored(value, "red"))
@@ -122,25 +125,17 @@ def loading():
         pass
 
 
-or_n = cx_Oracle.NUMBER
-or_s = cx_Oracle.STRING
-or_f = cx_Oracle.NATIVE_FLOAT
-or_o = cx_Oracle.OBJECT
-or_ov = cx_Oracle.OBJECT
-or_dt = cx_Oracle.DATETIME
-
 options_prefetch = ['show', 'set', 'default']
 options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
-options_out = ['csv', 'tab', 'fits', 'h5']
-options_def = ['Coma separated value', 'space separated value', 'Fits format', 'HDF5 format']
+options_out = eafile.FILE_EXTS
+options_def = eafile.FILE_DEFS
+# ADW: It would be better to grab these from the config object
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
                   'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit', 'explain']
-
-type_dict = {'float64': 'D', 'int64': 'K', 'float32': 'E', 'int32': 'J', 'object': '200A', 'int8': 'I'}
 
 
 def _complete_path(line):
@@ -168,7 +163,7 @@ def _complete_path(line):
 
 def read_buf(fbuf):
     """
-    Read SQL files, sql statement should end with ; if parsing to a file to write
+    Read SQL files, sql statement should end with ';' if parsing to a file to write.
     """
     try:
         with open(fbuf) as f:
@@ -185,149 +180,19 @@ def read_buf(fbuf):
     return newquery
 
 
-def change_type(info):
-    if info[1] == or_n:
-        if info[5] == 0 and info[4] >= 10:
-            return "int64"
-        elif info[5] == 0 and info[4] >= 3:
-            return "int32"
-        elif info[5] == 0 and info[4] >= 1:
-            return "int8"
-        elif 0 < info[5] <= 5:
-            return "float32"
-        else:
-            return "float64"
-    elif info[1] == or_f:
-        if info[3] == 4:
-            return "float32"
-        else:
-            return "float64"
-    else:
-        return ""
-
-
-def dtype2oracle(dtype):
-    kind = dtype.kind
-    size = dtype.itemsize
-
-    if (kind == 'S'):
-        # string type
-        return 'VARCHAR2(%d)' % size
-    elif (kind == 'i'):
-        if (size == 1):
-            # 1-byte (16 bit) integer
-            return 'NUMBER(2,0)'
-        elif (size == 2):
-            # 2-byte (16 bit) integer
-            return 'NUMBER(6,0)'
-        elif (size == 4):
-            # 4-byte (32 bit) integer
-            return 'NUMBER(11,0)'
-        else:
-            # 8-byte (64 bit) integer
-            return 'NUMBER'
-    elif (kind == 'f'):
-        if (size == 4):
-            # 4-byte (32 bit) float
-            return 'BINARY_FLOAT'
-        elif (size == 8):
-            # 8-byte (64 bit) double
-            return 'BINARY_DOUBLE'
-        else:
-            msg = "Unsupported float type: %s" % kind
-            raise ValueError(msg)
-    else:
-        msg = "Unsupported type: %s" % kind
-        raise ValueError(msg)
-
-
-def write_to_fits(df, fitsfile, fileindex, mode='w', listN=[], listT=[], fits_max_mb=1000):
-    # build the dtypes...
-    dtypes = []
-    for col in df:
-        if col in listN:
-            fmt = listT[listN.index(col)]
-        else:
-            fmt = df[col].dtype.name
-
-        if fmt == 'FLOAT':  # fot objects -- some --
-            dtypes.append((col, 'f8', len(df[col].values[0])))
-        else:
-            dtypes.append((col, fmt))
-
-
-    # create the numpy array to write
-    arr = np.zeros(len(df.index), dtype=dtypes)
-
-    # fill array
-    for col in df:
-        if col in listN:
-            fmt = listT[listN.index(col)]
-            if fmt == 'FLOAT':
-                temp_arr = np.array(df[col].values.tolist())
-                arr[col] = temp_arr
-            else:
-                arr[col][:] = df[col].values
-        else:
-            arr[col][:] = df[col].values
-
-    # write or append...
-    if mode == 'w':
-        # assume that this is smaller than the max size!
-        if os.path.exists(fitsfile): os.remove(fitsfile)
-        fitsio.write(fitsfile, arr, clobber=True)
-        return fileindex
-    elif mode == 'a':
-        # what is the actual name of the current file?
-        fileparts = fitsfile.split('.fits')
-
-        if (fileindex == 1):
-            thisfile = fitsfile
-        else:
-            thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
-
-        # check the size of the current file
-        size = float(os.path.getsize(thisfile)) / (2. ** 20)
-
-        if (size > fits_max_mb):
-            # it's time to increment
-            if (fileindex == 1):
-                # this is the first one ... it needs to be moved
-                # we're doing a 1-index thing here, because...
-                os.rename(fitsfile, '%s_%06d.fits' % (fileparts[0], fileindex))
-
-            # and make a new filename, after incrementing
-            fileindex += 1
-
-            thisfile = '%s_%06d.fits' % (fileparts[0], fileindex)
-
-            if os.path.exists(thisfile): os.remove(thisfile)
-            fitsio.write(thisfile, arr, clobber=True)
-            return fileindex
-        else:
-            # just append
-            fits = fitsio.FITS(thisfile, mode='rw')
-            fits[1].append(arr)
-            fits.close()
-            return fileindex
-
-    else:
-        msg = "Illegal write mode!"
-        raise Exception(msg)
-
-
 class easy_or(cmd.Cmd, object):
-    """Easy cx_oracle interpreter for DESDM"""
+    """Easy cx_Oracle interpreter for DESDM."""
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
         cmd.Cmd.__init__(self)
         self.intro = colored(
-            "\neasyaccess  %s. The DESDM Database shell. \n* Type help or ? to list commands. *\n" % __version__,
+            "\neasyaccess  %s. The DESDM Database shell. \n* Type 'help' or '?' to list commands. *\n" % __version__,
             "cyan")
         self.writeconfig = False
         self.config = conf
         self.quiet = quiet
         self.desconfig = desconf
+        # ADW: It would be better to set these automatically...
         self.editor = os.getenv('EDITOR', self.config.get('easyaccess', 'editor'))
         self.timeout = self.config.getint('easyaccess', 'timeout')
         self.prefetch = self.config.getint('easyaccess', 'prefetch')
@@ -335,6 +200,9 @@ class easy_or(cmd.Cmd, object):
         self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
         self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
         self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
+        self.desdm_coldefs = self.config.getboolean('easyaccess', 'desdm_coldefs')
+        self.trim_whitespace = self.config.getboolean('easyaccess', 'trim_whitespace')
+
         self.dbname = db
         self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
         self.prompt = self.savePrompt
@@ -696,6 +564,17 @@ class easy_or(cmd.Cmd, object):
 
 
     def default(self, line):
+        """
+        Default function called for line execution.
+
+        Parameters:
+        -----------
+        line : The input line.
+
+        Returns:
+        --------
+        None
+        """
         fend = line.find(';')
         if fend > -1:
             # with open('easy.buf', 'w') as filebuf:
@@ -710,11 +589,7 @@ class easy_or(cmd.Cmd, object):
                         print(colored('Ok!\n', 'green'))
                         return
                     except:
-                        (type, value, traceback) = sys.exc_info()
-                        print()
-                        print(colored(type, "red"))
-                        print(colored(value, "red"))
-                        print()
+                        print_exception()
                         return
                 elif app.find('submit') > -1:
                     print(colored('\nTo be done: Submit jobs to the DB cluster', 'cyan'))
@@ -734,20 +609,17 @@ class easy_or(cmd.Cmd, object):
             if line[fend:].find('>') > -1:
                 try:
                     fileout = line[fend:].split('>')[1].strip().split()[0]
-                    fileformat = fileout.split('.')[-1]
-                    if fileformat in options_out:
-                        print('\nFetching data and saving it to %s ...' % fileout + '\n')
-                        self.query_and_save(query, fileout)
-                    else:
-                        print(colored('\nFile format not valid.\n', 'red'))
-                        print('Supported formats:\n')
-                        for jj, ff in enumerate(options_out): print('%5s  %s' % (ff, options_def[jj]))
+                    print('\nFetching data and saving it to %s ...' % fileout + '\n')
+                    eafile.check_filetype(fileout)
+                    self.query_and_save(query, fileout)
                 except KeyboardInterrupt or EOFError:
                     print(colored('\n\nAborted \n', "red"))
-                except:
+                except IndexError:
                     print(colored('\nMust indicate output file\n', "red"))
                     print('Format:\n')
-                    print('select ... from ... where ... ; > example.csv \n')
+                    print('DESDB ~> select ... from ... where ... ; > example.csv \n')
+                except:
+                    print_exception()
             else:
                 try:
                     self.query_and_print(query)
@@ -758,11 +630,10 @@ class easy_or(cmd.Cmd, object):
                         pass
                     print(colored('\n\nAborted \n', "red"))
 
-
         else:
             print()
-            print('Invalid command or missing ; at the end of query.')
-            print('Type help or ? to list commands')
+            print("Invalid command or missing ';' at the end of query.")
+            print("Type 'help' or '?' to list commands")
             print()
 
     def completedefault(self, text, line, begidx, lastidx):
@@ -868,12 +739,12 @@ class easy_or(cmd.Cmd, object):
                     data.index += 1
                     if extra != "":
                         print(colored(extra + '\n', "cyan"))
-                    # ADW: Oracle distinguishes between NaN and Null while pandas 
-                    # does not making this replacement confusing...
-                    # ##try:
-                    # ##    data.fillna('Null', inplace=True)
-                    # ##except:
-                    ###    pass
+                    ## # ADW: Oracle distinguishes between NaN and Null while pandas 
+                    ## # does not making this replacement confusing...
+                    ## try:
+                    ##     data.fillna('Null', inplace=True)
+                    ## except:
+                    ##     pass
                     print(data)
             else:
                 t2 = time.time()
@@ -905,27 +776,19 @@ class easy_or(cmd.Cmd, object):
 
     def query_and_save(self, query, fileout, print_time=True):
         """
-        Executes a query and save the results to a file, Supported formats are
-        .csv, .tab, .fits and .h5
+        Executes a query and save the results to a file, Supported
+        formats are: '.csv', '.tab', '.h5', and '.fits'
         """
+        # to be safe
         query = query.replace(';','')
-        fileformat = fileout.split('.')[-1]
-        mode = fileformat
-        if fileformat in options_out:
-            pass
-        else:
-            print(colored('\nFile format not valid.\n', 'red'))
-            print('Supported formats:\n')
-            for jj, ff in enumerate(options_out): print('%5s  %s' % (ff, options_def[jj]))
-            return
-        if mode != fileout.split('.')[-1]:
-            print(colored(' fileout extension and mode do not match! \n', "red"))
-            return
+        eafile.check_filetype(fileout)
+
         fileout_original = fileout
         self.cur.arraysize = self.prefetch
         t1 = time.time()
         if self.loading_bar: self.pload = Process(target=loading)
         if self.loading_bar: self.pload.start()
+        #if True:
         try:
             self.cur.execute(query)
             if self.cur.description != None:
@@ -945,68 +808,20 @@ class easy_or(cmd.Cmd, object):
                     if self.loading_bar: sys.stdout.write('\b' * len(rowline))
                     if self.loading_bar: sys.stdout.flush()
                     com_it += 1
-                    if first:
-                        fileindex = 1  # 1-indexed for backwards compatibility
-                        list_names = []
-                        list_type = []
-                        for inf in info:
-                            if inf[1] == or_s:
-                                list_names.append(inf[0])
-                                # list_type.append(str(inf[3]) + 'A') #pyfits uses A, fitsio S
-                                list_type.append('S' + str(inf[3]))
-                            if inf[1] == or_ov:
-                                list_names.append(inf[0])
-                                list_type.append('FLOAT')
-                            if inf[1] == or_dt:
-                                list_names.append(inf[0])
-                                list_type.append('S50')
+                    # 1-indexed for backwards compatibility
+                    if first: fileindex = 1  
 
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
-                        for jj, col in enumerate(data):
-                            nt = change_type(info[jj])
+                        for i, col in enumerate(data):
+                            nt = eatypes.oracle2numpy(info[i])
                             if nt != "": data[col] = data[col].astype(nt)
 
-                        if mode_write == 'a' and mode in ('csv', 'tab', 'h5'):
-                            fileparts = fileout_original.split('.' + mode)
-                            if (fileindex == 1):
-                                thisfile = fileout_original
-                            else:
-                                thisfile = '%s_%06d.%s' % (fileparts[0], fileindex, mode)
-
-                            # check the size of the current file
-                            size = float(os.path.getsize(thisfile)) / (2. ** 20)
-
-                            if (size > self.outfile_max_mb):
-                                # it's time to increment
-                                if (fileindex == 1):
-                                    # this is the first one ... it needs to be moved
-                                    # we're doing a 1-index thing here, because...
-                                    os.rename(fileout_original, '%s_%06d.%s' % ( fileparts[0], fileindex, mode))
-
-                                # and make a new filename, after incrementing
-                                fileindex += 1
-
-                                thisfile = '%s_%06d.%s' % (fileparts[0], fileindex, mode)
-                                fileout = thisfile
-                                mode_write = 'w'
-                                header_out = True
-                                first = True
-
-                            else:
-                                fileout = thisfile
-                                header_out = False
-
-                        if mode == 'csv': data.to_csv(fileout, index=False, float_format='%.8f', sep=',',
-                                                      mode=mode_write, header=header_out)
-                        if mode == 'tab': data.to_csv(fileout, index=False, float_format='%.8f', sep=' ',
-                                                      mode=mode_write, header=header_out)
-                        if mode == 'h5':  data.to_hdf(fileout, 'data', mode=mode_write, index=False,
-                                                      header=header_out)  # , complevel=9,complib='bzip2'
-                        if mode == 'fits': fileindex = write_to_fits(data, fileout, fileindex, mode=mode_write,
-                                                                     listN=list_names,
-                                                                     listT=list_type, fits_max_mb=self.outfile_max_mb)
+                        fileindex = eafile.write_file(fileout,data,info,fileindex,
+                                                      mode_write,
+                                                      max_mb=self.outfile_max_mb)
+                        
                         if first:
                             mode_write = 'a'
                             header_out = False
@@ -1444,12 +1259,7 @@ class easy_or(cmd.Cmd, object):
             outproc=self.cur.callproc(proc_name, arguments)
             print(colored('Done!', "green"))
         except:
-            (type, value, traceback) = sys.exc_info()
-            print()
-            print(colored(type, "red"))
-            print(colored(value, "red"))
-
-
+            print_exception()
 
 
     def do_set_password(self, arg):
@@ -1562,6 +1372,9 @@ class easy_or(cmd.Cmd, object):
 
         Usage: whoami
         """
+        # It might be useful to print user roles as well
+        # select GRANTED_ROLE from USER_ROLE_PRIVS
+
         if self.dbname in ('dessci', 'desoper'):
             sql_getUserDetails = """
             select d.username, d.email, d.firstname as first, d.lastname as last, trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
@@ -1648,7 +1461,7 @@ class easy_or(cmd.Cmd, object):
     def get_tablename_tuple(self, tablename):
         """
         Return the tuple (schema,table,link) that can be used to
-        locate the `real` table requested.
+        locate the fundamental definition of the table requested.
         """
         table = tablename
         schema = self.user.upper()  # default --- Mine
@@ -1667,15 +1480,14 @@ class easy_or(cmd.Cmd, object):
             # check for fundamental definition  e.g. schema.table@link
             q = """
             select count(*) from ALL_TAB_COLUMNS%s
-            where OWNER = '%s' 
-            and TABLE_NAME = '%s'
+            where OWNER = '%s' and TABLE_NAME = '%s'
             """ % ("@" + link if link else "", schema, table)
             ans = self.query_results(q)
             if ans[0][0] > 0:
                 # found real definition return the tuple
                 return (schema,table,link)
 
-            # check if we are indirect by  synonym of mine
+            # check if we are indirect by synonym of user
             q = """
             select TABLE_OWNER, TABLE_NAME, DB_LINK from USER_SYNONYMS%s
             where SYNONYM_NAME = '%s'
@@ -1868,6 +1680,7 @@ class easy_or(cmd.Cmd, object):
         return self._complete_tables(text)
 
     def get_filename(self, line):
+        # Good to move some of this into eautils.fileio
         line = line.replace(';', '')
         if line == "":
             print('\nMust include table filename!\n')
@@ -1880,6 +1693,7 @@ class easy_or(cmd.Cmd, object):
         basename = os.path.basename(filename)
         alls = basename.split('.')
         if len(alls) > 2:
+            # Oracle tables cannot contain a '.'
             print("\nDo not use extra '.' in filename\n")
             return
 
@@ -1888,85 +1702,132 @@ class easy_or(cmd.Cmd, object):
     def check_table_exists(self, table):
         # check table first
         self.cur.execute(
-            'select count(table_name) from user_tables where table_name = \'%s\'' % table.upper())
+            "select count(table_name) from user_tables where table_name = \'%s\'" % table.upper())
         exists = self.cur.fetchall()[0][0]
         return exists
 
     def load_data(self, filename):
-        base, format = os.path.basename(filename).split('.')
-        if format in ('csv', 'tab'):
-            if format == 'csv': sepa = ','
-            if format == 'tab': sepa = None
-            try:
-                DF = pd.read_csv(filename, sep=sepa)
-            except:
-                msg = 'Problem reading %s\n' % filename
-                raise Exception(msg)
-            # Monkey patch to grab columns and values
-            DF.ea_get_columns = DF.columns.values.tolist
-            DF.ea_get_values = DF.values.tolist
-        elif format in ('fits', 'fit'):
-            try:
-                DF = fitsio.FITS(filename)
-            except:
-                msg = 'Problems reading %s\n' % filename
-                raise Exception(msg)
-            # Monkey patch to grab columns and values
-            DF.ea_get_columns = DF[1].get_colnames
-            DF.ea_get_values = DF[1].read().tolist
-        else:
-            msg = "Format not recognized: %s \nUse 'csv' or 'fits' as extensions\n" % format
-            raise Exception(msg)
-        return DF
+        """Load data from a file into a pandas.DataFrame or
+        fitsio.FITS object. We return the object itself, since it
+        might be useful. We also monkey patch three functions to
+        access the data as lists directly for upload to the DB.
 
-    def new_table_columns(self, DF, format='csv'):
+        data.ea_get_columns = list of column names
+        data.ea_get_values  = list of column values
+        data.ea_get_dtypes  = list of column numpy dtypes
+
+        Parameters:
+        -----------
+        filename : Input file name.
+
+        Returns:
+        --------
+        data : A pandas.DataFrame or fitsio.FITS object
+        """
+        data = eafile.read_file(filename)
+        return data
+
+    def new_table_columns(self, columns, dtypes):
+        """
+        Create the SQL query to create a new table from a list of column names and numpy dtypes.
+
+        Parameters:
+        -----------
+        columns : List of column names
+        dtypes  : List of numpy dtypes
+
+        Returns:
+        --------
+        query   : SQL query string
+        """
+        # Start the table columns
         qtable = '( '
-        if format in ('csv', 'tab'):
-            for col in DF:
-                if DF[col].dtype.name == 'object':
-                    qtable += col + ' ' + 'VARCHAR2(' + str(max(DF[col].str.len())) + '),'
-                elif DF[col].dtype.name.find('int') > -1:
-                    qtable += col + ' INT,'
-                elif DF[col].dtype.name.find('float') > -1:
-                    qtable += col + ' BINARY_DOUBLE,'
-                else:
-                    qtable += col + ' NUMBER,'
-        elif format in ('fits', 'fit'):
-            # returns a list of column names
-            col_n = DF[1].get_colnames()
-            # and the data types
-            dtypes = DF[1].get_rec_dtype(vstorage='fixed')[0]
-            for i in range(len(col_n)):
-                qtable += '%s %s,' % (col_n[i], dtype2oracle(dtypes[i]))
-        # cut last , and close paren
-        qtable = qtable[:-1] + ')'
 
+        for column,dtype in zip(columns,dtypes):
+            if self.desdm_coldefs:
+                qtable += '%s %s,' % (column, eatypes.numpy2desdm([column,dtype]))
+            else:
+                qtable += '%s %s,' % (column, eatypes.numpy2oracle(dtype))
+
+        # cut last ',' and close paren
+        qtable = qtable[:-1] + ')'
+        
         return qtable
 
     def drop_table(self, table):
         # Do we want to add a PURGE to this query?
         qdrop = "DROP TABLE %s" % table.upper()
-        self.cur.execute(qdrop)
+        try:
+            self.cur.execute(qdrop)
+        except cx_Oracle.DatabaseError:
+            print(colored(
+                "\n Couldn't drop '%s' (doesn't exist)."%(table.upper()),'red'))
         if self.autocommit: self.con.commit()
 
-    def create_table(self, table, DF, format='csv'):
+    def create_table(self, table, columns, dtypes):
+        """
+        Create a DB table from a list of columns and numpy dtypes.
+        
+        Parameters:
+        ----------
+        table   : Name of the Oracle table to create
+        columns : List of column names
+        dtypes  : List of numpy dtypes
+
+        Returns:
+        --------
+        None
+        """
         qtable = 'create table %s ' % table
-        qtable += self.new_table_columns(DF, format)
+        qtable += self.new_table_columns(columns,dtypes)
         self.cur.execute(qtable)
         if self.autocommit: self.con.commit()
 
-    def insert_data(self, columns, values, table):
-        """ Insert data columns into DB table.
+    def insert_data(self, table, columns, values, dtypes=None):
+        """Insert data into a DB table. 
+
+        Trim trailing whitespace from string columns. Because of the
+        way `executemany` works, input needs to by python lists.
+        
+        Parameters:
+        -----------
+        table   : Name of the table to insert into
+        columns : List of column names.
+        values  : List of values
+        dtypes  : List of numpy dtypes
+
+        Returns:
+        --------
+        None
+
         """
+        if dtypes is None: len(columns)*[None]
+
+        # Remove trailing whitespace from string values
+        cvals = []
+        for column,dtype in zip(columns,dtypes):
+            if dtype.kind == 'S' and self.trim_whitespace:
+                cvals.append('TRIM(TRAILING FROM :%s)'%column)
+            else:
+                cvals.append(':%s'%column)
+            
         cols = ','.join(columns)
-        vals = ',:'.join(columns)
-        vals = ':' + vals
+        vals = ','.join(cvals)
+
         qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
 
-        t1 = time.time()
-        self.cur.executemany(qinsert, values)
-        t2 = time.time()
-        if self.autocommit: self.con.commit()
+        try: 
+            t1 = time.time()
+            self.cur.executemany(qinsert, values)
+            t2 = time.time()
+            if self.autocommit: self.con.commit()
+        except cx_Oracle.DatabaseError, e:
+            if self.desdm_coldefs:
+                msg  = str(e)
+                msg += "\n If you are sure, you can disable DESDM column typing: \n"
+                msg += " DESDB ~> config desdm_coldefs set no"
+            raise cx_Oracle.DatabaseError(msg)
+                
         print(colored(
             '\n Inserted %d rows and %d columns into table %s in %.2f seconds' % (
                 len(values), len(columns), table.upper(), t2 - t1), "green"))
@@ -1991,7 +1852,7 @@ class easy_or(cmd.Cmd, object):
         """
         filename = self.get_filename(line)
         if filename is None: return
-        base, format = os.path.basename(filename).split('.')
+        base, ext = os.path.splitext(os.path.basename(filename))
 
         if name == '':
             table = base
@@ -2000,42 +1861,45 @@ class easy_or(cmd.Cmd, object):
 
         # check table first
         if self.check_table_exists(table):
-            print('\n Table already exists. Table can be removed with:' \
-                  '\n  DROP TABLE %s;\n' % table.upper())
+            print(colored('\n Table already exists. Table can be removed with:','red'))
+            print(colored(' DESDB ~> DROP TABLE %s;\n' % table.upper(),'red'))
             return
 
         try:
-            DF = self.load_data(filename)
+            data = self.load_data(filename)
         except:
             print_exception()
             return
 
-        columns = DF.ea_get_columns()
-        values = DF.ea_get_values()
+        # Get the data in a way that Oracle understands
+        columns = data.ea_get_columns()
+        values  = data.ea_get_values()
+        dtypes  = data.ea_get_dtypes()
+
+        # Clean up the original object
+        del data
 
         try:
-            self.create_table(table, DF, format)
-        except:
-            print_exception()
-            self.drop_table(table)
-            del DF
-            return
-        del DF
-
-        try:
-            self.insert_data(columns, values, table)
+            self.create_table(table, columns, dtypes)
         except:
             print_exception()
             self.drop_table(table)
             return
 
-        print(colored('\n Table %s loaded successfully.' % table.upper(), "green"))
-        print(colored(
-            '\n You might want to refresh the metadata (refresh_metadata_cache)\n so your new table appears during autocompletion',
-            "cyan"))
+        try:
+            self.insert_data(table, columns, values, dtypes)
+        except:
+            print_exception()
+            self.drop_table(table)
+            return
+
+        print(colored('\n Table %s loaded successfully.\n' % table.upper(), "green"))
+        print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion',"cyan"))
+        print(colored(' DESDB ~> refresh_metadata_cache;',"cyan"))
+
         print()
-        print(colored('To make this table public run:', "blue"), '\n')
-        print(colored('   grant select on %s to DES_READER; ' % table.upper(), "blue"), '\n')
+        print(colored(' To make this table public run:', "blue"))
+        print(colored(' DESDB ~> grant select on %s to DES_READER;' % table.upper(), "blue"), '\n')
         return
 
 
@@ -2063,7 +1927,7 @@ class easy_or(cmd.Cmd, object):
 
         filename = self.get_filename(line)
         if filename is None: return
-        base, format = os.path.basename(filename).split('.')
+        base, ext = os.path.splitext(os.path.basename(filename))
 
         if name == '':
             table = base
@@ -2073,20 +1937,21 @@ class easy_or(cmd.Cmd, object):
         # check table first 
         if not self.check_table_exists(table):
             print('\n Table does not exist. Table can be created with:' \
-                  '\n  CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
+                  '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
-            DF = self.load_data(filename)
+            data = self.load_data(filename)
         except:
             print_exception()
             return
 
-        columns = DF.ea_get_columns()
-        values = DF.ea_get_values()
-        del DF
+        columns = data.ea_get_columns()
+        values  = data.ea_get_values()
+        dtypes  = data.ea_get_dtypes()
+        del data
 
         try:
-            self.insert_data(columns, values, table)
+            self.insert_data(table, columns, values, dtypes)
         except:
             print_exception()
             return
@@ -2211,8 +2076,17 @@ color_term = True
 class connect(easy_or):
     def __init__(self, section='', quiet=False):
         """
-        Creates a connection to the DB ans easyaccess commands, section is obtained frmo
+        Creates a connection to the DB as easyaccess commands, section is obtained from
         config file, can be bypass here, e.g., section = desoper
+
+        Parameters:
+        -----------
+        section :  DB connection : dessci, desoper, destest
+        quiet   :  Don't print much
+
+        Returns:
+        --------
+        easy_or object
         """
         self.quiet = quiet
         conf = config_mod.get_config(config_file)
@@ -2305,7 +2179,7 @@ class connect(easy_or):
 
 
 # #################################################
-
+# ADW: Add this to a separate 'parser' module?
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
         print('\n*****************')
@@ -2354,10 +2228,12 @@ if __name__ == '__main__':
         except:
             print(colored('readline might have problems accessing history', 'red'))
 
+    # ADW: Add this to a separate 'parser' module?
     parser = MyParser(
         description='Easy access to the DES database. There is a configuration file located in %s for more customizable options' % config_file)
-    parser.add_argument("-v", "--version", dest='version', action="store_true",
-                        help="show program's version number and exit")
+    parser.add_argument("-v", "--version", action = "version", 
+                        version = '%(prog)s ' + __version__,
+                        help="print version number and exit")
     parser.add_argument("-c", "--command", dest='command', 
                         help="Executes command and exit")
     parser.add_argument("-l", "--loadsql", dest='loadsql', 
@@ -2375,10 +2251,6 @@ if __name__ == '__main__':
     parser.add_argument("-u", "--user", dest='user', help="username")
     parser.add_argument("-p", "--password", dest='password', help="password")
     args = parser.parse_args()
-
-    if args.version:
-        print('version: %s' % __version__)
-        os._exit(0)
 
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
@@ -2426,5 +2298,3 @@ if __name__ == '__main__':
     else:
         initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
-
-
