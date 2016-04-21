@@ -492,15 +492,16 @@ class easy_or(cmd.Cmd, object):
         if line[0] == "@":
             if len(line) > 1:
                 fbuf = line[1:]
+                fbuf = fbuf.replace(';','')
                 if fbuf.find('>') > -1:
                     try:
                         fbuf = "".join(fbuf.split())
                         line = read_buf(fbuf.split('>')[0])
                         if line == "": return ""
-                        if line.find('>') > -1:
-                            line = line.split('>')[0]
+                        if line.find(';') > -1:
+                            line = line.split(';')[0]
                         outputfile = fbuf.split('>')[1]
-                        line = line + ' > ' + outputfile
+                        line = line + '; > ' + outputfile
                     except:
                         outputfile = ''
 
@@ -1061,15 +1062,15 @@ class easy_or(cmd.Cmd, object):
 
         Optional: loadsql <filename with sql statement> > <output_file> to write to a file, not to the screen
         """
-
+        line = line.replace(';','')
         if line.find('>') > -1:
             try:
                 line = "".join(line.split())
                 newq = read_buf(line.split('>')[0])
-                if newq.find('>') > -1:
-                    newq = newq.split('>')[0]
+                if newq.find(';') > -1:
+                    newq = newq.split(';')[0]
                 outputfile = line.split('>')[1]
-                newq = newq + ' > ' + outputfile
+                newq = newq + '; > ' + outputfile
             except:
                 outputfile = ''
 
