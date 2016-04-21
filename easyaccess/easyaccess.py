@@ -1574,7 +1574,7 @@ class easy_or(cmd.Cmd, object):
             and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
             and acc.column_name = atc.column_name 
             and atc.column_name like '%(pattern)s'
-            order by atc.column_id
+            order by atc.column_name
             """ % params
         else:
             comm = """Description of %(table)s commented as: '%(comment)s'""" % params
@@ -1585,7 +1585,7 @@ class easy_or(cmd.Cmd, object):
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
             and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
             and acc.column_name = atc.column_name
-            order by atc.column_id
+            order by atc.column_name
             """ % params
 
         self.query_and_print(q, print_time=False,
