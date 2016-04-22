@@ -1569,7 +1569,11 @@ class easy_or(cmd.Cmd, object):
             comm = """Description of %(table)s with pattern %(pattern)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
-            atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
+            case atc.data_type 
+            when 'NUMBER' then '(' || atc.data_precision || ',' || atc.data_scale || ')'
+            when 'VARCHAR2' then atc.CHAR_LENGTH || ' characters'
+            else atc.data_length || ''  end as DATA_FORMAT,
+            acc.comments
             from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
             and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
@@ -1581,7 +1585,11 @@ class easy_or(cmd.Cmd, object):
             comm = """Description of %(table)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
-            atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
+            case atc.data_type 
+            when 'NUMBER' then '(' || atc.data_precision || ',' || atc.data_scale || ')'
+            when 'VARCHAR2' then atc.CHAR_LENGTH || ' characters'
+            else atc.data_length || ''  end as DATA_FORMAT,
+            acc.comments
             from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
             and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
