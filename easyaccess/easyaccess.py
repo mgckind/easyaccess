@@ -499,15 +499,16 @@ class easy_or(cmd.Cmd, Import, object):
         if line[0] == "@":
             if len(line) > 1:
                 fbuf = line[1:]
+                fbuf = fbuf.replace(';','')
                 if fbuf.find('>') > -1:
                     try:
                         fbuf = "".join(fbuf.split())
                         line = read_buf(fbuf.split('>')[0])
                         if line == "": return ""
-                        if line.find('>') > -1:
-                            line = line.split('>')[0]
+                        if line.find(';') > -1:
+                            line = line.split(';')[0]
                         outputfile = fbuf.split('>')[1]
-                        line = line + ' > ' + outputfile
+                        line = line + '; > ' + outputfile
                     except:
                         outputfile = ''
 
@@ -1086,15 +1087,15 @@ class easy_or(cmd.Cmd, Import, object):
 
         Optional: loadsql <filename with sql statement> > <output_file> to write to a file, not to the screen
         """
-
+        line = line.replace(';','')
         if line.find('>') > -1:
             try:
                 line = "".join(line.split())
                 newq = read_buf(line.split('>')[0])
-                if newq.find('>') > -1:
-                    newq = newq.split('>')[0]
+                if newq.find(';') > -1:
+                    newq = newq.split(';')[0]
                 outputfile = line.split('>')[1]
-                newq = newq + ' > ' + outputfile
+                newq = newq + '; > ' + outputfile
             except:
                 outputfile = ''
 
@@ -1593,24 +1594,32 @@ class easy_or(cmd.Cmd, Import, object):
             comm = """Description of %(table)s with pattern %(pattern)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
-            atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
+            case atc.data_type 
+            when 'NUMBER' then '(' || atc.data_precision || ',' || atc.data_scale || ')'
+            when 'VARCHAR2' then atc.CHAR_LENGTH || ' characters'
+            else atc.data_length || ''  end as DATA_FORMAT,
+            acc.comments
             from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
             and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
             and acc.column_name = atc.column_name 
             and atc.column_name like '%(pattern)s'
-            order by atc.column_id
+            order by atc.column_name
             """ % params
         else:
             comm = """Description of %(table)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
-            atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
+            case atc.data_type 
+            when 'NUMBER' then '(' || atc.data_precision || ',' || atc.data_scale || ')'
+            when 'VARCHAR2' then atc.CHAR_LENGTH || ' characters'
+            else atc.data_length || ''  end as DATA_FORMAT,
+            acc.comments
             from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
             and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
             and acc.column_name = atc.column_name
-            order by atc.column_id
+            order by atc.column_name
             """ % params
 
         self.query_and_print(q, print_time=False,
