@@ -133,7 +133,8 @@ options_def = eafile.FILE_DEFS
 # ADW: It would be better to grab these from the config object
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
-                  'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
+                  'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue',
+                  'autocommit', 'trim_whitespace', 'desdm_coldefs']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit', 'explain']
 
@@ -1145,13 +1146,17 @@ class easy_or(cmd.Cmd, object):
             timeout           : Timeout for a query to be printed on the screen. Doesn't apply to output files
             nullvalue         : value to replace Null entries when writing a file (default = -9999)
             outfile_max_mb    : Max size of each fits file in MB
+            autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
+            trim_whitespace   : Trim whitespace from strings when uploading data to the DB (default yes)
+            desdm_coldefs     : Use DESDM DB compatible data types when uploading data (default yes)
+
             max_rows          : Max number of rows to display on the screen. Doesn't apply to output files
             width             : Width of the output format on the screen
             max_columns       : Max number of columns to display on the screen. Doesn't apply to output files
             max_colwidth      : Max number of characters per column at display. Doesn't apply to output files
             color_terminal    : yes/no toggles the color for terminal std output. Need to restart easyaccess
             loading_bar       : yes/no toggles the loading bar. Useful for background jobs
-            autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
+
         """
         global load_bar
         if line == '': return self.do_help('config')
@@ -1204,6 +1209,8 @@ class easy_or(cmd.Cmd, object):
             if key == 'nullvalue': self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
             if key == 'outfile_max_mb': self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
             if key == 'autocommit': self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
+            if key == 'trim_whitespace': self.autocommit = self.config.getboolean('easyaccess', 'trim_whitespace')
+            if key == 'desdm_coldefs': self.autocommit = self.config.getboolean('easyaccess', 'desdm_coldefs')
 
             return
         else:
@@ -2207,21 +2214,6 @@ def initial_message(quiet=False, clear=True):
 if __name__ == '__main__':
 
     conf = config_mod.get_config(config_file)
-    # PANDAS DISPLAY SET UP
-    pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
-    pd.set_option('display.width', conf.getint('display', 'width'))
-    pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
-    pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
-
-    load_bar = conf.getboolean('display', 'loading_bar')
-    if load_bar:
-        from multiprocessing import Process
-
-    color_term = True
-    if not conf.getboolean('display', 'color_terminal'):
-        # Careful, this is duplicated from imports at the top of the file
-        def colored(line, color): return line
-        color_term = False
 
     # ADW: What about all the readline imports in the code?
     try:
@@ -2257,9 +2249,62 @@ if __name__ == '__main__':
                         help="Override database name [dessci,desoper,destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
                         help="Silence initialization, no loading bar")
-    parser.add_argument("-u", "--user", dest='user', help="username")
-    parser.add_argument("-p", "--password", dest='password', help="password")
+    parser.add_argument("-u", "--user", dest='user')
+    parser.add_argument("-p", "--password", dest='password')
+    parser.add_argument("--config", help="--config show, will print content of "
+                                                        "config file\n"
+                                                        "--config reset will reset config to default "
+                                                        "values\n"
+                                                        "--config set param1=val1 param2=val2 will "
+                                                        "modify parameters for the session only", nargs='+')
     args = parser.parse_args()
+
+    if args.config:
+        if args.config[0] == 'show':
+            print('\n Showing content of the config file (%s) :\n' % config_file)
+            file_temp = open(config_file, 'r')
+            for line in file_temp.readlines():
+                print(line.strip())
+            file_temp.close()
+            sys.exit()
+        elif args.config[0] == 'reset':
+            print('\n ** Reset  config file (%s) to its default!! **:\n' % config_file)
+            check = input(' Proceed? (y/[n]) : ')
+            if check.lower() == 'y':
+                os.remove(config_file)
+                conf = config_mod.get_config(config_file)
+                sys.exit()
+        elif args.config[0] == 'set':
+            if len(args.config) == 1:
+                parser.print_help()
+                sys.exit()
+            entries = ','.join(args.config[1:])
+            entries = entries.replace(',,',',')
+            entries = entries.split(',')
+            for e in entries:
+                key, value = e.split('=')
+                conf.set('display', key, value)
+                #sys.exit()
+        else:
+            parser.print_help()
+            sys.exit()
+
+    # PANDAS DISPLAY SET UP
+    pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
+    pd.set_option('display.width', conf.getint('display', 'width'))
+    pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
+    pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
+
+    load_bar = conf.getboolean('display', 'loading_bar')
+    if load_bar:
+        from multiprocessing import Process
+
+    color_term = True
+    if not conf.getboolean('display', 'color_terminal'):
+        # Careful, this is duplicated from imports at the top of the file
+        def colored(line, color): return line
+        color_term = False
+
 
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
