@@ -846,7 +846,7 @@ class easy_or(cmd.Cmd, Import, object):
 
                         fileindex = eafile.write_file(fileout,data,info,fileindex,
                                                       mode_write,
-                                                      max_mb=self.outfile_max_mb)
+                                                      max_mb=self.outfile_max_mb,query=query)
                         
                         if first:
                             mode_write = 'a'
