@@ -1,13 +1,20 @@
 # Changes
 
-## v1.2.1b
-#### XXXX-XXX-XX
+## v1.3.0
+#### 2016-XXX-XX
 - Fixes a bug with python2/3 compatibility (see Pull-request #36)
 - Removes ; from query for python API (query_* functions) issue #37
 - Added execproc to run sql/pl procedures, see help execproc for more information (see PR #48)
 - Fix show_index and describe_table commands and queries (no more repeated rows) (see PR #42 and #43)
 - Case insensitive options (PR #45)
 - Reorganization of the structure of the code, this way is much simpler to develop (PR #49)
+- Conda installation
+- In-query python functions (beta)
+- Query and execution information in FITS header #50
+- Fix bug when loading sql from file #55
+- Dealing better with trailing white space #52
+- Fix several minor issues: #37, #40
+
 
 
 ## v1.2.0
