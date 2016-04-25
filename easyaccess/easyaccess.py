@@ -2260,6 +2260,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.config:
+        int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
+                        'nullvalue', 'loading_bar', 'autocommit', 'max_col_width']
         if args.config[0] == 'show':
             print('\n Showing content of the config file (%s) :\n' % config_file)
             file_temp = open(config_file, 'r')
@@ -2282,9 +2284,20 @@ if __name__ == '__main__':
             entries = entries.replace(',,',',')
             entries = entries.split(',')
             for e in entries:
-                key, value = e.split('=')
-                conf.set('display', key, value)
-                #sys.exit()
+                if e =='': continue
+                updated = False
+                try:
+                    key, value = e.split('=')
+                    for section in (conf.sections()):
+                        if conf.has_option(section, key):
+                            conf.set(section, key, str(value))
+                            updated = True
+                    if not updated: raise
+                except:
+                    print("Check the key exists or that you included the '=' for the parameter\nFor more "
+                          "info "
+                          "use --help.")
+                    sys.exit()
         else:
             parser.print_help()
             sys.exit()
