@@ -11,14 +11,15 @@ pandas:
 import os
 import datetime
 import numpy as np
-import version
+import pandas as pd
 import fitsio
-
 
 try:
     import easyaccess.eautils.dtypes as eatypes
+    import easyaccess.version as version
 except ImportError:
     import eautils.dtypes as eatypes
+    import version
 
 PANDAS_DEFS = ('comma separated text', 'space separated tex', 'HDF5 format')
 PANDAS_EXTS = ('.csv', '.tab', '.h5')
