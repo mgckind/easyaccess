@@ -23,7 +23,7 @@ import stat
 import re
 
 try:
-    from easyaccess.version import __version__
+    from easyaccess.version import __version__, last_pip_version
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     from easyaccess.eautils import des_logo as dl
@@ -33,7 +33,7 @@ try:
     from easyaccess.eautils.import_utils import Import
 
 except ImportError:
-    from version import __version__
+    from version import __version__, last_pip_version
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
@@ -2074,6 +2074,20 @@ class easy_or(cmd.Cmd, Import, object):
             return options_add_comment
 
 
+    def do_version(self, line):
+        """
+        Print current version of easyacccess
+        """
+        print("\n Current : easyaccess {:} \n".format(__version__))
+
+        try:
+            last_version = last_pip_version()
+            if last_version != __version__:
+                print(" Latest  : easyaccess {:}".format(last_pip_version()))
+        except:
+            return
+
+
     # UNDOCCUMENTED DO METHODS
 
     def do_EOF(self, line):
@@ -2260,8 +2274,7 @@ if __name__ == '__main__':
     # ADW: Add this to a separate 'parser' module?
     parser = MyParser(
         description='Easy access to the DES database. There is a configuration file located in %s for more customizable options' % config_file)
-    parser.add_argument("-v", "--version", action = "version", 
-                        version = '%(prog)s ' + __version__,
+    parser.add_argument("-v", "--version", action = "store_true", 
                         help="print version number and exit")
     parser.add_argument("-c", "--command", dest='command', 
                         help="Executes command and exit")
@@ -2286,6 +2299,16 @@ if __name__ == '__main__':
                                                         "--config set param1=val1 param2=val2 will "
                                                         "modify parameters for the session only", nargs='+')
     args = parser.parse_args()
+
+    if args.version:
+        print("\nCurrent : easyaccess {:} \n".format(__version__))
+        try:
+            last_version = last_pip_version()
+            if last_version != __version__:
+                print("Latest  : easyaccess {:}".format(last_pip_version()))
+        except:
+            pass
+        sys.exit()
 
     if args.config:
         int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
