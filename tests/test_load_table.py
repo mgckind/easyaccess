@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
 
     # Now try grabbing from existing table
-    nrows = 1000
+    nrows = 100000
     query = 'select RA,DEC from Y1A1_COADD_OBJECTS@DESSCI where rownum <= %s;'%nrows
     for ext in ('.fits','.csv','.tab'):
         print ("*** DOWNLOADING EXISTING TABLE ***")
