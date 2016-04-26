@@ -1877,7 +1877,7 @@ class easy_or(cmd.Cmd, object):
         load_parser.add_argument('-h', '--help', help='print help', action='store_true')
         try:
             load_args = load_parser.parse_args(line.split())
-        except:
+        except SystemExit:
             self.do_help('load_table')
             return
         if load_args.help:
@@ -1885,8 +1885,6 @@ class easy_or(cmd.Cmd, object):
             return
         filename = self.get_filename(load_args.filename)
         name = load_args.name
-        print(filename)
-        print(name)
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 

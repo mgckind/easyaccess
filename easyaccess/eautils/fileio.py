@@ -13,7 +13,7 @@ import datetime
 import numpy as np
 import version
 import fitsio
-
+import pandas as pd
 
 try:
     import easyaccess.eautils.dtypes as eatypes
