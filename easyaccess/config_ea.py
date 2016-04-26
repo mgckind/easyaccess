@@ -18,17 +18,28 @@ import os
 configcomment = """#
 # Easyaccess default parameters
 # 
-# database       : Default is dessci, change to desoper, destest and others
-#                  Make sure the db-"database" section is in the .desservices.ini
-# editor         : Default editor to open from inside easyaccess if $EDITOR is not set
-# prefetch       : Prefetch number of rows to get from oracle (not the number of total rows)
-#                : This determine the number of trips to the DB to get all results from query
-# histcache      : The number of line in the history cache (when possible)
-# timeout        : The time in seconds before closing a connection for a query to print on screen
-#                  If the results are redirected to a file there is not a timeout
-# nullvalue      : The value used to replace null or empty entries when printing into a file
-# outfile_max_mb : Max size of each fits file in MB (default 1GB)
-# autocommit     : Auto commit changes in DB (default yes)
+# database        : Default is dessci, change to desoper, destest and others
+#                   Make sure the db-"database" section is in the .desservices.ini
+# editor          : Default editor to open from inside easyaccess if $EDITOR is not set
+# prefetch        : Prefetch number of rows to get from oracle (not the number of total rows)
+#                 : This determine the number of trips to the DB to get all results from query (def. 30000)
+# histcache       : The number of line in the history cache (when possible)
+# timeout         : The time in seconds before closing a connection for a query to print on screen
+#                   If the results are redirected to a file there is not a timeout (default 20 min)
+# nullvalue       : The value used to replace null or empty entries when printing into a file
+# outfile_max_mb  : Max size of each fits file in MB (default 1GB)
+# autocommit      : Auto commit changes in DB (default yes)
+# trim_whitespace : Trim whitespace from strings when uploading data to the DB (default yes)
+# desdm_coldefs   : Use DESDM DB compatible data types when uploading data (default yes)
+
+# Display default parameters
+#
+# color_terminal  : Display colors in terminal (default yes)
+# loading_bar     : Display a loading bar when querying the DB (default yes)
+# max_rows        : Max number of rows to display on the screen. Doesn't apply to output files (default 2500)
+# width           : Width of the output format on the screen (default 1000)
+# max_columns     : Max number of columns to display on the screen. Doesn't apply to output files (default 50)
+# max_colwidth    : Max number of characters per column at display. Doesn't apply to output files (def. 500)
 """
 
 descomment = """#
@@ -56,7 +67,8 @@ def get_config(configfile):
     if not config.has_option('easyaccess', 'database'): configwrite = True;config.set('easyaccess', 'database',
                                                                                       'dessci')
     if not config.has_option('easyaccess', 'editor'): configwrite = True;config.set('easyaccess', 'editor', 'nano')
-    if not config.has_option('easyaccess', 'prefetch'): configwrite = True;config.set('easyaccess', 'prefetch', '10000')
+    if not config.has_option('easyaccess', 'prefetch'): configwrite = True;config.set('easyaccess',
+                                                                                      'prefetch', '30000')
     if not config.has_option('easyaccess', 'histcache'): configwrite = True;config.set('easyaccess', 'histcache', '5000')
     if not config.has_option('easyaccess', 'timeout'): configwrite = True;config.set('easyaccess', 'timeout', '1200')
     if not config.has_option('easyaccess', 'nullvalue'): configwrite = True;config.set('easyaccess', 'nullvalue', '-9999')
@@ -78,10 +90,13 @@ def get_config(configfile):
     if not config.has_option('display', 'color_terminal'): configwrite = True;config.set('display', 'color_terminal',
                                                                                          'yes')
     if not config.has_option('display', 'loading_bar'): configwrite = True;config.set('display', 'loading_bar', 'yes')
-    if not config.has_option('display', 'max_rows'): configwrite = True;config.set('display', 'max_rows', '1500')
+    if not config.has_option('display', 'max_rows'): configwrite = True;config.set('display', 'max_rows',
+                                                                                   '2500')
     if not config.has_option('display', 'width'): configwrite = True;config.set('display', 'width', '1000')
-    if not config.has_option('display', 'max_columns'): configwrite = True;config.set('display', 'max_columns', '100')
-    if not config.has_option('display', 'max_colwidth'): configwrite = True;config.set('display', 'max_colwidth', '150')
+    if not config.has_option('display', 'max_columns'): configwrite = True;config.set('display',
+                                                                                      'max_columns', '50')
+    if not config.has_option('display', 'max_colwidth'): configwrite = True;config.set('display',
+                                                                                       'max_colwidth', '500')
 
     check = True
     if configwrite == True:

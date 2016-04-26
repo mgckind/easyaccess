@@ -23,14 +23,14 @@ import stat
 import re
 
 try:
-    from easyaccess.version import __version__
+    from easyaccess.version import __version__, last_pip_version
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     import easyaccess.eautils.des_logo as dl
     import easyaccess.eautils.dtypes as eatypes
     import easyaccess.eautils.fileio as eafile
 except ImportError:
-    from version import __version__
+    from version import __version__, last_pip_version
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
@@ -133,7 +133,8 @@ options_def = eafile.FILE_DEFS
 # ADW: It would be better to grab these from the config object
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
                   'max_columns',
-                  'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue', 'autocommit']
+                  'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue',
+                  'autocommit', 'trim_whitespace', 'desdm_coldefs']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit', 'explain']
 
@@ -492,15 +493,16 @@ class easy_or(cmd.Cmd, object):
         if line[0] == "@":
             if len(line) > 1:
                 fbuf = line[1:]
+                fbuf = fbuf.replace(';','')
                 if fbuf.find('>') > -1:
                     try:
                         fbuf = "".join(fbuf.split())
                         line = read_buf(fbuf.split('>')[0])
                         if line == "": return ""
-                        if line.find('>') > -1:
-                            line = line.split('>')[0]
+                        if line.find(';') > -1:
+                            line = line.split(';')[0]
                         outputfile = fbuf.split('>')[1]
-                        line = line + ' > ' + outputfile
+                        line = line + '; > ' + outputfile
                     except:
                         outputfile = ''
 
@@ -820,7 +822,7 @@ class easy_or(cmd.Cmd, object):
 
                         fileindex = eafile.write_file(fileout,data,info,fileindex,
                                                       mode_write,
-                                                      max_mb=self.outfile_max_mb)
+                                                      max_mb=self.outfile_max_mb,query=query)
                         
                         if first:
                             mode_write = 'a'
@@ -1061,15 +1063,15 @@ class easy_or(cmd.Cmd, object):
 
         Optional: loadsql <filename with sql statement> > <output_file> to write to a file, not to the screen
         """
-
+        line = line.replace(';','')
         if line.find('>') > -1:
             try:
                 line = "".join(line.split())
                 newq = read_buf(line.split('>')[0])
-                if newq.find('>') > -1:
-                    newq = newq.split('>')[0]
+                if newq.find(';') > -1:
+                    newq = newq.split(';')[0]
                 outputfile = line.split('>')[1]
-                newq = newq + ' > ' + outputfile
+                newq = newq + '; > ' + outputfile
             except:
                 outputfile = ''
 
@@ -1144,13 +1146,17 @@ class easy_or(cmd.Cmd, object):
             timeout           : Timeout for a query to be printed on the screen. Doesn't apply to output files
             nullvalue         : value to replace Null entries when writing a file (default = -9999)
             outfile_max_mb    : Max size of each fits file in MB
+            autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
+            trim_whitespace   : Trim whitespace from strings when uploading data to the DB (default yes)
+            desdm_coldefs     : Use DESDM DB compatible data types when uploading data (default yes)
+
             max_rows          : Max number of rows to display on the screen. Doesn't apply to output files
             width             : Width of the output format on the screen
             max_columns       : Max number of columns to display on the screen. Doesn't apply to output files
             max_colwidth      : Max number of characters per column at display. Doesn't apply to output files
             color_terminal    : yes/no toggles the color for terminal std output. Need to restart easyaccess
             loading_bar       : yes/no toggles the loading bar. Useful for background jobs
-            autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
+
         """
         global load_bar
         if line == '': return self.do_help('config')
@@ -1203,6 +1209,8 @@ class easy_or(cmd.Cmd, object):
             if key == 'nullvalue': self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
             if key == 'outfile_max_mb': self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
             if key == 'autocommit': self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
+            if key == 'trim_whitespace': self.autocommit = self.config.getboolean('easyaccess', 'trim_whitespace')
+            if key == 'desdm_coldefs': self.autocommit = self.config.getboolean('easyaccess', 'desdm_coldefs')
 
             return
         else:
@@ -1568,24 +1576,32 @@ class easy_or(cmd.Cmd, object):
             comm = """Description of %(table)s with pattern %(pattern)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
-            atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
+            case atc.data_type 
+            when 'NUMBER' then '(' || atc.data_precision || ',' || atc.data_scale || ')'
+            when 'VARCHAR2' then atc.CHAR_LENGTH || ' characters'
+            else atc.data_length || ''  end as DATA_FORMAT,
+            acc.comments
             from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
             and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
             and acc.column_name = atc.column_name 
             and atc.column_name like '%(pattern)s'
-            order by atc.column_id
+            order by atc.column_name
             """ % params
         else:
             comm = """Description of %(table)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
-            atc.data_length || ',' || atc.data_precision || ',' || atc.data_scale DATA_FORMAT, acc.comments
+            case atc.data_type 
+            when 'NUMBER' then '(' || atc.data_precision || ',' || atc.data_scale || ')'
+            when 'VARCHAR2' then atc.CHAR_LENGTH || ' characters'
+            else atc.data_length || ''  end as DATA_FORMAT,
+            acc.comments
             from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
             and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
             and acc.column_name = atc.column_name
-            order by atc.column_id
+            order by atc.column_name
             """ % params
 
         self.query_and_print(q, print_time=False,
@@ -2033,6 +2049,20 @@ class easy_or(cmd.Cmd, object):
             return options_add_comment
 
 
+    def do_version(self, line):
+        """
+        Print current version of easyacccess
+        """
+        print("\n Current : easyaccess {:} \n".format(__version__))
+
+        try:
+            last_version = last_pip_version()
+            if last_version != __version__:
+                print(" Latest  : easyaccess {:}".format(last_pip_version()))
+        except:
+            return
+
+
     # UNDOCCUMENTED DO METHODS
 
     def do_EOF(self, line):
@@ -2198,21 +2228,6 @@ def initial_message(quiet=False, clear=True):
 if __name__ == '__main__':
 
     conf = config_mod.get_config(config_file)
-    # PANDAS DISPLAY SET UP
-    pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
-    pd.set_option('display.width', conf.getint('display', 'width'))
-    pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
-    pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
-
-    load_bar = conf.getboolean('display', 'loading_bar')
-    if load_bar:
-        from multiprocessing import Process
-
-    color_term = True
-    if not conf.getboolean('display', 'color_terminal'):
-        # Careful, this is duplicated from imports at the top of the file
-        def colored(line, color): return line
-        color_term = False
 
     # ADW: What about all the readline imports in the code?
     try:
@@ -2231,8 +2246,7 @@ if __name__ == '__main__':
     # ADW: Add this to a separate 'parser' module?
     parser = MyParser(
         description='Easy access to the DES database. There is a configuration file located in %s for more customizable options' % config_file)
-    parser.add_argument("-v", "--version", action = "version", 
-                        version = '%(prog)s ' + __version__,
+    parser.add_argument("-v", "--version", action = "store_true", 
                         help="print version number and exit")
     parser.add_argument("-c", "--command", dest='command', 
                         help="Executes command and exit")
@@ -2248,9 +2262,85 @@ if __name__ == '__main__':
                         help="Override database name [dessci,desoper,destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
                         help="Silence initialization, no loading bar")
-    parser.add_argument("-u", "--user", dest='user', help="username")
-    parser.add_argument("-p", "--password", dest='password', help="password")
+    parser.add_argument("-u", "--user", dest='user')
+    parser.add_argument("-p", "--password", dest='password')
+    parser.add_argument("--config", help="--config show, will print content of "
+                                                        "config file\n"
+                                                        "--config reset will reset config to default "
+                                                        "values\n"
+                                                        "--config set param1=val1 param2=val2 will "
+                                                        "modify parameters for the session only", nargs='+')
     args = parser.parse_args()
+
+    if args.version:
+        print("\nCurrent : easyaccess {:} \n".format(__version__))
+        try:
+            last_version = last_pip_version()
+            if last_version != __version__:
+                print("Latest  : easyaccess {:}".format(last_pip_version()))
+        except:
+            pass
+        sys.exit()
+
+    if args.config:
+        int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
+                        'nullvalue', 'loading_bar', 'autocommit', 'max_col_width']
+        if args.config[0] == 'show':
+            print('\n Showing content of the config file (%s) :\n' % config_file)
+            file_temp = open(config_file, 'r')
+            for line in file_temp.readlines():
+                print(line.strip())
+            file_temp.close()
+            sys.exit()
+        elif args.config[0] == 'reset':
+            print('\n ** Reset  config file (%s) to its default!! **:\n' % config_file)
+            check = input(' Proceed? (y/[n]) : ')
+            if check.lower() == 'y':
+                os.remove(config_file)
+                conf = config_mod.get_config(config_file)
+                sys.exit()
+        elif args.config[0] == 'set':
+            if len(args.config) == 1:
+                parser.print_help()
+                sys.exit()
+            entries = ','.join(args.config[1:])
+            entries = entries.replace(',,',',')
+            entries = entries.split(',')
+            for e in entries:
+                if e =='': continue
+                updated = False
+                try:
+                    key, value = e.split('=')
+                    for section in (conf.sections()):
+                        if conf.has_option(section, key):
+                            conf.set(section, key, str(value))
+                            updated = True
+                    if not updated: raise
+                except:
+                    print("Check the key exists or that you included the '=' for the parameter\nFor more "
+                          "info "
+                          "use --help.")
+                    sys.exit()
+        else:
+            parser.print_help()
+            sys.exit()
+
+    # PANDAS DISPLAY SET UP
+    pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
+    pd.set_option('display.width', conf.getint('display', 'width'))
+    pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
+    pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
+
+    load_bar = conf.getboolean('display', 'loading_bar')
+    if load_bar:
+        from multiprocessing import Process
+
+    color_term = True
+    if not conf.getboolean('display', 'color_terminal'):
+        # Careful, this is duplicated from imports at the top of the file
+        def colored(line, color): return line
+        color_term = False
+
 
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
