@@ -56,6 +56,10 @@ import argparse
 import webbrowser
 import signal
 
+class KeyParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.exit(2)
+
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p')
 
@@ -1866,7 +1870,23 @@ class easy_or(cmd.Cmd, object):
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
-        filename = self.get_filename(line)
+        line = line.replace(';','')
+        load_parser = KeyParser(prog='', usage='', add_help=False)
+        load_parser.add_argument('filename', help='name for the file', action='store', default=None)
+        load_parser.add_argument('--name', help='name for the table', action='store', default='')
+        load_parser.add_argument('-h', '--help', help='print help', action='store_true')
+        try:
+            load_args = load_parser.parse_args(line.split())
+        except:
+            self.do_help('load_table')
+            return
+        if load_args.help:
+            self.do_help('load_table')
+            return
+        filename = self.get_filename(load_args.filename)
+        name = load_args.name
+        print(filename)
+        print(name)
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
