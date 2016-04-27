@@ -153,3 +153,5 @@ if __name__ == "__main__":
     for filename in glob('*.csv')+glob('*.fits')+glob('*.tab'):
         print("*** REMOVING FILE %s ***"%filename)
         os.remove(filename)
+
+    print('\n'+"*** TESTS COMPLETED SUCCESSFULLY ***")
