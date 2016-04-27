@@ -282,6 +282,7 @@ def get_dtypes(df):
         dtypes = [df[c].dtype if df[c].dtype.kind != 'O'
                   else np.dtype('S' + str(max(df[c].str.len())))
                   for i, c in enumerate(df)]
+
     if df.file_type == 'fits':
         dtype = df[1].get_rec_dtype(vstorage='fixed')[0]
         dtypes = [dtype[i] for i, d in enumerate(dtype.descr)]

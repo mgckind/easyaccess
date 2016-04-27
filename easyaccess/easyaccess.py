@@ -1803,7 +1803,7 @@ class easy_or(cmd.Cmd, object):
         self.cur.execute(qtable)
         if self.autocommit: self.con.commit()
 
-    def insert_data(self, table, columns, values, dtypes=None):
+    def insert_data(self, table, columns, values, dtypes=None, niter = 0):
         """Insert data into a DB table. 
 
         Trim trailing whitespace from string columns. Because of the
@@ -1849,8 +1849,8 @@ class easy_or(cmd.Cmd, object):
             raise cx_Oracle.DatabaseError(msg)
                 
         print(colored(
-            '\n Inserted %d rows and %d columns into table %s in %.2f seconds' % (
-                len(values), len(columns), table.upper(), t2 - t1), "green"))
+            '\n [Iter: %d] Inserted %d rows and %d columns into table %s in %.2f seconds' % (
+                niter+1, len(values), len(columns), table.upper(), t2 - t1), "green"))
 
 
     def do_load_table(self, line, name=''):
@@ -1868,6 +1868,8 @@ class easy_or(cmd.Cmd, object):
         Optional Arguments:
 
             --tablename NAME            given name for the table, default is taken from filename
+            --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
+                                        that do not fit in memory
 
         Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
         as data (using ',' or space)
@@ -1921,13 +1923,13 @@ class easy_or(cmd.Cmd, object):
             while not done:
                 try:
                     df = data.get_chunk(chunk)
+                    df.file_type = 'pandas'
                     if len(df) == 0: break
                     if iteration == 0:
                         dtypes = eafile.get_dtypes(df)
-                        columns = df.columns.values.tolist()
+                    columns = df.columns.values.tolist()
                     values = df.values.tolist()
                     total_rows += len(df)
-                    del df
                 except:
                     break
                 if iteration == 0:
@@ -1937,10 +1939,9 @@ class easy_or(cmd.Cmd, object):
                         print_exception()
                         self.drop_table(table)
                         return
-
                 try:
                     if not done:
-                        self.insert_data(table, columns, values, dtypes)
+                        self.insert_data(table, columns, values, dtypes, iteration)
                         iteration += 1
                 except:
                     print_exception()
@@ -1972,7 +1973,7 @@ class easy_or(cmd.Cmd, object):
 
                 try:
                     if not done:
-                        self.insert_data(table, columns, values, dtypes)
+                        self.insert_data(table, columns, values, dtypes, iteration)
                         iteration += 1
                 except:
                     print_exception()
@@ -2012,6 +2013,8 @@ class easy_or(cmd.Cmd, object):
          Optional Arguments:
     
               --tablename NAME            given name for the table, default is taken from filename
+              --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
+                                        that do not fit in memory
 
         Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
         as data (using ',' or space)
@@ -2022,6 +2025,8 @@ class easy_or(cmd.Cmd, object):
         append_parser = KeyParser(prog='', usage='', add_help=False)
         append_parser.add_argument('filename', help='name for the file', action='store', default=None)
         append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default='')
+        append_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
+                                                       'issues', action='store', default=None, type=int)
         append_parser.add_argument('-h', '--help', help='print help', action='store_true')
         try:
             append_args = append_parser.parse_args(line.split())
@@ -2033,6 +2038,7 @@ class easy_or(cmd.Cmd, object):
             return
         filename = self.get_filename(append_args.filename)
         name = append_args.tablename
+        chunk = append_args.chunksize
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -2052,18 +2058,56 @@ class easy_or(cmd.Cmd, object):
             print_exception()
             return
 
-        columns = data.ea_get_columns()
-        values  = data.ea_get_values()
-        dtypes  = data.ea_get_dtypes()
-        del data
 
-        try:
-            self.insert_data(table, columns, values, dtypes)
-        except:
-            print_exception()
-            return
+        iteration = 0
+        done = False
+        total_rows = 0
+        if data.file_type == 'pandas':
+            while not done:
+                try:
+                    df = data.get_chunk(chunk)
+                    df.file_type = 'pandas'
+                    if len(df) == 0: break
+                    if iteration == 0:
+                        dtypes = eafile.get_dtypes(df)
+                    columns = df.columns.values.tolist()
+                    values = df.values.tolist()
+                    total_rows += len(df)
+                except:
+                    break
+                try:
+                    if not done:
+                        self.insert_data(table, columns, values, dtypes, iteration)
+                        iteration += 1
+                except:
+                    print_exception()
+                    return
 
-        print(colored('\n Table %s appended successfully.' % table.upper(), "green"))
+        if data.file_type == 'fits':
+            if chunk is None: chunk = data[1].get_nrows()
+            start = 0
+            while not done:
+                try:
+                    df = data
+                    if iteration == 0:
+                        dtypes = eafile.get_dtypes(df)
+                        columns = df[1].get_colnames()
+                    values = df[1][start:start+chunk].tolist()
+                    start += chunk
+                    if len(values) == 0 : break
+                    total_rows += len(values)
+                except:
+                    break
+                try:
+                    if not done:
+                        self.insert_data(table, columns, values, dtypes, iteration)
+                        iteration += 1
+                except:
+                    print_exception()
+                    return
+
+        print(colored('\n ** Table %s appended successfully with %d rows.' % (table.upper(), total_rows),
+                      "green"))
 
 
     def complete_append_table(self, text, line, start_idx, end_idx):
@@ -2354,6 +2398,9 @@ if __name__ == '__main__':
     parser.add_argument("--tablename", dest='tablename', 
                         help="Custom table name to be used with --load_table\
                         or --append_table")
+    parser.add_argument("--chunksize", dest='chunksize', type=int, default = None,
+                        help="Number of rows to be inserted at a time. Useful for large files \
+                                        that do not fit in memory. Use with --load_table")
     parser.add_argument("-s", "--db",dest='db', #choices=[...]?
                         help="Override database name [dessci,desoper,destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
@@ -2475,6 +2522,8 @@ if __name__ == '__main__':
         linein = "load_table " + args.loadtable
         if args.tablename is not None:
             linein += ' --tablename ' + args.tablename
+        if args.chunksize is not None:
+            linein += ' --chunksize ' + str(args.chunksize)
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.appendtable is not None:
@@ -2483,6 +2532,8 @@ if __name__ == '__main__':
         linein = "append_table " + args.appendtable
         if args.tablename is not None:
             linein += ' --tablename ' + args.tablename
+        if args.chunksize is not None:
+            linein += ' --chunksize ' + str(args.chunksize)
         cmdinterp.onecmd(linein)
         os._exit(0)
     else:
