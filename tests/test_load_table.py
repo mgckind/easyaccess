@@ -150,7 +150,8 @@ if __name__ == "__main__":
     for table in [BASENAME,BASENAME2,BASENAME3]:
         print("*** DROPPING TABLE %s ***"%table)
         conn.drop_table(table)
-    for filename in glob('*.csv')+glob('*.fits')+glob('*.tab'):
+    filenames=glob(BASENAME+'*.csv')+glob(BASENAME+'*.fits')+glob(BASENAME+'*.tab')
+    for filename in filenames:
         print("*** REMOVING FILE %s ***"%filename)
         os.remove(filename)
 
