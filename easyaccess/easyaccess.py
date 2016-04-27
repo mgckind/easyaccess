@@ -1897,6 +1897,11 @@ class easy_or(cmd.Cmd, object):
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
+        if ext == '.h5' and chunk is not None:
+            print(colored("\nHDF5 file upload with chunksize is not supported yet. Try without "
+                          "--chunksize\n","red"))
+            return
+
         if name == '':
             table = base
         else:
@@ -1909,7 +1914,7 @@ class easy_or(cmd.Cmd, object):
             return
 
         try:
-            data = self.load_data(filename)
+            data, iterator = self.load_data(filename)
         except:
             print_exception()
             return
@@ -1922,7 +1927,10 @@ class easy_or(cmd.Cmd, object):
         if data.file_type == 'pandas':
             while not done:
                 try:
-                    df = data.get_chunk(chunk)
+                    if iterator:
+                        df = data.get_chunk(chunk)
+                    else:
+                        df = data
                     df.file_type = 'pandas'
                     if len(df) == 0: break
                     if iteration == 0:
@@ -1943,6 +1951,7 @@ class easy_or(cmd.Cmd, object):
                     if not done:
                         self.insert_data(table, columns, values, dtypes, iteration)
                         iteration += 1
+                        if not iterator: done =True
                 except:
                     print_exception()
                     self.drop_table(table)
@@ -2042,6 +2051,12 @@ class easy_or(cmd.Cmd, object):
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
+        if ext == '.h5' and chunk is not None:
+            print(colored("\nHDF5 file upload with chunksize is not supported yet. Try without "
+                          "--chunksize\n","red"))
+            return
+
+
         if name == '':
             table = base
         else:
@@ -2053,7 +2068,7 @@ class easy_or(cmd.Cmd, object):
                   '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
-            data = self.load_data(filename)
+            data, iterator = self.load_data(filename)
         except:
             print_exception()
             return
@@ -2065,7 +2080,10 @@ class easy_or(cmd.Cmd, object):
         if data.file_type == 'pandas':
             while not done:
                 try:
-                    df = data.get_chunk(chunk)
+                    if iterator:
+                        df = data.get_chunk(chunk)
+                    else:
+                        df = data
                     df.file_type = 'pandas'
                     if len(df) == 0: break
                     if iteration == 0:
@@ -2079,6 +2097,7 @@ class easy_or(cmd.Cmd, object):
                     if not done:
                         self.insert_data(table, columns, values, dtypes, iteration)
                         iteration += 1
+                        if not iterator: done = True
                 except:
                     print_exception()
                     return

@@ -311,8 +311,10 @@ def read_pandas(filename):
             if ext == '.csv': sepa = ','
             if ext == '.tab': sepa = None
             df = pd.read_csv(filename, sep=sepa, iterator = True)
-        #elif ext in ('.h5'):
-        #    df = pd.read_hdf(filename, key='data')  # iterator for hdf in padnas 0.18
+            iterator = True
+        elif ext in ('.h5'):
+            df = pd.read_hdf(filename, key='data')  # iterator for hdf in padnas 0.18
+            iterator = False
     except:
         msg = 'Problem reading %s\n' % filename
         raise IOError(msg)
@@ -328,7 +330,7 @@ def read_pandas(filename):
     #df.ea_get_dtypes = lambda: dtypes
     df.file_type = 'pandas'
 
-    return df
+    return df, iterator
 
 
 def read_fitsio(filename):
@@ -366,7 +368,7 @@ def read_fitsio(filename):
     ### fits.ea_get_values = lambda: fits[1].read(columns=fits.ea_get_columns()).tolist()
     ### fits.ea_get_dtypes = lambda: dtypes[x1:x2]
 
-    return fits
+    return fits, True
 
 
 if __name__ == "__main__":
