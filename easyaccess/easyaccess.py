@@ -1878,6 +1878,8 @@ class easy_or(cmd.Cmd, object):
         load_parser = KeyParser(prog='', usage='', add_help=False)
         load_parser.add_argument('filename', help='name for the file', action='store', default=None)
         load_parser.add_argument('--tablename', help='name for the table', action='store', default='')
+        load_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
+    'issues', action='store', type=int, default=None)
         load_parser.add_argument('-h', '--help', help='print help', action='store_true')
         try:
             load_args = load_parser.parse_args(line.split())
@@ -1889,6 +1891,7 @@ class easy_or(cmd.Cmd, object):
             return
         filename = self.get_filename(load_args.filename)
         name = load_args.tablename
+        chunk = load_args.chunksize
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -1910,28 +1913,76 @@ class easy_or(cmd.Cmd, object):
             return
 
         # Get the data in a way that Oracle understands
-        columns = data.ea_get_columns()
-        values  = data.ea_get_values()
-        dtypes  = data.ea_get_dtypes()
 
-        # Clean up the original object
-        del data
+        iteration = 0
+        done = False
+        total_rows = 0
+        if data.file_type == 'pandas':
+            while not done:
+                try:
+                    df = data.get_chunk(chunk)
+                    if len(df) == 0: break
+                    if iteration == 0:
+                        dtypes = eafile.get_dtypes(df)
+                        columns = df.columns.values.tolist()
+                    values = df.values.tolist()
+                    total_rows += len(df)
+                    del df
+                except:
+                    break
+                if iteration == 0:
+                    try:
+                        self.create_table(table, columns, dtypes)
+                    except:
+                        print_exception()
+                        self.drop_table(table)
+                        return
 
-        try:
-            self.create_table(table, columns, dtypes)
-        except:
-            print_exception()
-            self.drop_table(table)
-            return
+                try:
+                    if not done:
+                        self.insert_data(table, columns, values, dtypes)
+                        iteration += 1
+                except:
+                    print_exception()
+                    self.drop_table(table)
+                    return
 
-        try:
-            self.insert_data(table, columns, values, dtypes)
-        except:
-            print_exception()
-            self.drop_table(table)
-            return
+        if data.file_type == 'fits':
+            if chunk is None: chunk = data[1].get_nrows()
+            start = 0
+            while not done:
+                try:
+                    df = data
+                    if iteration == 0:
+                        dtypes = eafile.get_dtypes(df)
+                        columns = df[1].get_colnames()
+                    values = df[1][start:start+chunk].tolist()
+                    start += chunk
+                    if len(values) == 0 : break
+                    total_rows += len(values)
+                except:
+                    break
+                if iteration == 0:
+                    try:
+                        self.create_table(table, columns, dtypes)
+                    except:
+                        print_exception()
+                        self.drop_table(table)
+                        return
 
-        print(colored('\n Table %s loaded successfully.\n' % table.upper(), "green"))
+                try:
+                    if not done:
+                        self.insert_data(table, columns, values, dtypes)
+                        iteration += 1
+                except:
+                    print_exception()
+                    self.drop_table(table)
+                    return
+
+
+
+        print(colored('\n ** Table %s loaded successfully with %d rows.\n' % (table.upper(), total_rows),
+                      "green"))
         print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion',"cyan"))
         print(colored(' DESDB ~> refresh_metadata_cache;',"cyan"))
 
