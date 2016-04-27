@@ -1857,7 +1857,7 @@ class easy_or(cmd.Cmd, object):
         """
         DB:Loads a table from a file (csv or fits) taking name from filename and columns from header
 
-        Usage: load_table <filename> [--name NAME]
+        Usage: load_table <filename> [--tablename NAME] [--chunksize CHUNK]
         Ex: example.csv has the following content
              RA,DEC,MAG
              1.23,0.13,23
@@ -2010,7 +2010,7 @@ class easy_or(cmd.Cmd, object):
         """
         DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
 
-        Usage: append_table <filename> [--name NAME]
+        Usage: append_table <filename> [--tablename NAME] [--chunksize CHUNK]
         Ex: example.csv has the following content
              RA,DEC,MAG
              1.23,0.13,23
