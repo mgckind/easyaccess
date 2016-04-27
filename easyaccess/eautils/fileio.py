@@ -274,6 +274,21 @@ def read_file(filename):
     return data
 
 
+def get_dtypes(df):
+    """
+    Get dtypes from pandas DataFrame or fitsio.FITS
+    """
+    if df.file_type == 'pandas':
+        dtypes = [df[c].dtype if df[c].dtype.kind != 'O'
+                  else np.dtype('S' + str(max(df[c].str.len())))
+                  for i, c in enumerate(df)]
+
+    if df.file_type == 'fits':
+        dtype = df[1].get_rec_dtype(vstorage='fixed')[0]
+        dtypes = [dtype[i] for i, d in enumerate(dtype.descr)]
+    return dtypes
+
+
 def read_pandas(filename):
     """
     Read an input file into a pandas DataFrame.  Accepted file
@@ -295,24 +310,27 @@ def read_pandas(filename):
         if ext in ('.csv', '.tab'):
             if ext == '.csv': sepa = ','
             if ext == '.tab': sepa = None
-            df = pd.read_csv(filename, sep=sepa)
+            df = pd.read_csv(filename, sep=sepa, iterator = True)
+            iterator = True
         elif ext in ('.h5'):
-            df = pd.read_hdf(filename, key='data')
+            df = pd.read_hdf(filename, key='data')  # iterator for hdf in padnas 0.18
+            iterator = False
     except:
         msg = 'Problem reading %s\n' % filename
         raise IOError(msg)
 
     # Monkey patch to grab columns and values
     # List comprehension is faster but less readable
-    dtypes = [df[c].dtype if df[c].dtype.kind != 'O'
-              else np.dtype('S' + str(max(df[c].str.len())))
-              for i, c in enumerate(df)]
+    #dtypes = [df[c].dtype if df[c].dtype.kind != 'O'
+    #          else np.dtype('S' + str(max(df[c].str.len())))
+    #          for i, c in enumerate(df)]
 
-    df.ea_get_columns = df.columns.values.tolist
-    df.ea_get_values = df.values.tolist
-    df.ea_get_dtypes = lambda: dtypes
+    #df.ea_get_columns = df.columns.values.tolist
+    #df.ea_get_values = df.values.tolist
+    #df.ea_get_dtypes = lambda: dtypes
+    df.file_type = 'pandas'
 
-    return df
+    return df, iterator
 
 
 def read_fitsio(filename):
@@ -334,12 +352,13 @@ def read_fitsio(filename):
         msg = 'Problem reading %s\n' % filename
         raise IOError(msg)
     # Monkey patch to grab columns and values
-    dtype = fits[1].get_rec_dtype(vstorage='fixed')[0]
-    dtypes = [dtype[i] for i, d in enumerate(dtype.descr)]
+    #dtype = fits[1].get_rec_dtype(vstorage='fixed')[0]
+    #dtypes = [dtype[i] for i, d in enumerate(dtype.descr)]
 
-    fits.ea_get_columns = fits[1].get_colnames
-    fits.ea_get_values = fits[1].read().tolist
-    fits.ea_get_dtypes = lambda: dtypes
+    #fits.ea_get_columns = fits[1].get_colnames
+    #fits.ea_get_values = fits[1].read().tolist
+    #fits.ea_get_dtypes = lambda: dtypes
+    fits.file_type = 'fits'
 
     # ## # Hack to just get a subset of columns
     ### x1,x2 = 25,37
@@ -349,7 +368,7 @@ def read_fitsio(filename):
     ### fits.ea_get_values = lambda: fits[1].read(columns=fits.ea_get_columns()).tolist()
     ### fits.ea_get_dtypes = lambda: dtypes[x1:x2]
 
-    return fits
+    return fits, True
 
 
 if __name__ == "__main__":
