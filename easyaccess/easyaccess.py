@@ -1857,13 +1857,17 @@ class easy_or(cmd.Cmd, object):
         """
         DB:Loads a table from a file (csv or fits) taking name from filename and columns from header
 
-        Usage: load_table <filename>
+        Usage: load_table <filename> [--name NAME]
         Ex: example.csv has the following content
              RA,DEC,MAG
              1.23,0.13,23
              0.13,0.01,22
 
         This command will create a table named EXAMPLE with 3 columns RA,DEC and MAG and values taken from file
+
+        Optional Arguments:
+
+            --tablename NAME            given name for the table, default is taken from filename
 
         Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
         as data (using ',' or space)
@@ -1873,7 +1877,7 @@ class easy_or(cmd.Cmd, object):
         line = line.replace(';','')
         load_parser = KeyParser(prog='', usage='', add_help=False)
         load_parser.add_argument('filename', help='name for the file', action='store', default=None)
-        load_parser.add_argument('--name', help='name for the table', action='store', default='')
+        load_parser.add_argument('--tablename', help='name for the table', action='store', default='')
         load_parser.add_argument('-h', '--help', help='print help', action='store_true')
         try:
             load_args = load_parser.parse_args(line.split())
@@ -1884,7 +1888,7 @@ class easy_or(cmd.Cmd, object):
             self.do_help('load_table')
             return
         filename = self.get_filename(load_args.filename)
-        name = load_args.name
+        name = load_args.tablename
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -1945,21 +1949,39 @@ class easy_or(cmd.Cmd, object):
         """
         DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
 
-        Usage: append_table <filename>
+        Usage: append_table <filename> [--name NAME]
         Ex: example.csv has the following content
              RA,DEC,MAG
              1.23,0.13,23
              0.13,0.01,22
 
         This command will append the contents of example.csv to the table named EXAMPLE.
+        It is meant to use after load_table command
+
+         Optional Arguments:
+    
+              --tablename NAME            given name for the table, default is taken from filename
 
         Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
         as data (using ',' or space)
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
-
-        filename = self.get_filename(line)
+        line = line.replace(';','')
+        append_parser = KeyParser(prog='', usage='', add_help=False)
+        append_parser.add_argument('filename', help='name for the file', action='store', default=None)
+        append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default='')
+        append_parser.add_argument('-h', '--help', help='print help', action='store_true')
+        try:
+            append_args = append_parser.parse_args(line.split())
+        except SystemExit:
+            self.do_help('append_table')
+            return
+        if append_args.help:
+            self.do_help('append_table')
+            return
+        filename = self.get_filename(append_args.filename)
+        name = append_args.tablename
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -2272,10 +2294,15 @@ if __name__ == '__main__':
                         help="Loads a sql command, execute it and exit")
     parser.add_argument("-lt", "--load_table", dest='loadtable', 
                         help="Loads data from a csv, tab, or fits formatted file \
-                        into a DB table using the filename as the table name")
+                        into a DB table using the filename as the table name or a custom \
+                        name with --tablename MYTABLE")
     parser.add_argument("-at", "--append_table", dest='appendtable', 
                         help="Appends data from a csv, tab, or fits formatted file \
-                        into a DB table using the filename as the table name")
+                        into a DB table using the filename as the table name or a custom \
+                        name with --tablename MYABLE")
+    parser.add_argument("--tablename", dest='tablename', 
+                        help="Custom table name to be used with --load_table\
+                        or --append_table")
     parser.add_argument("-s", "--db",dest='db', #choices=[...]?
                         help="Override database name [dessci,desoper,destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
@@ -2395,12 +2422,16 @@ if __name__ == '__main__':
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "load_table " + args.loadtable
+        if args.tablename is not None:
+            linein += ' --tablename ' + args.tablename
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.appendtable is not None:
         initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
         linein = "append_table " + args.appendtable
+        if args.tablename is not None:
+            linein += ' --tablename ' + args.tablename
         cmdinterp.onecmd(linein)
         os._exit(0)
     else:
