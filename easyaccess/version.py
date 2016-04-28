@@ -1,15 +1,19 @@
 """easyaccess version"""
 
-import json
-import urllib2
+import requests
+import logging
+import warnings
+warnings.filterwarnings("ignore")
 
 def last_pip_version():
+    logging.getLogger("requests").setLevel(logging.WARNING)
     """
     Return last available version of easyaccess from pypi
     """
     url = "https://pypi.python.org/pypi/%s/json" % ('easyaccess',)
-    data = json.load(urllib2.urlopen(urllib2.Request(url)))
-    versions = data["releases"].keys()
+    #data = json.load(urllib2.urlopen(urllib2.Request(url)))
+    data = requests.get(url).json()
+    versions = list(data["releases"].keys())
     versions.sort()
     return versions[-1]
 
