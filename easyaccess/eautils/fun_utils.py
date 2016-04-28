@@ -106,7 +106,8 @@ def updateDF(D, f, a, n, idx):
     """
     Updates a data frame in place.
     """
-    ii = np.where(D.columns.values == 'F' + str(idx) + 'ARG0')[0][0]
+    #ii = np.where(D.columns.values == 'F' + str(idx) + 'ARG0')[0][0]
+    ii = D.columns.get_loc('F' + str(idx) + 'ARG0')
     func = f[idx]
     if func.find('.') > -1:
         modname, func_name = func.split('.')
@@ -127,12 +128,11 @@ def updateDF(D, f, a, n, idx):
     for sa in a[idx][0]:
         key, value = sa.split('=')
         kwargs[key] = value
-    print('debug1')
     temp = H(*args, **kwargs)
-    print('debug2')
     D.insert(ii, n[idx].upper(), temp)
     for j in range(a[idx][1]):
         D.drop('F' + str(idx) + 'ARG' + str(j), 1, inplace=True)
+    return D
 
 
 

@@ -724,28 +724,32 @@ class easy_or(cmd.Cmd, Import, object):
         if self.loading_bar: self.pload.start()
         try:
             self.cur.execute(query)
-            if self.cur.description != None:
+            if self.cur.description is not None:
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[1:6] for rec in self.cur.description]
                 # data = pd.DataFrame(self.cur.fetchall())
-                data = pd.DataFrame(self.cur.fetchmany(), columns=header)
+                updated = False
+                data = pd.DataFrame(self.cur.fetchmany())
                 while True:
                     if data.empty: break
-                    if extra_func is not None:
+                    if extra_func is not None and not updated:
+                        data.columns = header
                         for kf in range(len(p_functions)):
-                            fun_utils.updateDF(data,p_functions,p_args,p_names,kf)
+                            data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
+                        updated = True
                     rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
                     if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
                     if self.loading_bar: sys.stdout.flush()
                     if self.loading_bar: sys.stdout.write('\b' * len(rowline))
                     if self.loading_bar: sys.stdout.flush()
-                    temp = pd.DataFrame(self.cur.fetchmany(), columns=header)
+                    temp = pd.DataFrame(self.cur.fetchmany())
                     if not temp.empty:
                         if extra_func is not None:
+                            temp.columns = header
                             for kf in range(len(p_functions)):
-                                fun_utils.updateDF(temp,p_functions,p_args,p_names,kf)
+                                temp = fun_utils.updateDF(temp, p_functions, p_args, p_names, kf)
                         data = data.append(temp, ignore_index=True)
                     else:
                         break
@@ -766,7 +770,8 @@ class easy_or(cmd.Cmd, Import, object):
                     print(fline)
                     print(colored(err_arg, "red"))
                 else:
-                    #data.columns = header
+                    if extra_func is None:
+                        data.columns = header
                     data.index += 1
                     if extra != "":
                         print(colored(extra + '\n', "cyan"))
