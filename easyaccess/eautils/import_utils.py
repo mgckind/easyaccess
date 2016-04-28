@@ -84,6 +84,7 @@ class Import(object):
              To list all loaded functions
         """
         line = line.replace(';','')
+        line = line.replace('()','')
         if line.split() == []:
             return self.do_help('help_function')
         function = line.split()[0]
