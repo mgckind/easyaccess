@@ -26,9 +26,12 @@ try:
     from easyaccess.version import __version__, last_pip_version
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
-    import easyaccess.eautils.des_logo as dl
+    from easyaccess.eautils import des_logo as dl
     import easyaccess.eautils.dtypes as eatypes
     import easyaccess.eautils.fileio as eafile
+    import easyaccess.eautils.fun_utils as fun_utils
+    from easyaccess.eautils.import_utils import Import
+
 except ImportError:
     from version import __version__, last_pip_version
     import eautils.dircache as dircache
@@ -36,6 +39,8 @@ except ImportError:
     import eautils.des_logo as dl
     import eautils.dtypes as eatypes
     import eautils.fileio as eafile
+    import eautils.fun_utils as fun_utils
+    from eautils.import_utils import Import
 
 import threading
 import time
@@ -55,6 +60,8 @@ import numpy as np
 import argparse
 import webbrowser
 import signal
+
+fun_utils.init_func()
 
 class KeyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -185,7 +192,7 @@ def read_buf(fbuf):
     return newquery
 
 
-class easy_or(cmd.Cmd, object):
+class easy_or(cmd.Cmd, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
@@ -586,6 +593,14 @@ class easy_or(cmd.Cmd, object):
             # with open('easy.buf', 'w') as filebuf:
             # filebuf.write(self.buff)
             query = line[:fend]
+            # PARSE QUERY HERE
+            try:
+                query, funs, args, names = fun_utils.parseQ(query)
+            except:
+                print_exception()
+                return
+            extra_func = [funs, args, names]
+            if funs is None : extra_func = None
             if line[fend:].find('<') > -1:
                 app = line[fend:].split('<')[1].strip().split()[0].lower()
                 if app.find('check') > -1:
@@ -617,7 +632,7 @@ class easy_or(cmd.Cmd, object):
                     fileout = line[fend:].split('>')[1].strip().split()[0]
                     print('\nFetching data and saving it to %s ...' % fileout + '\n')
                     eafile.check_filetype(fileout)
-                    self.query_and_save(query, fileout)
+                    self.query_and_save(query, fileout, extra_func=extra_func)
                 except KeyboardInterrupt or EOFError:
                     print(colored('\n\nAborted \n', "red"))
                 except IndexError:
@@ -628,7 +643,7 @@ class easy_or(cmd.Cmd, object):
                     print_exception()
             else:
                 try:
-                    self.query_and_print(query)
+                    self.query_and_print(query, extra_func=extra_func)
                 except:
                     try:
                         self.con.cancel()
@@ -694,9 +709,13 @@ class easy_or(cmd.Cmd, object):
 
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
-                        clear=False):
+                        clear=False, extra_func=None):
         #to be safe
         query = query.replace(';','')
+        if extra_func is not None:
+            p_functions = extra_func[0]
+            p_args = extra_func[1]
+            p_names = extra_func[2]
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
@@ -705,14 +724,20 @@ class easy_or(cmd.Cmd, object):
         if self.loading_bar: self.pload.start()
         try:
             self.cur.execute(query)
-            if self.cur.description != None:
+            if self.cur.description is not None:
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[1:6] for rec in self.cur.description]
                 # data = pd.DataFrame(self.cur.fetchall())
+                updated = False
                 data = pd.DataFrame(self.cur.fetchmany())
                 while True:
                     if data.empty: break
+                    if extra_func is not None and not updated:
+                        data.columns = header
+                        for kf in range(len(p_functions)):
+                            data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
+                        updated = True
                     rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
                     if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
@@ -721,6 +746,10 @@ class easy_or(cmd.Cmd, object):
                     if self.loading_bar: sys.stdout.flush()
                     temp = pd.DataFrame(self.cur.fetchmany())
                     if not temp.empty:
+                        if extra_func is not None:
+                            temp.columns = header
+                            for kf in range(len(p_functions)):
+                                temp = fun_utils.updateDF(temp, p_functions, p_args, p_names, kf)
                         data = data.append(temp, ignore_index=True)
                     else:
                         break
@@ -741,7 +770,8 @@ class easy_or(cmd.Cmd, object):
                     print(fline)
                     print(colored(err_arg, "red"))
                 else:
-                    data.columns = header
+                    if extra_func is None:
+                        data.columns = header
                     data.index += 1
                     if extra != "":
                         print(colored(extra + '\n', "cyan"))
@@ -780,7 +810,7 @@ class easy_or(cmd.Cmd, object):
                 print('To see a list of compatible format\n')
 
 
-    def query_and_save(self, query, fileout, print_time=True):
+    def query_and_save(self, query, fileout, print_time=True, extra_func=None):
         """
         Executes a query and save the results to a file, Supported
         formats are: '.csv', '.tab', '.h5', and '.fits'
@@ -788,7 +818,10 @@ class easy_or(cmd.Cmd, object):
         # to be safe
         query = query.replace(';','')
         eafile.check_filetype(fileout)
-
+        if extra_func is not None:
+            p_functions = extra_func[0]
+            p_args = extra_func[1]
+            p_names = extra_func[2]
         fileout_original = fileout
         self.cur.arraysize = self.prefetch
         t1 = time.time()
@@ -801,6 +834,7 @@ class easy_or(cmd.Cmd, object):
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[0:6] for rec in self.cur.description]
+                names_info = [jj[0] for jj in info]
                 first = True
                 mode_write = 'w'
                 header_out = True
@@ -823,8 +857,18 @@ class easy_or(cmd.Cmd, object):
                         for i, col in enumerate(data):
                             nt = eatypes.oracle2numpy(info[i])
                             if nt != "": data[col] = data[col].astype(nt)
+                        if extra_func is not None:
+                            for kf in range(len(p_functions)):
+                                data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
+                            ## UPDATE INFO before write_file
+                                info2 = []
+                                for cc in data.columns:
+                                    if cc in names_info:
+                                        info2.append(info[names_info.index(cc)])
+                                    else:
+                                        info2.append(tuple([cc,'updated',0,0,0,0]))
 
-                        fileindex = eafile.write_file(fileout,data,info,fileindex,
+                        fileindex = eafile.write_file(fileout,data,info2,fileindex,
                                                       mode_write,
                                                       max_mb=self.outfile_max_mb,query=query)
                         
@@ -2238,6 +2282,9 @@ class easy_or(cmd.Cmd, object):
 
     def do_online_tutorial(self, line):
         tut = webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
+
+
+
 
 
 ##################################################
