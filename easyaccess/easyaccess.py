@@ -632,7 +632,7 @@ class easy_or(cmd.Cmd, Import, object):
                     fileout = line[fend:].split('>')[1].strip().split()[0]
                     print('\nFetching data and saving it to %s ...' % fileout + '\n')
                     eafile.check_filetype(fileout)
-                    self.query_and_save(query, fileout)
+                    self.query_and_save(query, fileout, extra_func=extra_func)
                 except KeyboardInterrupt or EOFError:
                     print(colored('\n\nAborted \n', "red"))
                 except IndexError:
@@ -810,7 +810,7 @@ class easy_or(cmd.Cmd, Import, object):
                 print('To see a list of compatible format\n')
 
 
-    def query_and_save(self, query, fileout, print_time=True):
+    def query_and_save(self, query, fileout, print_time=True, extra_func=None):
         """
         Executes a query and save the results to a file, Supported
         formats are: '.csv', '.tab', '.h5', and '.fits'
@@ -818,7 +818,10 @@ class easy_or(cmd.Cmd, Import, object):
         # to be safe
         query = query.replace(';','')
         eafile.check_filetype(fileout)
-
+        if extra_func is not None:
+            p_functions = extra_func[0]
+            p_args = extra_func[1]
+            p_names = extra_func[2]
         fileout_original = fileout
         self.cur.arraysize = self.prefetch
         t1 = time.time()
@@ -831,6 +834,7 @@ class easy_or(cmd.Cmd, Import, object):
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[0:6] for rec in self.cur.description]
+                names_info = [jj[0] for jj in info]
                 first = True
                 mode_write = 'w'
                 header_out = True
@@ -853,8 +857,18 @@ class easy_or(cmd.Cmd, Import, object):
                         for i, col in enumerate(data):
                             nt = eatypes.oracle2numpy(info[i])
                             if nt != "": data[col] = data[col].astype(nt)
+                        if extra_func is not None:
+                            for kf in range(len(p_functions)):
+                                data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
+                            ## UPDATE INFO before write_file
+                                info2 = []
+                                for cc in data.columns:
+                                    if cc in names_info:
+                                        info2.append(info[names_info.index(cc)])
+                                    else:
+                                        info2.append(tuple([cc,'updated',0,0,0,0]))
 
-                        fileindex = eafile.write_file(fileout,data,info,fileindex,
+                        fileindex = eafile.write_file(fileout,data,info2,fileindex,
                                                       mode_write,
                                                       max_mb=self.outfile_max_mb,query=query)
                         

@@ -210,6 +210,8 @@ def write_fitsio(filename, df, desc, fileindex, mode='w', query=''):
             # Could this be better addressed elsewhere?
             dtypes.append((name, 'f8', len(df[name].values[0])))
             print(d, dtypes[-1])
+        elif otype == 'updated':
+            dtypes.append((name, df[name].dtype.kind+str(df[name].dtype.itemsize)))
         else:
             dtypes.append((name, eatypes.oracle2fitsio(d)))
 
