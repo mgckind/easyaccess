@@ -2287,7 +2287,7 @@ class easy_or(cmd.Cmd, Import, object):
 
 
 
-##################################################
+############### PYTOHN API ###############################
 
 
 def to_pandas(cur):
@@ -2343,8 +2343,10 @@ class connect(easy_or):
         try:
             self.con.ping()
             if not self.quiet: print('Still connected to DB')
+            return True
         except:
             if not self.quiet: print('Connection with DB lost')
+            return False
 
     def close(self):
         self.con.close()
