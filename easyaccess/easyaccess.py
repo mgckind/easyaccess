@@ -21,6 +21,7 @@ import cx_Oracle
 import shutil
 import stat
 import re
+import getpass
 
 try:
     from easyaccess.version import __version__, last_pip_version
@@ -243,7 +244,7 @@ class easy_or(cmd.Cmd, Import, object):
                 lasterr = str(e).strip()
                 print(colored("Error when trying to connect to database: %s" % lasterr, "red"))
                 print("\n   Retrying...\n")
-                time.sleep(8)
+                time.sleep(5)
         if not connected:
             print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
             os._exit(0)
@@ -709,7 +710,7 @@ class easy_or(cmd.Cmd, Import, object):
 
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
-                        clear=False, extra_func=None):
+                        clear=False, extra_func=None, return_df=False):
         #to be safe
         query = query.replace(';','')
         if extra_func is not None:
@@ -781,6 +782,7 @@ class easy_or(cmd.Cmd, Import, object):
                     ##     data.fillna('Null', inplace=True)
                     ## except:
                     ##     pass
+                    if return_df: return data
                     print(data)
             else:
                 t2 = time.time()
@@ -1453,7 +1455,7 @@ class easy_or(cmd.Cmd, Import, object):
         """
         self.query_and_print(query, print_time=False, clear=True)
 
-    def do_mytables(self, arg):
+    def do_mytables(self, arg, return_df=False, extra="List of my tables"):
         """
         DB:Lists tables you have made in your user schema.
 
@@ -1466,7 +1468,8 @@ class easy_or(cmd.Cmd, Import, object):
         WHERE s.segment_name = t.table_name
         """
 
-        self.query_and_print(query, print_time=False, extra="List of my tables", clear=True)
+        df = self.query_and_print(query, print_time=False, extra=extra, clear=True, return_df=return_df)
+        if return_df: return df
 
     def do_find_user(self, line):
         """
@@ -1897,7 +1900,7 @@ class easy_or(cmd.Cmd, Import, object):
                 niter+1, len(values), len(columns), table.upper(), t2 - t1), "green"))
 
 
-    def do_load_table(self, line, name=''):
+    def do_load_table(self, line, name=None, chunksize=None):
         """
         DB:Loads a table from a file (csv or fits) taking name from filename and columns from header
 
@@ -1923,7 +1926,7 @@ class easy_or(cmd.Cmd, Import, object):
         line = line.replace(';','')
         load_parser = KeyParser(prog='', usage='', add_help=False)
         load_parser.add_argument('filename', help='name for the file', action='store', default=None)
-        load_parser.add_argument('--tablename', help='name for the table', action='store', default='')
+        load_parser.add_argument('--tablename', help='name for the table', action='store', default=None)
         load_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
     'issues', action='store', type=int, default=None)
         load_parser.add_argument('-h', '--help', help='print help', action='store_true')
@@ -1936,8 +1939,10 @@ class easy_or(cmd.Cmd, Import, object):
             self.do_help('load_table')
             return
         filename = self.get_filename(load_args.filename)
-        name = load_args.tablename
+        table = load_args.tablename
         chunk = load_args.chunksize
+        if chunksize is not None:
+            chunk = chunksize
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -1946,10 +1951,10 @@ class easy_or(cmd.Cmd, Import, object):
                           "--chunksize\n","red"))
             return
 
-        if name == '':
+        if table is None:
             table = base
-        else:
-            table = name
+            if name is not None:
+                table = name
 
         # check table first
         if self.check_table_exists(table):
@@ -2050,7 +2055,7 @@ class easy_or(cmd.Cmd, Import, object):
         return _complete_path(line)
 
 
-    def do_append_table(self, line, name=''):
+    def do_append_table(self, line, name=None, chunksize=None):
         """
         DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
 
@@ -2077,7 +2082,7 @@ class easy_or(cmd.Cmd, Import, object):
         line = line.replace(';','')
         append_parser = KeyParser(prog='', usage='', add_help=False)
         append_parser.add_argument('filename', help='name for the file', action='store', default=None)
-        append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default='')
+        append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default=None)
         append_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
                                                        'issues', action='store', default=None, type=int)
         append_parser.add_argument('-h', '--help', help='print help', action='store_true')
@@ -2090,8 +2095,10 @@ class easy_or(cmd.Cmd, Import, object):
             self.do_help('append_table')
             return
         filename = self.get_filename(append_args.filename)
-        name = append_args.tablename
+        table = append_args.tablename
         chunk = append_args.chunksize
+        if chunksize is not None:
+            chunk = chunksize
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -2101,10 +2108,10 @@ class easy_or(cmd.Cmd, Import, object):
             return
 
 
-        if name == '':
+        if table is None:
             table = base
-        else:
-            table = name
+            if name is not None:
+                table = name
 
         # check table first 
         if not self.check_table_exists(table):
@@ -2305,7 +2312,7 @@ color_term = True
 
 
 class connect(easy_or):
-    def __init__(self, section='', quiet=False):
+    def __init__(self, section='', user=None, passwd=None, quiet=False):
         """
         Creates a connection to the DB as easyaccess commands, section is obtained from
         config file, can be bypass here, e.g., section = desoper
@@ -2313,6 +2320,8 @@ class connect(easy_or):
         Parameters:
         -----------
         section :  DB connection : dessci, desoper, destest
+        user    :  Manualy use username
+        passwd  :  password for username (if not enter is prompted)
         quiet   :  Don't print much
 
         Returns:
@@ -2331,6 +2340,12 @@ class connect(easy_or):
         else:
             db = section
         desconf = config_mod.get_desconfig(desfile, db)
+        if user is not None:
+            print('Bypassing .desservices file with user : %s' % user)
+            if passwd is None:
+                passwd = getpass.getpass(prompt='Enter password : ')
+            desconf.set('db-' + db, 'user', user)
+            desconf.set('db-' + db, 'passwd', passwd)
         easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet)
         self.loading_bar = False
 
@@ -2339,13 +2354,15 @@ class connect(easy_or):
         cursor.arraysize = self.prefetch
         return cursor
 
-    def ping(self):
+    def ping(self, quiet = None):
+        if quiet is None:
+            quiet = self.quiet
         try:
             self.con.ping()
-            if not self.quiet: print('Still connected to DB')
+            if not quiet: print('Still connected to DB')
             return True
         except:
-            if not self.quiet: print('Connection with DB lost')
+            if not quiet: print('Connection with DB lost')
             return False
 
     def close(self):
@@ -2353,7 +2370,17 @@ class connect(easy_or):
 
     def query_to_pandas(self, query, prefetch=''):
         """
-        Executes a query and return the results in pandas DataFrame
+        Executes a query and return the results in pandas DataFrame. If result is too big 
+        it is better to save results to a file
+
+        Parameters:
+        -----------
+        query     : The SQL query to be executed 
+        prefetch  : Number of rows to retrieve at each trip to the DB
+
+        Returns:
+        --------
+        a pandas DataFrame with the result of the query
         """
         cursor = self.con.cursor()
         cursor.arraysize = self.prefetch
@@ -2387,8 +2414,12 @@ class connect(easy_or):
     def mytables(self):
         """
         List tables in own schema
+
+        Returns:
+        --------
+        A pandas dataframe with a list of owner's tables
         """
-        self.do_mytables('')
+        return self.do_mytables('', return_df=True, extra='')
 
     def myquota(self):
         """
@@ -2396,19 +2427,50 @@ class connect(easy_or):
         """
         self.do_myquota('')
 
-    def load_table(self, table_file, name=''):
+    def load_table(self, table_file, name=None, chunksize=None):
         """
         Loads and create a table in the DB. If name is not passed, is taken from
         the filename. Formats supported are 'fits', 'csv' and 'tab' files
-        """
-        self.do_load_table(table_file, name=name)
 
-    def append_table(self, table_file, name=''):
+        Parameters:
+        -----------
+        table_file : Filename to be uploaded as table (.csv, .fits, .tab)
+        name       : Name of the table to be created
+        chunksize  : Number of rows to upload at a time to avoid memory issues
+
+        Returns:
+        --------
+        True if success otherwise False
+
+        """
+        try:
+            self.do_load_table(table_file, name=name, chunksize=chunksize)
+            return True
+        except:
+            # exception
+            return False
+            
+
+    def append_table(self, table_file, name=None, chunksize=None):
         """
         Appends data to a table in the DB. If name is not passed, is taken from
         the filename. Formats supported are 'fits', 'csv' and 'tab' files
+
+        Parameters:
+        -----------
+        table_file : Filename to be uploaded as table (.csv, .fits, .tab)
+        name       : Name of the table to be created
+        chunksize  : Number of rows to upload at a time to avoid memory issues
+
+        Returns:
+        --------
+        True if success otherwise False
         """
-        self.do_append_table(table_file, name=name)
+        try:
+            self.do_append_table(table_file, name=name, chunksize=chunksize)
+            return True
+        except:
+            return False
 
 
 # #################################################
