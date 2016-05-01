@@ -1576,7 +1576,7 @@ class easy_or(cmd.Cmd, Import, object):
         raise Exception(msg)
 
 
-    def do_describe_table(self, arg, clear=True):
+    def do_describe_table(self, arg, clear=True, extra=None, return_df = False):
         """
         DB:This tool is useful for noting the lack of documentation
         for columns. If you don't know the full table name you can
@@ -1654,10 +1654,14 @@ class easy_or(cmd.Cmd, Import, object):
             and acc.column_name = atc.column_name
             order by atc.column_name
             """ % params
-
-        self.query_and_print(q, print_time=False,
+        
+        if extra is None:
+            extra = comm
+        df = self.query_and_print(q, print_time=False,
                              err_arg='Table does not exist or it is not accessible by user or pattern do not match',
-                             extra=comm, clear=clear)
+                             extra=extra, clear=clear, return_df = return_df)
+        if return_df :
+            return df
         return
 
     def complete_describe_table(self, text, line, start_index, end_index):
@@ -2296,6 +2300,37 @@ class easy_or(cmd.Cmd, Import, object):
 
 ############### PYTOHN API ###############################
 
+class IterData(object):
+    """
+    Iterator class for cx_oracle
+    """
+    def __init__(self, cursor, extra_func=None):
+        self.rows_count = 0
+        self.cursor = cursor
+        self.extra_func = extra_func
+        self.data = pd.DataFrame(self.cursor.fetchmany(), columns=[rec[0] for rec in self.cursor.description])
+        if self.extra_func is not None and not self.data.empty:
+            funs, args, names = self.extra_func
+            for kf in range(len(funs)):
+                self.data = fun_utils.updateDF(self.data, funs, args, names, kf)  
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if not self.data.empty:
+            data = self.data
+            self.rows_count += len(data)
+            self.data = pd.DataFrame(self.cursor.fetchmany(), columns=[rec[0] for rec in self.cursor.description])
+            if self.extra_func is not None and not self.data.empty:
+                funs, args, names = self.extra_func
+                for kf in range(len(funs)):
+                    self.data = fun_utils.updateDF(self.data, funs, args, names, kf)  
+            return data
+        else:
+            self.cursor.close()
+            raise StopIteration('No more data in the DB')
+        
+        
 
 def to_pandas(cur):
     """
@@ -2368,7 +2403,7 @@ class connect(easy_or):
     def close(self):
         self.con.close()
 
-    def query_to_pandas(self, query, prefetch=''):
+    def query_to_pandas(self, query, prefetch='', iterator = False):
         """
         Executes a query and return the results in pandas DataFrame. If result is too big 
         it is better to save results to a file
@@ -2377,21 +2412,34 @@ class connect(easy_or):
         -----------
         query     : The SQL query to be executed 
         prefetch  : Number of rows to retrieve at each trip to the DB
+        iterator  : Return interator, get data with .next() method (to avoid get all data at once)
 
         Returns:
         --------
-        a pandas DataFrame with the result of the query
+        If iterator is False (default) the function returns a pandas DataFrame 
+        with the result of the query. If the iterator is True, it will return an iterator
+        to retrieve data one piece at a time.
         """
         cursor = self.con.cursor()
         cursor.arraysize = self.prefetch
         if prefetch != '': cursor.arraysize = prefetch
         query = query.replace(';' , '')
+        query, funs, args, names = fun_utils.parseQ(query, myglobals=globals())
+        extra_func = [funs, args, names]
+        if funs is None : extra_func = None
+        print(query)
         temp = cursor.execute(query)
         if temp.description != None:
-            data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
+            if iterator:
+                data = IterData(temp, extra_func)
+            else:
+                data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
+                if extra_func is not None:
+                    for kf in range(len(funs)):
+                        data = fun_utils.updateDF(data, funs, args, names, kf)  
         else:
             data = ""
-        cursor.close()
+        if not iterator: cursor.close()
         return data
 
 
@@ -2399,7 +2447,7 @@ class connect(easy_or):
         """
         Describes a table from the DB
         """
-        self.do_describe_table(tablename, False)
+        return self.do_describe_table(tablename, False, return_df=True)
 
 
     def loadsql(self, filename):
@@ -2471,6 +2519,15 @@ class connect(easy_or):
             return True
         except:
             return False
+
+    def find_table(self):
+        pass
+
+    def query_to_file(self):
+        pass
+
+    def pandas_to_db(self):
+        pass
 
 
 # #################################################

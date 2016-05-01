@@ -53,7 +53,7 @@ def toeasyaccess(custom):
     return temp
 
 
-def parseQ(query):
+def parseQ(query, myglobals=None):
     entries = re.findall('/\*p:(.*?)\*/', query)
     funs = None
     args = None
@@ -92,14 +92,15 @@ def parseQ(query):
             modname = f
             if f.find('.') > -1: modname, func_name = f.split('.')
             try:
-                _ = ea_func_dictionary[f]
+                if myglobals is None:
+                    _ = ea_func_dictionary[f]
             except:
                 print(colored("\n\nYou might need to import %s" % modname, "red"))
                 raise
     return query, funs, args, names
 
 
-def updateDF(D, f, a, n, idx):
+def updateDF(D, f, a, n, idx, myglobals=None):
     """
     Updates a data frame in place.
     """
@@ -109,15 +110,22 @@ def updateDF(D, f, a, n, idx):
     if func.find('.') > -1:
         modname, func_name = func.split('.')
         try:
-            HM = ea_func_dictionary[func]  # globals()[modname]
+            if myglobals is not None:
+                HM = myglobals[modname]
+            else:
+                HM = ea_func_dictionary[func] 
         except:
             print(colored("\n\nYou might need to import %s" % modname, "red"))
             raise
-        # H = getattr(HM, func_name)
-        H = HM
+        if myglobals is not None:
+            H = getattr(HM, func_name)
+        else:
+            H = HM
     else:
-        # H = globals()[func]
-        H = ea_func_dictionary[func]
+        if myglobals is not None:
+            H = globals()[func]
+        else:
+            H = ea_func_dictionary[func]
     args = []
     kwargs = {}
     for j in range(a[idx][1]):
