@@ -1667,16 +1667,20 @@ class easy_or(cmd.Cmd, Import, object):
     def complete_describe_table(self, text, line, start_index, end_index):
         return self._complete_tables(text)
 
-    def do_find_tables(self, arg):
+    def do_find_tables(self, arg, extra=None, return_df=False):
         """
         DB:Lists tables and views matching an oracle pattern  e.g %SVA%,
         
         Usage : find_tables PATTERN
         """
+        if extra is None:
+            extra = 'To select from a table use owner.table_name except for DESADMIN where only table_name is enough'
         if arg == '': return self.do_help('find_tables')
         arg = arg.replace(';', '')
-        query = "SELECT distinct table_name from fgottenmetadata  WHERE upper(table_name) LIKE '%s' " % (arg.upper())
-        self.query_and_print(query)
+        query = "SELECT owner,table_name from all_tables  WHERE upper(table_name) LIKE '%s' " % (arg.upper())
+        df = self.query_and_print(query, extra=extra, return_df=return_df)
+        if return_df:
+            return df
 
     def complete_find_tables(self, text, line, start_index, end_index):
         return self._complete_tables(text)
@@ -1886,7 +1890,7 @@ class easy_or(cmd.Cmd, Import, object):
         vals = ','.join(cvals)
 
         qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
-
+        self.msg = ''
         try: 
             t1 = time.time()
             self.cur.executemany(qinsert, values)
@@ -1894,10 +1898,10 @@ class easy_or(cmd.Cmd, Import, object):
             if self.autocommit: self.con.commit()
         except cx_Oracle.DatabaseError as e:
             if self.desdm_coldefs:
-                msg  = str(e)
-                msg += "\n If you are sure, you can disable DESDM column typing: \n"
-                msg += " DESDB ~> config desdm_coldefs set no"
-            raise cx_Oracle.DatabaseError(msg)
+                self.msg  = str(e)
+                self.msg += "\n If you are sure, you can disable DESDM column typing: \n"
+                self.msg += " DESDB ~> config desdm_coldefs set no"
+            raise cx_Oracle.DatabaseError(self.msg)
                 
         print(colored(
             '\n [Iter: %d] Inserted %d rows and %d columns into table %s in %.2f seconds' % (
@@ -2403,6 +2407,37 @@ class connect(easy_or):
     def close(self):
         self.con.close()
 
+    def ea_import(self, import_line='', help=False):
+        """
+        Executes a import of module with functions to be used for inline query functions,
+        checks whether function is wrapped @toeasyaccess and add module to library.
+
+        Parameters:
+        -----------
+        import_line  : the usual line after import.
+        help         : Print current loaded functions wrapped for easyaccess
+
+
+        Use:
+        ----
+        import('module as name')
+        import('my_module')
+
+        Returns:
+        --------
+
+        Add functions from module to internal library to be used inline queries
+        """
+
+        if help:
+            self.do_help_function('all')
+            return
+        if  import_line != '':
+            self.do_import(' '+import_line)
+            return
+
+
+
     def query_to_pandas(self, query, prefetch='', iterator = False):
         """
         Executes a query and return the results in pandas DataFrame. If result is too big 
@@ -2427,7 +2462,6 @@ class connect(easy_or):
         query, funs, args, names = fun_utils.parseQ(query, myglobals=globals())
         extra_func = [funs, args, names]
         if funs is None : extra_func = None
-        print(query)
         temp = cursor.execute(query)
         if temp.description != None:
             if iterator:
@@ -2520,14 +2554,58 @@ class connect(easy_or):
         except:
             return False
 
-    def find_table(self):
-        pass
+    def find_tables(self, pattern=''):
+        """
+        Lists tables and views matching an oracle pattern. 
 
-    def query_to_file(self):
-        pass
+        Parameters:
+        -----------
+        pattern  : The patter to search tables for, e.g. Y1A1_GOLD
 
-    def pandas_to_db(self):
-        pass
+        Returns:
+        --------
+        A pandas DataFram with the owners and table names. To select from a table use
+        owner.table_name, is owner is DES_ADMIN just use table_name
+        """
+        pattern = pattern.replace('%','')
+        pattern = ''.join(pattern.split())
+        pattern = "%"+pattern+"%"
+        return self.do_find_tables(pattern , extra='', return_df=True)
+
+    def pandas_to_db(self, df, tablename=None, append=False):
+        """ Writes a pandas DataFrame directly to the DB
+
+        Parameters:
+        -----------
+        df        : The DataFrame to be loaded to the DB
+        tablename : The name of the table to be created
+        append    : Set True if appending to existing table, if table doesn't exists it is created
+        
+
+        Returns:
+        --------
+        True or False depending on the success 
+        """
+        if tablename is None:
+            print("Please indicate a tablename to be ingested in the DB")
+            return False
+        if self.check_table_exists(tablename) and not append:
+            print(colored('\n Table already exists. Table can be removed with:','red'))
+            print(colored(' DESDB ~> DROP TABLE %s;\n' % tablename.upper(),'red'))
+            return False
+        df.file_type = 'pandas'
+        if len(df) == 0:
+            print('DataFrame is empty')
+            return False
+        dtypes = eafile.get_dtypes(df)
+        columns = df.columns.values.tolist()
+        values = df.values.tolist()
+        if not self.check_table_exists(tablename):
+            if append:
+                print('Table does not exist. Creating table\n')
+            self.create_table(tablename, columns, dtypes)
+        self.insert_data(tablename, columns, values, dtypes)
+        return True
 
 
 # #################################################
