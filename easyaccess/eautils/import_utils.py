@@ -2,8 +2,12 @@ import sys
 import importlib
 try:
     import fun_utils
-except ImportError:
-    import eautils.fun_utils as fun_utils
+except ImportError as e:
+    try:
+        import eautils.fun_utils as fun_utils
+    except:
+        import easyaccess.eautils.fun_utils as fun_utils
+
 from inspect import getmembers, isfunction
 try:
     from termcolor import colored
