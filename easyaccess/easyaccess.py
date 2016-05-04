@@ -855,7 +855,7 @@ class easy_or(cmd.Cmd, Import, object):
                     com_it += 1
                     # 1-indexed for backwards compatibility
                     if first: fileindex = 1  
-
+                    info2 = info
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
