@@ -21,21 +21,27 @@ import cx_Oracle
 import shutil
 import stat
 import re
+import getpass
 
 try:
-    from easyaccess.version import __version__, last_pip_version
+    from easyaccess.version import __version__
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
-    import easyaccess.eautils.des_logo as dl
+    from easyaccess.eautils import des_logo as dl
     import easyaccess.eautils.dtypes as eatypes
     import easyaccess.eautils.fileio as eafile
+    import easyaccess.eautils.fun_utils as fun_utils
+    from easyaccess.eautils.import_utils import Import
+
 except ImportError:
-    from version import __version__, last_pip_version
+    from version import __version__
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
     import eautils.dtypes as eatypes
     import eautils.fileio as eafile
+    import eautils.fun_utils as fun_utils
+    from eautils.import_utils import Import
 
 import threading
 import time
@@ -55,6 +61,8 @@ import numpy as np
 import argparse
 import webbrowser
 import signal
+
+fun_utils.init_func()
 
 class KeyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -185,7 +193,7 @@ def read_buf(fbuf):
     return newquery
 
 
-class easy_or(cmd.Cmd, object):
+class easy_or(cmd.Cmd, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False):
@@ -236,7 +244,7 @@ class easy_or(cmd.Cmd, object):
                 lasterr = str(e).strip()
                 print(colored("Error when trying to connect to database: %s" % lasterr, "red"))
                 print("\n   Retrying...\n")
-                time.sleep(8)
+                time.sleep(5)
         if not connected:
             print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
             os._exit(0)
@@ -586,6 +594,14 @@ class easy_or(cmd.Cmd, object):
             # with open('easy.buf', 'w') as filebuf:
             # filebuf.write(self.buff)
             query = line[:fend]
+            # PARSE QUERY HERE
+            try:
+                query, funs, args, names = fun_utils.parseQ(query)
+            except:
+                print_exception()
+                return
+            extra_func = [funs, args, names]
+            if funs is None : extra_func = None
             if line[fend:].find('<') > -1:
                 app = line[fend:].split('<')[1].strip().split()[0].lower()
                 if app.find('check') > -1:
@@ -617,7 +633,7 @@ class easy_or(cmd.Cmd, object):
                     fileout = line[fend:].split('>')[1].strip().split()[0]
                     print('\nFetching data and saving it to %s ...' % fileout + '\n')
                     eafile.check_filetype(fileout)
-                    self.query_and_save(query, fileout)
+                    self.query_and_save(query, fileout, extra_func=extra_func)
                 except KeyboardInterrupt or EOFError:
                     print(colored('\n\nAborted \n', "red"))
                 except IndexError:
@@ -628,7 +644,7 @@ class easy_or(cmd.Cmd, object):
                     print_exception()
             else:
                 try:
-                    self.query_and_print(query)
+                    self.query_and_print(query, extra_func=extra_func)
                 except:
                     try:
                         self.con.cancel()
@@ -694,9 +710,13 @@ class easy_or(cmd.Cmd, object):
 
 
     def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
-                        clear=False):
+                        clear=False, extra_func=None, return_df=False):
         #to be safe
         query = query.replace(';','')
+        if extra_func is not None:
+            p_functions = extra_func[0]
+            p_args = extra_func[1]
+            p_names = extra_func[2]
         self.cur.arraysize = self.prefetch
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
@@ -705,14 +725,20 @@ class easy_or(cmd.Cmd, object):
         if self.loading_bar: self.pload.start()
         try:
             self.cur.execute(query)
-            if self.cur.description != None:
+            if self.cur.description is not None:
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[1:6] for rec in self.cur.description]
                 # data = pd.DataFrame(self.cur.fetchall())
+                updated = False
                 data = pd.DataFrame(self.cur.fetchmany())
                 while True:
                     if data.empty: break
+                    if extra_func is not None and not updated:
+                        data.columns = header
+                        for kf in range(len(p_functions)):
+                            data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
+                        updated = True
                     rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
                     if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
@@ -721,6 +747,10 @@ class easy_or(cmd.Cmd, object):
                     if self.loading_bar: sys.stdout.flush()
                     temp = pd.DataFrame(self.cur.fetchmany())
                     if not temp.empty:
+                        if extra_func is not None:
+                            temp.columns = header
+                            for kf in range(len(p_functions)):
+                                temp = fun_utils.updateDF(temp, p_functions, p_args, p_names, kf)
                         data = data.append(temp, ignore_index=True)
                     else:
                         break
@@ -741,7 +771,8 @@ class easy_or(cmd.Cmd, object):
                     print(fline)
                     print(colored(err_arg, "red"))
                 else:
-                    data.columns = header
+                    if extra_func is None:
+                        data.columns = header
                     data.index += 1
                     if extra != "":
                         print(colored(extra + '\n', "cyan"))
@@ -751,6 +782,7 @@ class easy_or(cmd.Cmd, object):
                     ##     data.fillna('Null', inplace=True)
                     ## except:
                     ##     pass
+                    if return_df: return data
                     print(data)
             else:
                 t2 = time.time()
@@ -780,7 +812,7 @@ class easy_or(cmd.Cmd, object):
                 print('To see a list of compatible format\n')
 
 
-    def query_and_save(self, query, fileout, print_time=True):
+    def query_and_save(self, query, fileout, print_time=True, extra_func=None):
         """
         Executes a query and save the results to a file, Supported
         formats are: '.csv', '.tab', '.h5', and '.fits'
@@ -788,7 +820,10 @@ class easy_or(cmd.Cmd, object):
         # to be safe
         query = query.replace(';','')
         eafile.check_filetype(fileout)
-
+        if extra_func is not None:
+            p_functions = extra_func[0]
+            p_args = extra_func[1]
+            p_names = extra_func[2]
         fileout_original = fileout
         self.cur.arraysize = self.prefetch
         t1 = time.time()
@@ -801,6 +836,7 @@ class easy_or(cmd.Cmd, object):
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[0:6] for rec in self.cur.description]
+                names_info = [jj[0] for jj in info]
                 first = True
                 mode_write = 'w'
                 header_out = True
@@ -823,8 +859,18 @@ class easy_or(cmd.Cmd, object):
                         for i, col in enumerate(data):
                             nt = eatypes.oracle2numpy(info[i])
                             if nt != "": data[col] = data[col].astype(nt)
+                        if extra_func is not None:
+                            for kf in range(len(p_functions)):
+                                data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
+                            ## UPDATE INFO before write_file
+                                info2 = []
+                                for cc in data.columns:
+                                    if cc in names_info:
+                                        info2.append(info[names_info.index(cc)])
+                                    else:
+                                        info2.append(tuple([cc,'updated',0,0,0,0]))
 
-                        fileindex = eafile.write_file(fileout,data,info,fileindex,
+                        fileindex = eafile.write_file(fileout,data,info2,fileindex,
                                                       mode_write,
                                                       max_mb=self.outfile_max_mb,query=query)
                         
@@ -1409,7 +1455,7 @@ class easy_or(cmd.Cmd, object):
         """
         self.query_and_print(query, print_time=False, clear=True)
 
-    def do_mytables(self, arg):
+    def do_mytables(self, arg, return_df=False, extra="List of my tables"):
         """
         DB:Lists tables you have made in your user schema.
 
@@ -1422,7 +1468,8 @@ class easy_or(cmd.Cmd, object):
         WHERE s.segment_name = t.table_name
         """
 
-        self.query_and_print(query, print_time=False, extra="List of my tables", clear=True)
+        df = self.query_and_print(query, print_time=False, extra=extra, clear=True, return_df=return_df)
+        if return_df: return df
 
     def do_find_user(self, line):
         """
@@ -1529,7 +1576,7 @@ class easy_or(cmd.Cmd, object):
         raise Exception(msg)
 
 
-    def do_describe_table(self, arg, clear=True):
+    def do_describe_table(self, arg, clear=True, extra=None, return_df = False):
         """
         DB:This tool is useful for noting the lack of documentation
         for columns. If you don't know the full table name you can
@@ -1607,25 +1654,33 @@ class easy_or(cmd.Cmd, object):
             and acc.column_name = atc.column_name
             order by atc.column_name
             """ % params
-
-        self.query_and_print(q, print_time=False,
+        
+        if extra is None:
+            extra = comm
+        df = self.query_and_print(q, print_time=False,
                              err_arg='Table does not exist or it is not accessible by user or pattern do not match',
-                             extra=comm, clear=clear)
+                             extra=extra, clear=clear, return_df = return_df)
+        if return_df :
+            return df
         return
 
     def complete_describe_table(self, text, line, start_index, end_index):
         return self._complete_tables(text)
 
-    def do_find_tables(self, arg):
+    def do_find_tables(self, arg, extra=None, return_df=False):
         """
         DB:Lists tables and views matching an oracle pattern  e.g %SVA%,
         
         Usage : find_tables PATTERN
         """
+        if extra is None:
+            extra = 'To select from a table use owner.table_name except for DESADMIN where only table_name is enough'
         if arg == '': return self.do_help('find_tables')
         arg = arg.replace(';', '')
-        query = "SELECT distinct table_name from fgottenmetadata  WHERE upper(table_name) LIKE '%s' " % (arg.upper())
-        self.query_and_print(query)
+        query = "SELECT owner,table_name from all_tables  WHERE upper(table_name) LIKE '%s' " % (arg.upper())
+        df = self.query_and_print(query, extra=extra, return_df=return_df)
+        if return_df:
+            return df
 
     def complete_find_tables(self, text, line, start_index, end_index):
         return self._complete_tables(text)
@@ -1835,7 +1890,7 @@ class easy_or(cmd.Cmd, object):
         vals = ','.join(cvals)
 
         qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
-
+        self.msg = ''
         try: 
             t1 = time.time()
             self.cur.executemany(qinsert, values)
@@ -1843,17 +1898,17 @@ class easy_or(cmd.Cmd, object):
             if self.autocommit: self.con.commit()
         except cx_Oracle.DatabaseError as e:
             if self.desdm_coldefs:
-                msg  = str(e)
-                msg += "\n If you are sure, you can disable DESDM column typing: \n"
-                msg += " DESDB ~> config desdm_coldefs set no"
-            raise cx_Oracle.DatabaseError(msg)
+                self.msg  = str(e)
+                self.msg += "\n If you are sure, you can disable DESDM column typing: \n"
+                self.msg += " DESDB ~> config desdm_coldefs set no"
+            raise cx_Oracle.DatabaseError(self.msg)
                 
         print(colored(
             '\n [Iter: %d] Inserted %d rows and %d columns into table %s in %.2f seconds' % (
                 niter+1, len(values), len(columns), table.upper(), t2 - t1), "green"))
 
 
-    def do_load_table(self, line, name=''):
+    def do_load_table(self, line, name=None, chunksize=None):
         """
         DB:Loads a table from a file (csv or fits) taking name from filename and columns from header
 
@@ -1879,7 +1934,7 @@ class easy_or(cmd.Cmd, object):
         line = line.replace(';','')
         load_parser = KeyParser(prog='', usage='', add_help=False)
         load_parser.add_argument('filename', help='name for the file', action='store', default=None)
-        load_parser.add_argument('--tablename', help='name for the table', action='store', default='')
+        load_parser.add_argument('--tablename', help='name for the table', action='store', default=None)
         load_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
     'issues', action='store', type=int, default=None)
         load_parser.add_argument('-h', '--help', help='print help', action='store_true')
@@ -1892,8 +1947,10 @@ class easy_or(cmd.Cmd, object):
             self.do_help('load_table')
             return
         filename = self.get_filename(load_args.filename)
-        name = load_args.tablename
+        table = load_args.tablename
         chunk = load_args.chunksize
+        if chunksize is not None:
+            chunk = chunksize
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -1902,10 +1959,10 @@ class easy_or(cmd.Cmd, object):
                           "--chunksize\n","red"))
             return
 
-        if name == '':
+        if table is None:
             table = base
-        else:
-            table = name
+            if name is not None:
+                table = name
 
         # check table first
         if self.check_table_exists(table):
@@ -2006,7 +2063,7 @@ class easy_or(cmd.Cmd, object):
         return _complete_path(line)
 
 
-    def do_append_table(self, line, name=''):
+    def do_append_table(self, line, name=None, chunksize=None):
         """
         DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
 
@@ -2033,7 +2090,7 @@ class easy_or(cmd.Cmd, object):
         line = line.replace(';','')
         append_parser = KeyParser(prog='', usage='', add_help=False)
         append_parser.add_argument('filename', help='name for the file', action='store', default=None)
-        append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default='')
+        append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default=None)
         append_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
                                                        'issues', action='store', default=None, type=int)
         append_parser.add_argument('-h', '--help', help='print help', action='store_true')
@@ -2046,8 +2103,10 @@ class easy_or(cmd.Cmd, object):
             self.do_help('append_table')
             return
         filename = self.get_filename(append_args.filename)
-        name = append_args.tablename
+        table = append_args.tablename
         chunk = append_args.chunksize
+        if chunksize is not None:
+            chunk = chunksize
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -2057,10 +2116,10 @@ class easy_or(cmd.Cmd, object):
             return
 
 
-        if name == '':
+        if table is None:
             table = base
-        else:
-            table = name
+            if name is not None:
+                table = name
 
         # check table first 
         if not self.check_table_exists(table):
@@ -2209,14 +2268,6 @@ class easy_or(cmd.Cmd, object):
         """
         print("\n Current : easyaccess {:} \n".format(__version__))
 
-        try:
-            last_version = last_pip_version()
-            if last_version != __version__:
-                print(" Latest  : easyaccess {:}".format(last_pip_version()))
-        except:
-            return
-
-
     # UNDOCCUMENTED DO METHODS
 
     def do_EOF(self, line):
@@ -2240,8 +2291,42 @@ class easy_or(cmd.Cmd, object):
         tut = webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
 
 
-##################################################
 
+
+
+############### PYTOHN API ###############################
+
+class IterData(object):
+    """
+    Iterator class for cx_oracle
+    """
+    def __init__(self, cursor, extra_func=None):
+        self.rows_count = 0
+        self.cursor = cursor
+        self.extra_func = extra_func
+        self.data = pd.DataFrame(self.cursor.fetchmany(), columns=[rec[0] for rec in self.cursor.description])
+        if self.extra_func is not None and not self.data.empty:
+            funs, args, names = self.extra_func
+            for kf in range(len(funs)):
+                self.data = fun_utils.updateDF(self.data, funs, args, names, kf)  
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if not self.data.empty:
+            data = self.data
+            self.rows_count += len(data)
+            self.data = pd.DataFrame(self.cursor.fetchmany(), columns=[rec[0] for rec in self.cursor.description])
+            if self.extra_func is not None and not self.data.empty:
+                funs, args, names = self.extra_func
+                for kf in range(len(funs)):
+                    self.data = fun_utils.updateDF(self.data, funs, args, names, kf)  
+            return data
+        else:
+            self.cursor.close()
+            raise StopIteration('No more data in the DB')
+        
+        
 
 def to_pandas(cur):
     """
@@ -2258,7 +2343,7 @@ color_term = True
 
 
 class connect(easy_or):
-    def __init__(self, section='', quiet=False):
+    def __init__(self, section='', user=None, passwd=None, quiet=False):
         """
         Creates a connection to the DB as easyaccess commands, section is obtained from
         config file, can be bypass here, e.g., section = desoper
@@ -2266,6 +2351,8 @@ class connect(easy_or):
         Parameters:
         -----------
         section :  DB connection : dessci, desoper, destest
+        user    :  Manualy use username
+        passwd  :  password for username (if not enter is prompted)
         quiet   :  Don't print much
 
         Returns:
@@ -2284,6 +2371,12 @@ class connect(easy_or):
         else:
             db = section
         desconf = config_mod.get_desconfig(desfile, db)
+        if user is not None:
+            print('Bypassing .desservices file with user : %s' % user)
+            if passwd is None:
+                passwd = getpass.getpass(prompt='Enter password : ')
+            desconf.set('db-' + db, 'user', user)
+            desconf.set('db-' + db, 'passwd', passwd)
         easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet)
         self.loading_bar = False
 
@@ -2292,30 +2385,87 @@ class connect(easy_or):
         cursor.arraysize = self.prefetch
         return cursor
 
-    def ping(self):
+    def ping(self, quiet = None):
+        if quiet is None:
+            quiet = self.quiet
         try:
             self.con.ping()
-            if not self.quiet: print('Still connected to DB')
+            if not quiet: print('Still connected to DB')
+            return True
         except:
-            if not self.quiet: print('Connection with DB lost')
+            if not quiet: print('Connection with DB lost')
+            return False
 
     def close(self):
         self.con.close()
 
-    def query_to_pandas(self, query, prefetch=''):
+    def ea_import(self, import_line='', help=False):
         """
-        Executes a query and return the results in pandas DataFrame
+        Executes a import of module with functions to be used for inline query functions,
+        checks whether function is wrapped @toeasyaccess and add module to library.
+
+        Parameters:
+        -----------
+        import_line  : the usual line after import.
+        help         : Print current loaded functions wrapped for easyaccess
+
+
+        Use:
+        ----
+        import('module as name')
+        import('my_module')
+
+        Returns:
+        --------
+
+        Add functions from module to internal library to be used inline queries
+        """
+
+        if help:
+            self.do_help_function('all')
+            return
+        if  import_line != '':
+            self.do_import(' '+import_line)
+            return
+
+
+
+    def query_to_pandas(self, query, prefetch='', iterator = False):
+        """
+        Executes a query and return the results in pandas DataFrame. If result is too big 
+        it is better to save results to a file
+
+        Parameters:
+        -----------
+        query     : The SQL query to be executed 
+        prefetch  : Number of rows to retrieve at each trip to the DB
+        iterator  : Return interator, get data with .next() method (to avoid get all data at once)
+
+        Returns:
+        --------
+        If iterator is False (default) the function returns a pandas DataFrame 
+        with the result of the query. If the iterator is True, it will return an iterator
+        to retrieve data one piece at a time.
         """
         cursor = self.con.cursor()
         cursor.arraysize = self.prefetch
         if prefetch != '': cursor.arraysize = prefetch
         query = query.replace(';' , '')
+        query, funs, args, names = fun_utils.parseQ(query, myglobals=globals())
+        extra_func = [funs, args, names]
+        if funs is None : extra_func = None
         temp = cursor.execute(query)
         if temp.description != None:
-            data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
+            if iterator:
+                data = IterData(temp, extra_func)
+            else:
+                data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
+                if extra_func is not None:
+                    for kf in range(len(funs)):
+                        data = fun_utils.updateDF(data, funs, args, names, kf)  
         else:
             data = ""
-        cursor.close()
+        if not iterator: cursor.close()
         return data
 
 
@@ -2323,7 +2473,7 @@ class connect(easy_or):
         """
         Describes a table from the DB
         """
-        self.do_describe_table(tablename, False)
+        return self.do_describe_table(tablename, False, return_df=True)
 
 
     def loadsql(self, filename):
@@ -2338,8 +2488,12 @@ class connect(easy_or):
     def mytables(self):
         """
         List tables in own schema
+
+        Returns:
+        --------
+        A pandas dataframe with a list of owner's tables
         """
-        self.do_mytables('')
+        return self.do_mytables('', return_df=True, extra='')
 
     def myquota(self):
         """
@@ -2347,19 +2501,103 @@ class connect(easy_or):
         """
         self.do_myquota('')
 
-    def load_table(self, table_file, name=''):
+    def load_table(self, table_file, name=None, chunksize=None):
         """
         Loads and create a table in the DB. If name is not passed, is taken from
         the filename. Formats supported are 'fits', 'csv' and 'tab' files
-        """
-        self.do_load_table(table_file, name=name)
 
-    def append_table(self, table_file, name=''):
+        Parameters:
+        -----------
+        table_file : Filename to be uploaded as table (.csv, .fits, .tab)
+        name       : Name of the table to be created
+        chunksize  : Number of rows to upload at a time to avoid memory issues
+
+        Returns:
+        --------
+        True if success otherwise False
+
+        """
+        try:
+            self.do_load_table(table_file, name=name, chunksize=chunksize)
+            return True
+        except:
+            # exception
+            return False
+            
+
+    def append_table(self, table_file, name=None, chunksize=None):
         """
         Appends data to a table in the DB. If name is not passed, is taken from
         the filename. Formats supported are 'fits', 'csv' and 'tab' files
+
+        Parameters:
+        -----------
+        table_file : Filename to be uploaded as table (.csv, .fits, .tab)
+        name       : Name of the table to be created
+        chunksize  : Number of rows to upload at a time to avoid memory issues
+
+        Returns:
+        --------
+        True if success otherwise False
         """
-        self.do_append_table(table_file, name=name)
+        try:
+            self.do_append_table(table_file, name=name, chunksize=chunksize)
+            return True
+        except:
+            return False
+
+    def find_tables(self, pattern=''):
+        """
+        Lists tables and views matching an oracle pattern. 
+
+        Parameters:
+        -----------
+        pattern  : The patter to search tables for, e.g. Y1A1_GOLD
+
+        Returns:
+        --------
+        A pandas DataFram with the owners and table names. To select from a table use
+        owner.table_name, is owner is DES_ADMIN just use table_name
+        """
+        pattern = pattern.replace('%','')
+        pattern = ''.join(pattern.split())
+        pattern = "%"+pattern+"%"
+        return self.do_find_tables(pattern , extra='', return_df=True)
+
+    def pandas_to_db(self, df, tablename=None, append=False):
+        """ Writes a pandas DataFrame directly to the DB
+
+        Parameters:
+        -----------
+        df        : The DataFrame to be loaded to the DB
+        tablename : The name of the table to be created
+        append    : Set True if appending to existing table, if table doesn't exists it is created
+        
+
+        Returns:
+        --------
+        True or False depending on the success 
+        """
+        if tablename is None:
+            print("Please indicate a tablename to be ingested in the DB")
+            return False
+        if self.check_table_exists(tablename) and not append:
+            print(colored('\n Table already exists. Table can be removed with:','red'))
+            print(colored(' DESDB ~> DROP TABLE %s;\n' % tablename.upper(),'red'))
+            return False
+        df.file_type = 'pandas'
+        if len(df) == 0:
+            print('DataFrame is empty')
+            return False
+        dtypes = eafile.get_dtypes(df)
+        columns = df.columns.values.tolist()
+        values = df.values.tolist()
+        if not self.check_table_exists(tablename):
+            if append:
+                print('Table does not exist. Creating table\n')
+            self.create_table(tablename, columns, dtypes)
+        self.insert_data(tablename, columns, values, dtypes)
+        return True
 
 
 # #################################################
@@ -2436,12 +2674,6 @@ if __name__ == '__main__':
 
     if args.version:
         print("\nCurrent : easyaccess {:} \n".format(__version__))
-        try:
-            last_version = last_pip_version()
-            if last_version != __version__:
-                print("Latest  : easyaccess {:}".format(last_pip_version()))
-        except:
-            pass
         sys.exit()
 
     if args.config:
