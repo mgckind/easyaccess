@@ -196,7 +196,8 @@ def numpy2desdm(desc):
         return "NUMBER(7,0)"
     elif name.startswith(('HPIX','EXPNUM')):
         return "NUMBER(10,0)"
-    elif name in ['COADD_OBJECTS_ID','COADD_OBJECT_ID']:
+    # Temporary adjustment to deal with large object numbers
+    elif name in ['COADD_OBJECTS_ID','COADD_OBJECT_ID','OBJECT_NUMBER','OBJECT_ID']:
         return "NUMBER(11,0)"
     elif name in ['QUICK_OBJECT_ID']:
         return "NUMBER(15,0)"
