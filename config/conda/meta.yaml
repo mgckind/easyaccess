@@ -3,15 +3,15 @@ package:
   version: "1.3.0rc"
 
 source:
-  fn: easyaccess-1.3.0-rc1.tar.gz
-  md5: 9b6cbfd4630d0c55eb438509d4f3fd2e
-  url: https://pypi.python.org/packages/aa/98/0e52eb2aff751936c9f37f28064a99b2d53271391681dcd977aa29076fa8/easyaccess-1.3.0-rc1.tar.gz
+  fn: easyaccess-1.3.0-rc2.tar.gz
+  md5: dbc19f823613ef1fbc35f6cc17ca0262
+  url: https://pypi.python.org/packages/4c/4b/65e0d4b95ed47295d8593c6b6c19d4e7a99eba3f4ae7857ea8f56d101b9c/easyaccess-1.3.0-rc2.tar.gz
   #git_rev: '1.2.1b'
   #git_url: https://github.com/mgckind/easyaccess
   
 
 build:
-  number: 1
+  number: 2
 
 
 requirements:
