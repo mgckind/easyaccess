@@ -1,16 +1,18 @@
 package:
   name: easyaccess
-  version: "1.2.1b"
+  version: "1.3.0rc"
 
 source:
-  git_rev: '1.2.1b'
-  git_url: https://github.com/mgckind/easyaccess
+  fn: easyaccess-1.3.0-rc2.tar.gz
+  md5: dbc19f823613ef1fbc35f6cc17ca0262
+  url: https://pypi.python.org/packages/4c/4b/65e0d4b95ed47295d8593c6b6c19d4e7a99eba3f4ae7857ea8f56d101b9c/easyaccess-1.3.0-rc2.tar.gz
+  #git_rev: '1.2.1b'
+  #git_url: https://github.com/mgckind/easyaccess
   
 
 build:
-  # If this is a new build for the same version, increment the build
-  # number. If you do not include this key, it defaults to 0.
-  number: 0
+  number: 2
+
 
 requirements:
   build:

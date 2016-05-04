@@ -24,7 +24,7 @@ import re
 import getpass
 
 try:
-    from easyaccess.version import __version__, last_pip_version
+    from easyaccess.version import __version__
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     from easyaccess.eautils import des_logo as dl
@@ -34,7 +34,7 @@ try:
     from easyaccess.eautils.import_utils import Import
 
 except ImportError:
-    from version import __version__, last_pip_version
+    from version import __version__
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
@@ -2268,14 +2268,6 @@ class easy_or(cmd.Cmd, Import, object):
         """
         print("\n Current : easyaccess {:} \n".format(__version__))
 
-        try:
-            last_version = last_pip_version()
-            if last_version != __version__:
-                print(" Latest  : easyaccess {:}".format(last_pip_version()))
-        except:
-            return
-
-
     # UNDOCCUMENTED DO METHODS
 
     def do_EOF(self, line):
@@ -2682,12 +2674,6 @@ if __name__ == '__main__':
 
     if args.version:
         print("\nCurrent : easyaccess {:} \n".format(__version__))
-        try:
-            last_version = last_pip_version()
-            if last_version != __version__:
-                print("Latest  : easyaccess {:}".format(last_pip_version()))
-        except:
-            pass
         sys.exit()
 
     if args.config:

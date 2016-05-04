@@ -3,3 +3,5 @@ include *.md
 include easyaccess
 recursive-include doc *.*
 recursive-include data *.*
+recursive-include tests *.*
+recursive-include config *.*

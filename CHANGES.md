@@ -15,6 +15,9 @@
 - Dealing better with trailing white space #52
 - Fix several minor issues: #37, #40
 - configuration options at command line
+- Improved python API
+- Load big files
+- Fix find_tables (to include owners) and describe_table (dat_type) commands
 
 
 
