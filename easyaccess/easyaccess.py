@@ -196,7 +196,7 @@ def read_buf(fbuf):
 class easy_or(cmd.Cmd, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
 
-    def __init__(self, conf, desconf, db, interactive=True, quiet=False):
+    def __init__(self, conf, desconf, db, interactive=True, quiet=False, refresh=True):
         cmd.Cmd.__init__(self)
         self.intro = colored(
             "\neasyaccess  %s. The DESDM Database shell. \n* Type 'help' or '?' to list commands. *\n" % __version__,
@@ -204,6 +204,7 @@ class easy_or(cmd.Cmd, Import, object):
         self.writeconfig = False
         self.config = conf
         self.quiet = quiet
+        self.refresh = refresh
         self.desconfig = desconf
         # ADW: It would be better to set these automatically...
         self.editor = os.getenv('EDITOR', self.config.get('easyaccess', 'editor'))
@@ -426,44 +427,46 @@ class easy_or(cmd.Cmd, Import, object):
         Initialization before prompting user for commands.
         Despite the claims in the Cmd documentation, Cmd.preloop() is not a stub.
         """
-        tcache = threading.Timer(120, self.con.cancel)
-        tcache.start()
-        try:
-            if not self.quiet: print('Loading metadata into cache...')
+        self.cache_table_names = []
+        self.cache_usernames = []
+        self.cache_column_names = []
+        self.metadata = False
+        cmd.Cmd.preloop(self)  # # sets up command completion
+        if self.refresh:
+            tcache = threading.Timer(120, self.con.cancel)
+            tcache.start()
+            try:
+                if not self.quiet: print('Loading metadata into cache...')
 
-            cmd.Cmd.preloop(self)  # # sets up command completion
-            create_metadata = False
-            check = 'select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
-            self.cur.execute(check)
-            if self.cur.fetchall()[0][0] == 0:
-                create_metadata = True
-            else:
-                query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
-                    self.user.upper())
-                qt = self.cur.execute(query_time)
-                last = qt.fetchall()
-                now = datetime.datetime.now()
-                diff = abs(now - last[0][0]).seconds / (3600.)
-                if diff >= 24: create_metadata = True
-            if create_metadata:
-                query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-                self.cur.execute(query_2)
+                create_metadata = False
+                check = 'select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
+                self.cur.execute(check)
+                if self.cur.fetchall()[0][0] == 0:
+                    create_metadata = True
+                else:
+                    query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
+                        self.user.upper())
+                    qt = self.cur.execute(query_time)
+                    last = qt.fetchall()
+                    now = datetime.datetime.now()
+                    diff = abs(now - last[0][0]).seconds / (3600.)
+                    if diff >= 24: create_metadata = True
+                if create_metadata:
+                    query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
+                    self.cur.execute(query_2)
 
-            self.cache_table_names = self.get_tables_names()
-            self.cache_usernames = self.get_userlist()
-            self.cache_column_names = self.get_columnlist()
-            self.metadata = True
-            tcache.cancel()
+                self.cache_table_names = self.get_tables_names()
+                self.cache_usernames = self.get_userlist()
+                self.cache_column_names = self.get_columnlist()
+                self.metadata = True
+                tcache.cancel()
 
-        except:
-            print(colored(
-                "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
-                "red"))
-            tcache.cancel()
-            self.cache_table_names = []
-            self.cache_usernames = []
-            self.cache_column_names = []
-            self.metadata = False
+            except:
+                print(colored(
+                    "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
+                    "red"))
+                tcache.cancel()
+
 
         # history
         ht = open(history_file, 'r')
@@ -852,7 +855,7 @@ class easy_or(cmd.Cmd, Import, object):
                     com_it += 1
                     # 1-indexed for backwards compatibility
                     if first: fileindex = 1  
-
+                    info2 = info
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
@@ -2343,7 +2346,7 @@ color_term = True
 
 
 class connect(easy_or):
-    def __init__(self, section='', user=None, passwd=None, quiet=False):
+    def __init__(self, section='', user=None, passwd=None, quiet=False, refresh=False):
         """
         Creates a connection to the DB as easyaccess commands, section is obtained from
         config file, can be bypass here, e.g., section = desoper
@@ -2664,6 +2667,9 @@ if __name__ == '__main__':
                         help="Silence initialization, no loading bar")
     parser.add_argument("-u", "--user", dest='user')
     parser.add_argument("-p", "--password", dest='password')
+    parser.add_argument("-nr", "--no_refresh", dest='norefresh', action="store_true",
+                        help="Do not refresh metadata at starting up to speed initialization. Metadata can "
+                             "always be refreshed from inside using the refresh_metadata command")
     parser.add_argument("--config", help="--config show, will print content of "
                                                         "config file\n"
                                                         "--config reset will reset config to default "
@@ -2758,18 +2764,18 @@ if __name__ == '__main__':
 
     if args.command is not None:
         initial_message(args.quiet, clear=False)
-        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
         cmdinterp.onecmd(args.command)
         os._exit(0)
     elif args.loadsql is not None:
         initial_message(args.quiet, clear=False)
-        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.loadtable is not None:
         initial_message(args.quiet, clear=False)
-        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
         linein = "load_table " + args.loadtable
         if args.tablename is not None:
             linein += ' --tablename ' + args.tablename
@@ -2779,7 +2785,7 @@ if __name__ == '__main__':
         os._exit(0)
     elif args.appendtable is not None:
         initial_message(args.quiet, clear=False)
-        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
         linein = "append_table " + args.appendtable
         if args.tablename is not None:
             linein += ' --tablename ' + args.tablename
@@ -2789,4 +2795,4 @@ if __name__ == '__main__':
         os._exit(0)
     else:
         initial_message(args.quiet, clear=True)
-        easy_or(conf, desconf, db, quiet=args.quiet).cmdloop()
+        easy_or(conf, desconf, db, quiet=args.quiet, refresh= not args.norefresh).cmdloop()
