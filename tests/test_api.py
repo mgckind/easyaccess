@@ -25,10 +25,13 @@ class TestApi(unittest.TestCase):
     h5file = 'temp.h5'
 
     
-    @unittest.skip('')
     def test_ea_import(self):
-        self.assertTrue(self.con.ea_import('wrapped'))
-        self.assertTrue(self.con.ea_import('wrapped',  help=True))
+        test1 = self.con.ea_import('wrapped')
+        if test1 is not None:
+            self.assertTrue(test1)
+        test2 = self.con.ea_import('wrapped',  help=True)
+        if test2 is not None:
+            self.assertTrue(test2)
 
     def test_pandas_to_db(self):
         data = create_test_data()
@@ -269,17 +272,30 @@ class TestApi(unittest.TestCase):
         self.assertTrue(self.con.pandas_to_db(df, tablename=self.tablename))
         query = 'select RA,DEC from %s' % self.tablename.upper()
         self.con.query_and_save(query, self.csvfile, print_time=False)
-        #self.assertTrue(os.path.exists(self.csvfile))
+        self.assertTrue(os.path.exists(self.csvfile))
         self.con.query_and_save(query, self.fitsfile, print_time=False)
-        #self.assertTrue(os.path.exists(self.fitsfile))
+        self.assertTrue(os.path.exists(self.fitsfile))
         self.con.query_and_save(query, self.h5file, print_time=False)
-        #self.assertTrue(os.path.exists(self.h5file))
-        for i in range(10):
+        self.assertTrue(os.path.exists(self.h5file))
+        os.remove(self.csvfile)
+        os.remove(self.fitsfile)
+        os.remove(self.h5file)
+        for i in range(34):
             self.assertTrue(self.con.pandas_to_db(df, tablename=self.tablename, append=True))
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*11)
-        # TODO: save files in chunks
+        self.assertEqual(len(fetch), self.nrows*35)
+        self.con.outfile_max_mb = 1
+        self.con.query_and_save(query, self.csvfile, print_time=False)
+        for i in range(6):
+            self.assertTrue(os.path.exists(os.path.splitext(self.csvfile)[0]+'_00000'+str(i+1)+'.csv'))
+            os.remove(os.path.splitext(self.csvfile)[0]+'_00000'+str(i+1)+'.csv')
+        self.con.query_and_save(query, self.fitsfile, print_time=False)
+        for i in range(4):
+            self.assertTrue(os.path.exists(os.path.splitext(self.fitsfile)[0]+'_00000'+str(i+1)+'.fits'))
+            os.remove(os.path.splitext(self.fitsfile)[0]+'_00000'+str(i+1)+'.fits')
+
+        self.con.outfile_max_mb = 1000
         self.con.drop_table(self.tablename)
 
     def test_inline_functions(self):
@@ -292,13 +308,13 @@ class TestApi(unittest.TestCase):
         except:
             pass
         self.assertTrue(self.con.pandas_to_db(df, tablename=self.tablename))
-        # TODO: inline functions
-        # q='select /*p: Y.my_sum(ra,dec) */ from mini_y1a1'
-        # self.con.ea_import('wrapped as Y')
-        # self.con.query_to_pandas()
+        query = 'select /*p: Y.my_sum(ra,dec) as testcol*/ from %s' % self.tablename
+        self.con.ea_import('wrapped as Y')
+        df = self.con.query_to_pandas(query)
+        self.assertEqual(len(df), self.nrows)
+        self.assertTrue('TESTCOL' in df.columns.values.tolist())
+        self.con.drop_table(self.tablename)
 
-
-        
 
 if __name__ == '__main__':
     unittest.main()

@@ -3,7 +3,7 @@ import pandas as pd
 import inspect
 import re
 from functools import wraps
-from eautils.fun_utils import toeasyaccess
+from easyaccess.eautils.fun_utils import toeasyaccess
 
 
     
