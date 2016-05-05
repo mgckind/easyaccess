@@ -60,7 +60,6 @@ class Import(object):
             except NameError:
                 exec('importlib.reload('+modname+')', globals())
         try:
-            from test import my_func
             exec(command ,globals())
             func_list = [f for f in getmembers(globals()[modname]) if (isfunction(f[1]) and hasattr(f[1], 'in_easyaccess'))]
             if len(func_list) > 0:
