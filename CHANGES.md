@@ -18,7 +18,8 @@
 - Improved python API
 - Load big files
 - Fix find_tables (to include owners) and describe_table (dat_type) commands
-
+- Added unittest suites
+- Added --no_refresh option in command line to quick start up
 
 
 ## v1.2.0
