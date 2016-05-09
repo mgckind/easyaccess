@@ -38,7 +38,10 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - Can  run python functions inline query
 - Many more
 
+## Conda installation
+Now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box! 
 
+    conda install easyaccess -c mgckind
     
 ## Interactive interpreter
 
