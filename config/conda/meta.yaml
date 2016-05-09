@@ -1,17 +1,15 @@
 package:
   name: easyaccess
-  version: "1.3.0rc"
+  version: "1.3.0"
 
 source:
-  fn: easyaccess-1.3.0-rc2.tar.gz
-  md5: dbc19f823613ef1fbc35f6cc17ca0262
-  url: https://pypi.python.org/packages/4c/4b/65e0d4b95ed47295d8593c6b6c19d4e7a99eba3f4ae7857ea8f56d101b9c/easyaccess-1.3.0-rc2.tar.gz
-  #git_rev: '1.2.1b'
-  #git_url: https://github.com/mgckind/easyaccess
+  fn: easyaccess-1.3.0.tar.gz
+  md5: f3160dcc95de2a0fe7c29a08c4aa14dd
+  url: https://pypi.python.org/packages/22/a9/28586f7623f15ebbfea8c983300b9e3fd7201bf07ca0463a787a2f6329b3/easyaccess-1.3.0.tar.gz
   
 
 build:
-  number: 2
+  number: 0
 
 
 requirements:
@@ -23,7 +21,7 @@ requirements:
     - python
     - future
     - termcolor
-    - fitsio
+    - fitsio >=0.9.8
     - pandas >=0.14
     - oracle-instantclient
     - cx_oracle
