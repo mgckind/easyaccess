@@ -2426,10 +2426,10 @@ class connect(easy_or):
 
         if help:
             self.do_help_function('all')
-            return
-        if  import_line != '':
+            return True
+        if import_line != '':
             self.do_import(' '+import_line)
-            return
+            return True
 
 
 
