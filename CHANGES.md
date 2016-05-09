@@ -1,7 +1,7 @@
 # Changes
 
 ## v1.3.0
-#### 2016-XXX-XX
+#### 2016-MAY-09
 - Fixes a bug with python2/3 compatibility (see Pull-request #36)
 - Removes ; from query for python API (query_* functions) issue #37
 - Added execproc to run sql/pl procedures, see help execproc for more information (see PR #48)
@@ -9,16 +9,16 @@
 - Case insensitive options (PR #45)
 - Reorganization of the structure of the code, this way is much simpler to develop (PR #49)
 - Conda installation
-- In-query python functions (beta)
+- In-query python functions (beta) write your own function and call it from query#67
 - Query and execution information in FITS header #50
 - Fix bug when loading sql from file #55
 - Dealing better with trailing white space #52
 - Fix several minor issues: #37, #40
-- configuration options at command line
-- Improved python API
-- Load big files
-- Fix find_tables (to include owners) and describe_table (dat_type) commands
-- Added unittest suites
+- configuration options at command line (reset and configuration per session) with --config
+- Improved python API , added some extra functions (pandas_to_db) and imprived docs#68
+- Load big files in chunks -- very useful to load big files in chunks without running into memory issues #66
+- Fix find_tables (to include owners) and describe_table (data_type) commands
+- Added unittest suites #65 #70
 - Added --no_refresh option in command line to quick start up
 
 
