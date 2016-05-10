@@ -43,11 +43,6 @@ class TestInterpreter(unittest.TestCase):
         self.con.drop_table(self.tablename)
         os.remove(self.csvfile)
     
-    def test_help(self):
-        command = 'help'
-        self.con.onecmd(command)
-        command = '?'
-        self.con.onecmd(command)
 
     def test_add_comment(self):
         data = create_test_data()
@@ -155,16 +150,164 @@ class TestInterpreter(unittest.TestCase):
         if os.path.exists(self.csvfile): os.remove(self.csvfile)
 
 
-## TODO: 
-# multiple files (prefetch)
-# load_table
-# append_table
-# exceproc
-# execute
-# import and inline query
-# loadsql and @
-# find_
+    def test_load_table_csv(self):
+        data = create_test_data()
+        df = pd.DataFrame(data)
+        self.assertEqual( len(df), self.nrows)
+        df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',')
+        self.assertTrue(os.path.exists(self.csvfile))
+        self.con.drop_table(os.path.splitext(self.csvfile)[0].upper())
+        # name from filename
+        command = "load_table %s " % self.csvfile
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.csvfile)[0].upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows)
+        
+        # appending
+        command = "append_table %s " % self.csvfile
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.csvfile)[0].upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*2)
+        self.con.drop_table(os.path.splitext(self.csvfile)[0].upper())
+        
+        # name from tablename
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s" % (self.csvfile, self.tablename)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows)
+        # appending
+        command = "append_table %s --tablename %s" % (self.csvfile, self.tablename)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*2)
+        # chunksize
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s --chunksize %s" % (self.csvfile, self.tablename, self.chunk)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows)
+        ## appending
+        command = "append_table %s --tablename %s --chunksize %s" % (self.csvfile, self.tablename, self.chunk)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*2)
+        os.remove(self.csvfile)
+        self.con.drop_table(self.tablename)
 
 
+    def test_load_table_fits(self):
+        data = create_test_data()
+        fitsio.write(self.fitsfile, data, clobber=True)
+        self.assertTrue(os.path.exists(self.fitsfile))
+        self.con.drop_table(os.path.splitext(self.fitsfile)[0].upper())
+        # name from filename
+        command = "load_table %s " % self.fitsfile
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.fitsfile)[0].upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows)
+        
+        # appending
+        command = "append_table %s " % self.fitsfile
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.fitsfile)[0].upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*2)
+        self.con.drop_table(os.path.splitext(self.fitsfile)[0].upper())
+        
+        # name from tablename
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s" % (self.fitsfile, self.tablename)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows)
+        # appending
+        command = "append_table %s --tablename %s" % (self.fitsfile, self.tablename)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*2)
+        # chunksize
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s --chunksize %s" % (self.fitsfile, self.tablename, self.chunk)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows)
+        ## appending
+        command = "append_table %s --tablename %s --chunksize %s" % (self.fitsfile, self.tablename, self.chunk)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*2)
+        os.remove(self.fitsfile)
+        self.con.drop_table(self.tablename)
+
+    def test_loadsql(self):
+        data = create_test_data()
+        df = pd.DataFrame(data)
+        df.to_csv(self.csvfile,index=False, float_format='%.8f', sep=',')
+        self.assertTrue(os.path.exists(self.csvfile))
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s" % (self.csvfile, self.tablename)
+        self.con.onecmd(command)
+        os.remove(self.csvfile)
+        query = """
+        -- This is a comment
+        select RA, DEC from %s -- this is another comment
+         ; > %s
+        """ % (self.tablename, self.csvfile)
+        with open(self.sqlfile,'w') as F: F.write(query)
+        
+        command = "loadsql %s" % (self.sqlfile)
+        self.con.onecmd(command)
+        self.assertTrue(os.path.exists(self.csvfile))
+        df = pd.read_csv(self.csvfile, sep=',')
+        self.assertEqual(len(df), self.nrows)
+        os.remove(self.csvfile)
+        self.assertFalse(os.path.exists(self.csvfile))
+        os.remove(self.sqlfile)
+
+
+    def test_inline(self):
+        data = create_test_data()
+        df = pd.DataFrame(data)
+        df.to_csv(self.csvfile,index=False, float_format='%.8f', sep=',')
+        self.assertTrue(os.path.exists(self.csvfile))
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s" % (self.csvfile, self.tablename)
+        self.con.onecmd(command)
+        command = "import wrapped as Y"
+        self.con.onecmd(command)
+        command = "select /*p: Y.my_sum(ra,dec) as testcol */, dec from %s ; > %s" % (self.tablename, self.csvfile)
+        self.con.onecmd(command)
+        self.assertTrue(os.path.exists(self.csvfile))
+        df = pd.read_csv(self.csvfile, sep=',')
+        self.assertEqual(len(df), self.nrows)
+        self.assertTrue('TESTCOL' in df.columns.values.tolist())
+        os.remove(self.csvfile)
+        self.assertFalse(os.path.exists(self.csvfile))
+        self.con.drop_table(self.tablename)
+        
 if __name__ == '__main__':
     unittest.main()
