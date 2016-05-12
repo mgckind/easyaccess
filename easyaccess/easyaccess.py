@@ -1832,9 +1832,13 @@ class easy_or(cmd.Cmd, Import, object):
         
         return qtable
 
-    def drop_table(self, table):
-        # Do we want to add a PURGE to this query?
-        qdrop = "DROP TABLE %s" % table.upper()
+    def drop_table(self, table, purge=False):
+        # Added optional argument to purge the table.
+        if not purge:
+            qdrop = "DROP TABLE %s" % table.upper()
+        else:
+            qdrop = "DROP TABLE %s PURGE" % table.upper()
+
         try:
             self.cur.execute(qdrop)
         except cx_Oracle.DatabaseError:
