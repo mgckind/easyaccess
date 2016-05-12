@@ -24,7 +24,7 @@ setup(
     #packages=find_packages(),
     packages=['easyaccess','easyaccess.eautils'],
     license='LICENSE.txt',
-    description='Easy access to the DES DB. Enhance command line SQL interpreter client for DESDM',
+    description='Easy access to the DES DB. Enhanced command line SQL interpreter client for DESDM',
     long_description=read('README.md'),
     url='https://github.com/mgckind/easyaccess',
     install_requires=['pandas >= 0.14','termcolor','fitsio >= 0.9.6','cx_Oracle','future >= 0.15.0'],

@@ -1,7 +1,7 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.2.0"> <img src="https://img.shields.io/badge/release-v1.2.0-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.2.0"><img src="https://img.shields.io/badge/pypi-v1.2.0-orange.svg" alt="pypi version"/></a>
+# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.3.0"> <img src="https://img.shields.io/badge/release-v1.3.0-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.3.0"><img src="https://img.shields.io/badge/pypi-v1.3.0-orange.svg" alt="pypi version"/></a>
 ![help_screen](data/help_screenshot.png)
 
-Refactored version of trivialAccess for accessing the DES DB
+Enhanced command line SQL interpreter client for astronomical databases.
 
 Python Command Line Interpreter to access Oracle DES DB
 using cx_Oracle 
@@ -10,7 +10,7 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 (Using des credentials)
 
 
-**Current version = 1.2.0**
+**Current version = 1.3.0**
 
 ## Requirements
 
@@ -25,19 +25,23 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - **Note that you need to install python-future for python2/3 compatibility**
 
 ## Some *nice* features
-- Nice output format
+- Nice output format (using pandas)
 - Very flexible configuration
 - Smart tab completion for commands, table names, column names and file paths accordingly
 - write output results to csv, tab, fits files or HDF5 files
-- load tables from csv or fits directly into DB
+- load tables from csv, fits or hdf5 directly into DB (memory friendly)
 - intrinsic db commands to describe tables, own schema, quota and more
-- It can be imported as module
+- It can be imported as module from python, extense python API
 - Can run command directly from command line
 - Load sql query from file and/or from editor
 - Show the execution plan of a query if required
+- Can  run python functions inline query
 - Many more
 
+## Conda installation
+Now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box! 
 
+    conda install easyaccess -c mgckind
     
 ## Interactive interpreter
 
@@ -58,9 +62,9 @@ The file types supported so far are: .csv, .tab, .fits, and .h5. Any other exten
 
 ### Load tables
 To load a table it needs to be in a csv format with columns names in the first row
-the name of the table is taken from filename
+the name of the table is taken from filename or with optional argument --tablename
 
-        DESDB ~> load_table <filename>
+        DESDB ~> load_table <filename> --tablename <mytable>
 
 ### Load SQL queries
 To load SQL queries just run:
@@ -96,8 +100,3 @@ Much of the functionality provided through the interpreter is also available dir
 
         easyaccess --help
 
-## TODO
-    - There is a bug with some versions of readline
-    - Other small changes when loading tables
-    - Self-upgrade
-    - Refactor the code so that it isn't in one huge file
