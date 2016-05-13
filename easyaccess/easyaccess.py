@@ -250,7 +250,7 @@ class easy_or(cmd.Cmd, Import, object):
             print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
             os._exit(0)
         self.cur = self.con.cursor()
-        self.cur.arraysize = self.prefetch
+        self.cur.arraysize = int(self.prefetch)
         msg = self.last_pass_changed()
         if msg and not self.quiet: print(msg)
 
@@ -489,7 +489,7 @@ class easy_or(cmd.Cmd, Import, object):
             self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
             if self.autocommit: self.con.autocommit = True
             self.cur = self.con.cursor()
-            self.cur.arraysize = self.prefetch
+            self.cur.arraysize = int(self.prefetch)
 
         # handle line continuations -- line terminated with \
         # beware of null lines.
@@ -720,7 +720,7 @@ class easy_or(cmd.Cmd, Import, object):
             p_functions = extra_func[0]
             p_args = extra_func[1]
             p_names = extra_func[2]
-        self.cur.arraysize = self.prefetch
+        self.cur.arraysize = int(self.prefetch)
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
         t1 = time.time()
@@ -828,7 +828,7 @@ class easy_or(cmd.Cmd, Import, object):
             p_args = extra_func[1]
             p_names = extra_func[2]
         fileout_original = fileout
-        self.cur.arraysize = self.prefetch
+        self.cur.arraysize = int(self.prefetch)
         t1 = time.time()
         if self.loading_bar: self.pload = Process(target=loading)
         if self.loading_bar: self.pload.start()
@@ -1023,11 +1023,10 @@ class easy_or(cmd.Cmd, Import, object):
                 self.writeconfig = True
                 print('\nPrefetch value set to  {:}\n'.format(self.prefetch))
         elif line.find('default') > -1:
-            self.prefetch = 10000
-            self.config.set('easyaccess', 'prefetch', '10000')
-            o
+            self.prefetch = 30000
+            self.config.set('easyaccess', 'prefetch', '30000')
             self.writeconfig = True
-            print('\nPrefetch value set to default (10000) \n')
+            print('\nPrefetch value set to default (30000) \n')
         else:
             print('\nPrefetch value = {:}\n'.format(self.prefetch))
 
@@ -2389,7 +2388,7 @@ class connect(easy_or):
 
     def cursor(self):
         cursor = self.con.cursor()
-        cursor.arraysize = self.prefetch
+        cursor.arraysize = int(self.prefetch)
         return cursor
 
     def ping(self, quiet = None):
@@ -2455,8 +2454,8 @@ class connect(easy_or):
         to retrieve data one piece at a time.
         """
         cursor = self.con.cursor()
-        cursor.arraysize = self.prefetch
-        if prefetch != '': cursor.arraysize = prefetch
+        cursor.arraysize = int(self.prefetch)
+        if prefetch != '': cursor.arraysize = int(prefetch)
         query = query.replace(';' , '')
         query, funs, args, names = fun_utils.parseQ(query, myglobals=globals())
         extra_func = [funs, args, names]
