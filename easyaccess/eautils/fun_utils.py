@@ -41,7 +41,7 @@ def toeasyaccess(custom):
         if j < nargs_p:
             head.append(ag)
         else:
-            head.append(ag + '=' + str(check.defaults[j-narg_p]))    
+            head.append(ag + '=' + str(check.defaults[j-nargs_p]))    
     temp = easy_function
     temp.__doc1__ = '('+', '.join(head)+')'
     temp.in_easyaccess = True
