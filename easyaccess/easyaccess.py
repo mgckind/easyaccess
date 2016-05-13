@@ -61,6 +61,7 @@ import numpy as np
 import argparse
 import webbrowser
 import signal
+sys.path.insert(0, os.getcwd())
 
 fun_utils.init_func()
 
@@ -2418,8 +2419,8 @@ class connect(easy_or):
 
         Use:
         ----
-        import('module as name')
-        import('my_module')
+        ea_import('module as name')
+        ea_import('my_module')
 
         Returns:
         --------
