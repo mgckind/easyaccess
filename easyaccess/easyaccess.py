@@ -1757,25 +1757,7 @@ class easy_or(cmd.Cmd, Import, object):
     def complete_show_index(self, text, line, begidx, lastidx):
         return self._complete_tables(text)
 
-    def get_filename(self, line):
-        # Good to move some of this into eautils.fileio
-        line = line.replace(';', '')
-        if line == "":
-            print('\nMust include table filename!\n')
-            return
-        if line.find('.') == -1:
-            print(colored('\nError in filename\n', "red"))
-            return
 
-        filename = "".join(line.split())
-        basename = os.path.basename(filename)
-        alls = basename.split('.')
-        if len(alls) > 2:
-            # Oracle tables cannot contain a '.'
-            print("\nDo not use extra '.' in filename\n")
-            return
-
-        return filename
 
     def check_table_exists(self, table):
         # check table first
@@ -1915,11 +1897,11 @@ class easy_or(cmd.Cmd, Import, object):
                 niter+1, len(values), len(columns), table.upper(), t2 - t1), "green"))
 
 
-    def do_load_table(self, line, name=None, chunksize=None):
+    def do_load_table(self, line, name=None, chunksize=None, memsize=None):
         """
         DB:Loads a table from a file (csv or fits) taking name from filename and columns from header
 
-        Usage: load_table <filename> [--tablename NAME] [--chunksize CHUNK]
+        Usage: load_table <filename> [--tablename NAME] [--chunksize CHUNK] [--memsize MEMCHUNK]
         Ex: example.csv has the following content
              RA,DEC,MAG
              1.23,0.13,23
@@ -1932,6 +1914,8 @@ class easy_or(cmd.Cmd, Import, object):
             --tablename NAME            given name for the table, default is taken from filename
             --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
                                         that do not fit in memory
+            --memsize MEMCHUNK          The size in Mb to be read in chunks. If both specified, the lower
+                                        number of rows is selected (the lower memory limitations)
 
         Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
         as data (using ',' or space)
@@ -1943,7 +1927,9 @@ class easy_or(cmd.Cmd, Import, object):
         load_parser.add_argument('filename', help='name for the file', action='store', default=None)
         load_parser.add_argument('--tablename', help='name for the table', action='store', default=None)
         load_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
-    'issues', action='store', type=int, default=None)
+                                                     'issues', action='store', type=int, default=None)
+        load_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ',
+                                 action='store', type=int, default=None)
         load_parser.add_argument('-h', '--help', help='print help', action='store_true')
         try:
             load_args = load_parser.parse_args(line.split())
@@ -1953,11 +1939,20 @@ class easy_or(cmd.Cmd, Import, object):
         if load_args.help:
             self.do_help('load_table')
             return
-        filename = self.get_filename(load_args.filename)
+        filename = eafile.get_filename(load_args.filename)
         table = load_args.tablename
         chunk = load_args.chunksize
+        memchunk = load_args.memsize
         if chunksize is not None:
             chunk = chunksize
+        if memsize is not None:
+            memchunk = memsize
+        if memchunk is not None:
+            memchunk_rows = eafile.get_chunksize(filename, memory=memchunk)
+            if chunk is not None:
+                chunk = min(chunk, memchunk_rows)
+            else:
+                chunk = memchunk_rows
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -1978,7 +1973,7 @@ class easy_or(cmd.Cmd, Import, object):
             return
 
         try:
-            data, iterator = self.load_data(filename)
+            data, iterator = eafile.read_file(filename)
         except:
             print_exception()
             return
@@ -2070,11 +2065,11 @@ class easy_or(cmd.Cmd, Import, object):
         return _complete_path(line)
 
 
-    def do_append_table(self, line, name=None, chunksize=None):
+    def do_append_table(self, line, name=None, chunksize=None, memsize=None):
         """
         DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
 
-        Usage: append_table <filename> [--tablename NAME] [--chunksize CHUNK]
+        Usage: append_table <filename> [--tablename NAME] [--chunksize CHUNK] [--memsize MEMCHUNK]
         Ex: example.csv has the following content
              RA,DEC,MAG
              1.23,0.13,23
@@ -2087,7 +2082,9 @@ class easy_or(cmd.Cmd, Import, object):
     
               --tablename NAME            given name for the table, default is taken from filename
               --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
-                                        that do not fit in memory
+                                         that do not fit in memory
+              --memsize MEMCHUNK         The size in Mb to be read in chunks. If both specified, the lower
+                                        number of rows is selected (the lower memory limitations)
 
         Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
         as data (using ',' or space)
@@ -2100,6 +2097,8 @@ class easy_or(cmd.Cmd, Import, object):
         append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default=None)
         append_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
                                                        'issues', action='store', default=None, type=int)
+        append_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ', action='store',
+                                   type=int, default=None)
         append_parser.add_argument('-h', '--help', help='print help', action='store_true')
         try:
             append_args = append_parser.parse_args(line.split())
@@ -2109,11 +2108,21 @@ class easy_or(cmd.Cmd, Import, object):
         if append_args.help:
             self.do_help('append_table')
             return
-        filename = self.get_filename(append_args.filename)
+        filename = eafile.get_filename(append_args.filename)
         table = append_args.tablename
         chunk = append_args.chunksize
+        memchunk = append_args.memsize
         if chunksize is not None:
             chunk = chunksize
+        if memsize is not None:
+            memchunk = memsize
+        if memchunk is not None:
+            memchunk_rows = eafile.get_chunksize(filename, memory=memchunk)
+            if chunk is not None:
+                chunk = min(chunk, memchunk_rows)
+            else:
+                chunk = memchunk_rows
+
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -2134,7 +2143,7 @@ class easy_or(cmd.Cmd, Import, object):
                   '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
-            data, iterator = self.load_data(filename)
+            data, iterator = eafile.read_file(filename)
         except:
             print_exception()
             return
@@ -2508,7 +2517,7 @@ class connect(easy_or):
         """
         self.do_myquota('')
 
-    def load_table(self, table_file, name=None, chunksize=None):
+    def load_table(self, table_file, name=None, chunksize=None, memsize=None):
         """
         Loads and create a table in the DB. If name is not passed, is taken from
         the filename. Formats supported are 'fits', 'csv' and 'tab' files
@@ -2518,6 +2527,7 @@ class connect(easy_or):
         table_file : Filename to be uploaded as table (.csv, .fits, .tab)
         name       : Name of the table to be created
         chunksize  : Number of rows to upload at a time to avoid memory issues
+        memsize    : Size of chunk to be read. In Mb. If both specified, the lower number of rows is selected
 
         Returns:
         --------
@@ -2525,14 +2535,14 @@ class connect(easy_or):
 
         """
         try:
-            self.do_load_table(table_file, name=name, chunksize=chunksize)
+            self.do_load_table(table_file, name=name, chunksize=chunksize, memsize=memsize)
             return True
         except:
             # exception
             return False
             
 
-    def append_table(self, table_file, name=None, chunksize=None):
+    def append_table(self, table_file, name=None, chunksize=None, memsize=None):
         """
         Appends data to a table in the DB. If name is not passed, is taken from
         the filename. Formats supported are 'fits', 'csv' and 'tab' files
@@ -2542,13 +2552,14 @@ class connect(easy_or):
         table_file : Filename to be uploaded as table (.csv, .fits, .tab)
         name       : Name of the table to be created
         chunksize  : Number of rows to upload at a time to avoid memory issues
+        memsize    : Size of chunk to be read. In Mb. If both specified, the lower number of rows is selected
 
         Returns:
         --------
         True if success otherwise False
         """
         try:
-            self.do_append_table(table_file, name=name, chunksize=chunksize)
+            self.do_append_table(table_file, name=name, chunksize=chunksize, memsize=memsize)
             return True
         except:
             return False
@@ -2664,7 +2675,10 @@ if __name__ == '__main__':
                         or --append_table")
     parser.add_argument("--chunksize", dest='chunksize', type=int, default = None,
                         help="Number of rows to be inserted at a time. Useful for large files \
-                                        that do not fit in memory. Use with --load_table")
+                                        that do not fit in memory. Use with --load_table or --append_table")
+    parser.add_argument("--memsize", dest='memsize', type=int, default = None,
+                        help=" Size of chunk to be read at a time in Mb. Use with --load_table or "
+                             "--append_table")
     parser.add_argument("-s", "--db",dest='db', #choices=[...]?
                         help="Override database name [dessci,desoper,destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
@@ -2785,6 +2799,8 @@ if __name__ == '__main__':
             linein += ' --tablename ' + args.tablename
         if args.chunksize is not None:
             linein += ' --chunksize ' + str(args.chunksize)
+        if args.memsize is not None:
+            linein += ' --memsize ' + str(args.memsize)
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.appendtable is not None:
@@ -2795,6 +2811,8 @@ if __name__ == '__main__':
             linein += ' --tablename ' + args.tablename
         if args.chunksize is not None:
             linein += ' --chunksize ' + str(args.chunksize)
+        if args.memsize is not None:
+            linein += ' --memsize ' + str(args.memsize)
         cmdinterp.onecmd(linein)
         os._exit(0)
     else:
