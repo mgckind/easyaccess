@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 import easyaccess as ea
 import numpy as np
@@ -24,12 +25,14 @@ class TestInterpreter(unittest.TestCase):
     nrows = 10000
     prefetch = 4000
     chunk = 1000
+    memsize = 1
     sqlfile = 'temp.sql'
     csvfile = 'temp.csv'
     fitsfile = 'temp.fits'
     h5file = 'temp.h5'
 
     def test_describe(self):
+        print('\n*** test_describe ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         self.assertEqual( len(df), self.nrows)
@@ -45,6 +48,7 @@ class TestInterpreter(unittest.TestCase):
     
 
     def test_add_comment(self):
+        print('\n*** test_add_comment ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         self.assertEqual( len(df), self.nrows)
@@ -62,6 +66,7 @@ class TestInterpreter(unittest.TestCase):
         os.remove(self.csvfile)
 
     def test_select(self):
+        print('\n*** test_select ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         self.assertEqual( len(df), self.nrows)
@@ -75,6 +80,7 @@ class TestInterpreter(unittest.TestCase):
         os.remove(self.csvfile)
         
     def test_select_csv(self):
+        print('\n*** test_select_csv ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         self.assertEqual( len(df), self.nrows)
@@ -90,6 +96,7 @@ class TestInterpreter(unittest.TestCase):
 
 
     def test_select_fits(self):
+        print('\n*** test_select_fits ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         self.assertEqual( len(df), self.nrows)
@@ -105,6 +112,7 @@ class TestInterpreter(unittest.TestCase):
         self.con.drop_table(self.tablename)
     
     def test_select_hdf5(self):
+        print('\n*** test_select_hdf5 ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         self.assertEqual( len(df), self.nrows)
@@ -120,6 +128,7 @@ class TestInterpreter(unittest.TestCase):
         self.con.drop_table(self.tablename)
 
     def test_select_by_chunks(self):
+        print('\n*** test_select_by_chunks ***\n')
         global load_bar
         load_bar = False
         data = create_test_data()
@@ -150,7 +159,8 @@ class TestInterpreter(unittest.TestCase):
         if os.path.exists(self.csvfile): os.remove(self.csvfile)
 
 
-    def test_load_table_csv(self):
+    def test_load_append_table_csv(self):
+        print('\n*** test_load_append_table_csv ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         self.assertEqual( len(df), self.nrows)
@@ -173,7 +183,16 @@ class TestInterpreter(unittest.TestCase):
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows*2)
         self.con.drop_table(os.path.splitext(self.csvfile)[0].upper())
-        
+        os.remove(self.csvfile)
+
+
+    def test_load_append_table_name_csv(self):
+        print('\n*** test_load_append_table_name_csv ***\n')
+        data = create_test_data()
+        df = pd.DataFrame(data)
+        self.assertEqual( len(df), self.nrows)
+        df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',')
+        self.assertTrue(os.path.exists(self.csvfile))
         # name from tablename
         self.con.drop_table(self.tablename)
         command = "load_table %s --tablename %s" % (self.csvfile, self.tablename)
@@ -189,6 +208,17 @@ class TestInterpreter(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows*2)
+        self.con.drop_table(self.tablename)
+        os.remove(self.csvfile)
+
+
+    def test_load_append_table_chunk_csv(self):
+        print('\n*** test_load_append_table_chunk_csv ***\n')
+        data = create_test_data()
+        df = pd.DataFrame(data)
+        self.assertEqual( len(df), self.nrows)
+        df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',')
+        self.assertTrue(os.path.exists(self.csvfile))
         # chunksize
         self.con.drop_table(self.tablename)
         command = "load_table %s --tablename %s --chunksize %s" % (self.csvfile, self.tablename, self.chunk)
@@ -204,11 +234,65 @@ class TestInterpreter(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows*2)
+
+    def test_load_append_table_memory_csv(self):
+        print('\n*** test_load_append_table_memory_csv ***\n')
+        data = create_test_data()
+        df = pd.DataFrame(data)
+        self.assertEqual( len(df), self.nrows)
+        df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',')
+        for i in range(9):
+            df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',',mode='a',header=False)
+        self.assertTrue(os.path.exists(self.csvfile))
+        # memsize
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s --memsize %s" % (self.csvfile, self.tablename, self.memsize)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*10)
+        # appending
+        command = "append_table %s --tablename %s --memsize %s" % (self.csvfile, self.tablename, self.memsize)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*20)
+        ## end
         os.remove(self.csvfile)
         self.con.drop_table(self.tablename)
 
+    def test_load_append_table_memory_chunk_csv(self):
+        print('\n*** test_load_append_table_memory_chunk_csv ***\n')
+        data = create_test_data()
+        df = pd.DataFrame(data)
+        self.assertEqual( len(df), self.nrows)
+        df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',')
+        for i in range(9):
+            df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',',mode='a',header=False)
+        self.assertTrue(os.path.exists(self.csvfile))
+        # memsize
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s --memsize %s --chunksize %s" % (self.csvfile, self.tablename, self.memsize, self.chunk*10)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*10)
+        # appending
+        command = "append_table %s --tablename %s --memsize %s --chunksize %s" % (self.csvfile, self.tablename, self.memsize, self.chunk*200)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*20)
+        ## end
+        os.remove(self.csvfile)
+        self.con.drop_table(self.tablename)
 
-    def test_load_table_fits(self):
+    def test_load_append_table_fits(self):
+        print('\n*** test_load_append_table_fits ***\n')
         data = create_test_data()
         fitsio.write(self.fitsfile, data, clobber=True)
         self.assertTrue(os.path.exists(self.fitsfile))
@@ -229,7 +313,13 @@ class TestInterpreter(unittest.TestCase):
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows*2)
         self.con.drop_table(os.path.splitext(self.fitsfile)[0].upper())
-        
+        os.remove(self.fitsfile)
+
+    def test_load_append_table_name_fits(self):
+        print('\n*** test_load_append_table_name_fits ***\n')
+        data = create_test_data()
+        fitsio.write(self.fitsfile, data, clobber=True)
+        self.assertTrue(os.path.exists(self.fitsfile))
         # name from tablename
         self.con.drop_table(self.tablename)
         command = "load_table %s --tablename %s" % (self.fitsfile, self.tablename)
@@ -245,6 +335,14 @@ class TestInterpreter(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows*2)
+        os.remove(self.fitsfile)
+        self.con.drop_table(self.tablename)
+
+    def test_load_append_table_chunk_fits(self):
+        print('\n*** test_load_append_table_chunk_fits ***\n')
+        data = create_test_data()
+        fitsio.write(self.fitsfile, data, clobber=True)
+        self.assertTrue(os.path.exists(self.fitsfile))
         # chunksize
         self.con.drop_table(self.tablename)
         command = "load_table %s --tablename %s --chunksize %s" % (self.fitsfile, self.tablename, self.chunk)
@@ -263,7 +361,60 @@ class TestInterpreter(unittest.TestCase):
         os.remove(self.fitsfile)
         self.con.drop_table(self.tablename)
 
+    def test_load_append_table_memory_fits(self):
+        print('\n*** test_load_append_table_memory_fits ***\n')
+        data = create_test_data()
+        for i in range(4):
+            data = np.concatenate((data,data))
+        fitsio.write(self.fitsfile, data, clobber=True)
+        self.assertTrue(os.path.exists(self.fitsfile))
+        # memsize
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s --memsize %s" % (self.fitsfile, self.tablename, self.memsize)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*16)
+        # appending
+        command = "append_table %s --tablename %s --memsize %s" % (self.fitsfile, self.tablename, self.memsize)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*2*16)
+        ## end
+        os.remove(self.fitsfile)
+        self.con.drop_table(self.tablename)
+
+    def test_load_append_table_memory_chunk_fits(self):
+        print('\n*** test_load_append_table_memory_chunk_fits ***\n')
+        data = create_test_data()
+        for i in range(4):
+            data = np.concatenate((data,data))
+        fitsio.write(self.fitsfile, data, clobber=True)
+        self.assertTrue(os.path.exists(self.fitsfile))
+        # memsize
+        self.con.drop_table(self.tablename)
+        command = "load_table %s --tablename %s --memsize %s --chunksize %s" % (self.fitsfile, self.tablename, self.memsize, self.chunk*10)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*16)
+        # appending
+        command = "append_table %s --tablename %s --memsize %s --chunksize %s" % (self.fitsfile, self.tablename, self.memsize, self.chunk*200)
+        self.con.onecmd(command)
+        cursor = self.con2.cursor()
+        temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
+        fetch = temp.fetchall()
+        self.assertEqual(len(fetch), self.nrows*2*16)
+        ## end
+        os.remove(self.fitsfile)
+        self.con.drop_table(self.tablename)
+
     def test_loadsql(self):
+        print('\n*** test_loadsql ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         df.to_csv(self.csvfile,index=False, float_format='%.8f', sep=',')
@@ -290,6 +441,7 @@ class TestInterpreter(unittest.TestCase):
 
 
     def test_inline(self):
+        print('\n*** test_inline ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
         df.to_csv(self.csvfile,index=False, float_format='%.8f', sep=',')
