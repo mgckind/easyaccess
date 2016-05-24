@@ -1,5 +1,14 @@
 # Changes
 
+
+## v1.3.1
+#### 2016-MAY-24
+- Adds optional purge to drop_table (see PR #74)
+- Fix a bug setting prefetch parameters using config set #76
+- Improve import functionality for inline queries (see PR #78)
+- Add option to upload files in chunk of memory (in addition to the chunk by rows), using --memsize option.
+  This calculates an approximate number of rows to upload on each trip, avoiding memory issues. (see PR #79)
+
 ## v1.3.0
 #### 2016-MAY-09
 - Fixes a bug with python2/3 compatibility (see Pull-request #36)
