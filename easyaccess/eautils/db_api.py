@@ -72,13 +72,25 @@ class Job(object):
     def status(self):
         req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
         temp = requests.get(req)
+        self.req_status = temp.json()['status']
+        self.message = temp.json()['message']
         if temp.json()['status'] == 'ok':
             self._status = temp.json()['job_status']
+            if temp.json()['job_status'] == 'SUCCESS':
+                self.links = temp.json()['links']
         else:
             self._status = 'Error'
         return self._status
 
     def __del__(self):
+        req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
+        temp = requests.delete(req)
+        if temp.json()['status'] == 'ok':
+            print('Job %s was deleted from the DB' % self._jobid)
+        else:
+            print(temp.text)
+
+    def __delete__(self):
         req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
         temp = requests.delete(req)
         if temp.json()['status'] == 'ok':
@@ -237,24 +249,20 @@ class DesCoaddCuts(object):
         if self.verbose:
             print(self.submit.json()['message'])
         if self.submit.json()['status'] == 'ok':
-            self.jobid = self.submit.json()['job']
+            self.job = Job(self.submit.json()['job'], self.user, self.token, self.root_url)  
         elif self.submit.json()['status'] == 'error':
-            self.jobid = None
+            self.job = None
             if not self.verbose:
                 print(self.submit.json()['message'])
         else:
             assert False, self.submit.text
         if wait:
             t_init = time.time()
-            if self.submit.json()['status'] == 'ok':
-                req = self.root_url+'/api/jobs/?token={}&jobid={}'.format(self.token, self.jobid)
+            if self.job is not None:
                 for _ in range(1000):
-                    self.job = requests.get(req)
-                    if self.job.json()['job_status'] == 'SUCCESS':
+                    if self.job.status == 'SUCCESS':
                         requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
-                        self._status = self.job.json()['status']
-                        if self.verbose:
-                            print(self.job.json()['message'])
+                        self._status = self.job.req_status
                         break
                     if time.time() - t_init > timeout:
                         break
@@ -264,16 +272,15 @@ class DesCoaddCuts(object):
     @property
     def status(self):
         """Return the status of the submited job (if any)."""
-        if self.jobid is None:
+        if self.job is None:
             return 'No jobs has been submitted'
         else:
-            req = self.root_url+'/api/jobs/?token={}&jobid={}'.format(self.token, self.jobid)
-            self.job = requests.get(req)
             try:
-                self._status = self.job.json()['status']
-                if self._status == 'ok':
+                status = self.job.status
+                if status == 'SUCCESS':
+                    self._status = 'ok'
                     requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
-                return self.job.json()['message']
+                return status
             except:
                 self._status = 'Error!'
                 return self.job.text
@@ -281,7 +288,7 @@ class DesCoaddCuts(object):
     def get_files(self, folder=None, print_only=False, force=True):
         """Copy all files generated to local folder."""
         if self._status == 'ok':
-            self.links = self.job.json()['links']
+            self.links = self.job.links
             if folder is not None:
                 if not os.path.exists(folder):
                     os.mkdir(folder)
