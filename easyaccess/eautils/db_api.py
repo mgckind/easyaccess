@@ -58,6 +58,96 @@ class Token(object):
         return self._active
 
 
+class Job(object):
+    def __init__(self,jobid, user, token, url):
+        self._jobid = jobid
+        self._user = user
+        self._token = token
+        self._url = url
+    def __repr__(self):
+        return 'Job(jobid=%s, user=%s, token=%s, url=%s)' % (self._jobid, self._user, self._token, self._url)
+    def __str__(self):
+        return self._jobid
+    @property
+    def status(self):
+        req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
+        temp = requests.get(req)
+        if temp.json()['status'] == 'ok':
+            self._status = temp.json()['job_status']
+        else:
+            self._status = 'Error'
+        return self._status
+
+    def __del__(self):
+        req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
+        temp = requests.delete(req)
+        if temp.json()['status'] == 'ok':
+            print('Job %s was deleted from the DB' % self._jobid)
+        else:
+            print(temp.text)
+
+        
+
+
+
+class MyJobs(object):
+    
+    def __init__(self, user=None, token=None, root_url=None, db='desoper', verbose=False):
+        passwd = None
+        self.desconf = config_mod.get_desconfig(DESFILE, db)
+        self._db = db
+        self.verbose = verbose
+        self.jobid = None
+        self.token = None
+        self.submit = None
+        self._status = None
+        self.job = None
+        self.links = None
+        self.files = []
+        if user is not None:
+            if self.verbose:
+                print('Bypassing .desservices file with user : %s' % user)
+            if passwd is None:
+                passwd = getpass.getpass(prompt='Enter password : ')
+            self.desconf.set('db-' + self._db, 'user', user)
+            self.desconf.set('db-' + self._db, 'passwd', passwd)
+        self.user = self.desconf.get('db-' + self._db, 'user')
+        self._passwd = self.desconf.get('db-' + self._db, 'passwd')
+        self.root_url = root_url.strip('/')
+        self.get_token()
+        temp = requests.get(self.root_url+'/api/jobs/?token=%s&list_jobs' % self.token)
+        self._jobs = [Job(j, self.user, self.token, self.root_url) for j in temp.json()['list_jobs']]
+
+
+    def get_token(self):
+        """Generate a new token using user and password in the API."""
+        ext = '/api/token/'
+        req = self.root_url+ext
+        res = requests.post(req, data={'username': self.user, 'password' : self._passwd})
+        status = res.json()['status']
+        if status == 'ok':
+            self.token = Token(res.json()['token'], self.root_url)
+        else:
+            self.token = None
+
+
+    def __len__(self):
+        return len(self._jobs)
+
+    def __repr__(self):
+        return 'My Jobs (%d in total)' % len(self._jobs)
+
+    def __getitem__(self,index):
+        return self._jobs[index]
+
+    def __delitem__(self,index):
+        del self._jobs[index]
+        return
+
+    @property
+    def list(self):
+        return self._jobs
+
 class DesCoaddCuts(object):
     """
     This Class handles the object for the cutouts
@@ -92,13 +182,13 @@ class DesCoaddCuts(object):
             self.desconf.set('db-' + self._db, 'passwd', passwd)
         self.user = self.desconf.get('db-' + self._db, 'user')
         self._passwd = self.desconf.get('db-' + self._db, 'passwd')
-        self.root_url = root_url
+        self.root_url = root_url.strip('/')
 
     def get_token(self):
         """Generate a new token using user and password in the API."""
-        ext = '/api/token/?username={0}&password={1}'.format(self.user, self._passwd)
+        ext = '/api/token/'
         req = self.root_url+ext
-        res = requests.get(req)
+        res = requests.post(req, data={'username': self.user, 'password' : self._passwd})
         status = res.json()['status']
         if status == 'ok':
             self.token = Token(res.json()['token'], self.root_url)
@@ -108,20 +198,41 @@ class DesCoaddCuts(object):
             print(res.json()['message'])
             return self.token.value
 
-    def make_cuts(self, ra, dec, xsize=None, ysize=None, email=None, wait=False, timeout=3600):
+    def make_cuts(self, ra=None, dec=None, csvfile = None, xsize=None, ysize=None, email=None, list_only=False, wait=False, timeout=3600):
         """
         Submit a job to generate the cuts on the server side, if wait keyword id
         True the functions waits until the job is completed
         """
-        assert len(ra) == len(dec), 'ra and dec must have same dimension'
-        req = self.root_url+'/api/?token={}&ra={}&dec={}'.format(self.token, ra, dec)
+        req = self.root_url+'/api/jobs/'
+        self.body = { 'token': self.token.value, 'list_only': 'false', 'job_type':'coadd' }
+        if ra is not None:
+            try:
+                self.body['ra'] = str(list(ra))
+                self.body['dec'] = str(list(dec))
+            except:
+                self.body['ra'] = str(ra)
+                self.body['dec'] = str(dec)
         if xsize is not None:
-            req += '&xsize={}'.format(xsize)
+            try:
+                self.body['xsize'] = str(list(xsize))
+            except:
+                self.body['xsize'] = str(xsize)
         if ysize is not None:
-            req += '&ysize={}'.format(ysize)
+            try:
+                self.body['ysize'] = str(list(ysize))
+            except:
+                self.body['ysize'] = str(ysize)
         if email is not None:
-            req += '&email={}'.format(email)
-        self.submit = requests.get(req)
+            self.body['email'] = email
+        if list_only:
+            self.body['list_only'] = 'true'
+        if csvfile is not None:
+            self.body['ra'] = '0,0'
+            self.body['dec'] = '0,0'
+            self.body_files = {'csvfile': open(csvfile,'rb')}
+            self.submit = requests.post(req, data=self.body, files=self.body_files)
+        else:
+            self.submit = requests.post(req, data=self.body)
         self._status = 'Submitted'
         if self.verbose:
             print(self.submit.json()['message'])
@@ -139,7 +250,8 @@ class DesCoaddCuts(object):
                 req = self.root_url+'/api/jobs/?token={}&jobid={}'.format(self.token, self.jobid)
                 for _ in range(1000):
                     self.job = requests.get(req)
-                    if self.job.json()['status'] == 'ok':
+                    if self.job.json()['job_status'] == 'SUCCESS':
+                        requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
                         self._status = self.job.json()['status']
                         if self.verbose:
                             print(self.job.json()['message'])
@@ -159,6 +271,8 @@ class DesCoaddCuts(object):
             self.job = requests.get(req)
             try:
                 self._status = self.job.json()['status']
+                if self._status == 'ok':
+                    requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
                 return self.job.json()['message']
             except:
                 self._status = 'Error!'
