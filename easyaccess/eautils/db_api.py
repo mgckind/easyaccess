@@ -123,8 +123,10 @@ class MyJobs(object):
         self._passwd = self.desconf.get('db-' + self._db, 'passwd')
         self.root_url = root_url.strip('/')
         self.get_token()
-        self.jobs_info = requests.get(self.root_url+'/api/jobs/?token=%s&list_jobs' % self.token)
-        self._jobs = [Job(j, self.user, self.token, self.root_url) for j in self.jobs_info.json()['list_jobs']]
+        self.jobs_info = requests.get(self.root_url+'/api/jobs/?token=%s&list_jobs' % self.token).json()
+        self._jobs = [Job(j, self.user, self.token, self.root_url) for j in self.jobs_info['list_jobs']]
+        self.creation_times=self.jobs_info['creation_time']
+        self.job_types=self.jobs_info['job_type']
 
 
     def get_token(self):
