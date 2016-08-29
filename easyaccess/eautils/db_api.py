@@ -82,21 +82,17 @@ class Job(object):
             self._status = 'Error'
         return self._status
 
-    def __del__(self):
-        req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
-        temp = requests.delete(req)
-        if temp.json()['status'] == 'ok':
-            print('Job %s was deleted from the DB' % self._jobid)
-        else:
-            print(temp.text)
-
     def __delete__(self):
         req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
         temp = requests.delete(req)
         if temp.json()['status'] == 'ok':
             print('Job %s was deleted from the DB' % self._jobid)
+            print('mm')
         else:
             print(temp.text)
+
+    def delete(self):
+        return self.__delete__()
 
         
 
@@ -127,8 +123,8 @@ class MyJobs(object):
         self._passwd = self.desconf.get('db-' + self._db, 'passwd')
         self.root_url = root_url.strip('/')
         self.get_token()
-        temp = requests.get(self.root_url+'/api/jobs/?token=%s&list_jobs' % self.token)
-        self._jobs = [Job(j, self.user, self.token, self.root_url) for j in temp.json()['list_jobs']]
+        self.jobs_info = requests.get(self.root_url+'/api/jobs/?token=%s&list_jobs' % self.token)
+        self._jobs = [Job(j, self.user, self.token, self.root_url) for j in self.jobs_info.json()['list_jobs']]
 
 
     def get_token(self):
@@ -259,13 +255,14 @@ class DesCoaddCuts(object):
         if wait:
             t_init = time.time()
             if self.job is not None:
-                for _ in range(1000):
+                for _ in range(100000):
                     if self.job.status == 'SUCCESS':
                         requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
                         self._status = self.job.req_status
                         break
                     if time.time() - t_init > timeout:
                         break
+                    time.sleep(0.5)
                 if self._status != 'ok':
                     print('Job is taking longer than expected, will continue running but check status later')
 
