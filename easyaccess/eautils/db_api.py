@@ -87,7 +87,6 @@ class Job(object):
         temp = requests.delete(req)
         if temp.json()['status'] == 'ok':
             print('Job %s was deleted from the DB' % self._jobid)
-            print('mm')
         else:
             print(temp.text)
 
