@@ -286,6 +286,7 @@ class DesCoaddCuts(object):
     def get_files(self, folder=None, print_only=False, force=True):
         """Copy all files generated to local folder."""
         if self._status == 'ok':
+            self.files = []
             self.links = self.job.links
             if folder is not None:
                 if not os.path.exists(folder):
