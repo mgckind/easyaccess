@@ -122,7 +122,7 @@ def write_config(configfile, config_ob):
         return False
 
 
-def get_desconfig(desfile, db):
+def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     """
     Loads des config file or create one if not
 
@@ -136,9 +136,9 @@ def get_desconfig(desfile, db):
     check = config.read(desfile)
     if check == []:
         configwrite = True
-        print('\nError in DES_SERVICES config file, creating a new one...')
-        print('File might not exists or is not configured')
-        print()
+        if verbose: print('\nError in DES_SERVICES config file, creating a new one...')
+        if verbose: print('File might not exists or is not configured correctly')
+        if verbose: print()
 
     databases = ['db-desoper', 'db-dessci', 'db-destest']  #most used ones anyways
 
@@ -148,30 +148,31 @@ def get_desconfig(desfile, db):
         if check_db in ('n', 'N', 'no', 'No', 'NO'): sys.exit(0)
 
     if not config.has_section(db):
-        print('\nAdding section %s to des_service file\n' % db)
+        if verbose: print('\nAdding section %s to des_service file\n' % db)
         configwrite = True
         kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
         dsn = cx_Oracle.makedsn(**kwargs)
         good = False
-        for i in range(3):
-            try:
-                user = input('Enter username : ')
-                pw1 = getpass.getpass(prompt='Enter password : ')
-                ctemp = cx_Oracle.connect(user, pw1, dsn=dsn)
-                good = True
-                break
-            except:
-                (type, value, traceback) = sys.exc_info()
-                print(value)
-                if value.message.code == 1017:
-                    pass
-                else:
-                    sys.exit(0)
-        if good:
-            ctemp.close()
-        else:
-            print('\n Check your credentials and/or database access\n')
-            sys.exit(0)
+        if user is None:
+            for i in range(3):
+                try:
+                    user = input('Enter username : ')
+                    pw1 = getpass.getpass(prompt='Enter password : ')
+                    ctemp = cx_Oracle.connect(user, pw1, dsn=dsn)
+                    good = True
+                    break
+                except:
+                    (type, value, traceback) = sys.exc_info()
+                    print(value)
+                    if value.message.code == 1017:
+                        pass
+                    else:
+                        sys.exit(0)
+            if good:
+                ctemp.close()
+            else:
+                if verbose: print('\n Check your credentials and/or database access\n')
+                sys.exit(0)
         config.add_section(db)
 
     if not config.has_option(db, 'user'): configwrite = True;config.set(db, 'user', user)
