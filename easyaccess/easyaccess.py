@@ -2777,6 +2777,8 @@ if __name__ == '__main__':
             os._exit(0)
         else:
             desconf = config_mod.get_desconfig(desfile, db, verbose=False, user=args.user, pw1=args.password)
+    else:
+        desconf = config_mod.get_desconfig(desfile, db)
 
     if args.command is not None:
         initial_message(args.quiet, clear=False)
