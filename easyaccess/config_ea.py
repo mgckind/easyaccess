@@ -131,6 +131,13 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     port_n = '1521'
 
     if not db[:3] == 'db-': db = 'db-' + db
+
+    if db == 'db-dessci':
+        db_alter = 'db-desoper'
+    elif db == 'db-desoper':
+        db_alter = 'db-dessci'
+    else:
+        db_alter = None
     config = configparser.ConfigParser()
     configwrite = False
     check = config.read(desfile)
