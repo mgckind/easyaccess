@@ -2769,7 +2769,6 @@ if __name__ == '__main__':
     else:
         db = conf.get('easyaccess', 'database')
 
-    desconf = config_mod.get_desconfig(desfile, db)
 
     if args.user is not None:
         print('Bypassing .desservices file with user : %s' % args.user)
@@ -2777,8 +2776,7 @@ if __name__ == '__main__':
             print('Must include password')
             os._exit(0)
         else:
-            desconf.set('db-' + db, 'user', args.user)
-            desconf.set('db-' + db, 'passwd', args.password)
+            desconf = config_mod.get_desconfig(desfile, db, verbose=False, user=args.user, pw1=args.password)
 
     if args.command is not None:
         initial_message(args.quiet, clear=False)
