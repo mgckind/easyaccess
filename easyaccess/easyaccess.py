@@ -1427,6 +1427,62 @@ class easy_or(cmd.Cmd, Import, object):
         """ % (self.user.upper())
         self.query_and_print(query, print_time=False, extra=lines, clear=True)
 
+    def do_change_db(self, line):
+        """
+        DB: Change to another database, namely dessci, desoper or destest
+
+         Usage: 
+            change_db DB     # Changes to DB, it does not refresh metadata, e.g.: change_db desoper
+
+        """
+        if line == '': return self.do_help('change_db')
+        line = " ".join(line.split())
+        key_db = line.split()[0]
+        if key_db in ('dessci', 'desoper', 'destest'):
+            if key_db == self.dbname:
+                print(colored("Already connected to : %s" % key_db, "green"))
+                return
+            self.dbname = key_db
+            # connect to db
+            try:
+                self.user = self.desconfig.get('db-' + self.dbname, 'user')
+                self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
+            except:
+                print(colored("DB {} does not exist in your desservices file".format(key_db), "red"))
+                return
+            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
+            self.dsn = cx_Oracle.makedsn(**kwargs)
+            if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
+            self.con.close()
+            connected = False
+            for tries in range(3):
+                try:
+                    self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
+                    if self.autocommit: self.con.autocommit = True
+                    connected = True
+                    break
+                except Exception as e:
+                    lasterr = str(e).strip()
+                    print(colored("Error when trying to connect to database: %s" % lasterr, "red"))
+                    print("\n   Retrying...\n")
+                    time.sleep(5)
+            if not connected:
+                print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
+                os._exit(0)
+            self.cur = self.con.cursor()
+            self.cur.arraysize = int(self.prefetch)
+            return
+        else:
+            print(colored("DB {} does not exist or you don't have access to it".format(key_db), "red"))
+            return
+
+    def complete_change_db(self, text, line, start_index, end_index):
+        options_db = ['desoper','dessci','destest']
+        if text:
+            return [option for option in options_db if option.startswith(text.lower())]
+        else:
+            return options_db
+
     def do_whoami(self, arg):
         """
         DB:Print information about the user's details.
