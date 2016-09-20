@@ -188,16 +188,17 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     if not config.has_option(db, 'server'): configwrite = True;config.set(db, 'server', server_n)
     if not config.has_option(db, 'port'): configwrite = True;config.set(db, 'port', port_n)
     
-    if not config.has_section(db_alter):
-        user = config.get(db, 'user')
-        pw1 = config.get(db, 'passwd')
-        db = db_alter
-        config.add_section(db)
-        if not config.has_option(db, 'user'): configwrite = True;config.set(db, 'user', user)
-        if not config.has_option(db, 'passwd'): configwrite = True;config.set(db, 'passwd', pw1)
-        if not config.has_option(db, 'name'): configwrite = True;config.set(db, 'name', db[3:])
-        if not config.has_option(db, 'server'): configwrite = True;config.set(db, 'server', server_n)
-        if not config.has_option(db, 'port'): configwrite = True;config.set(db, 'port', port_n)
+    if db_alter is not None:
+        if not config.has_section(db_alter):
+            user = config.get(db, 'user')
+            pw1 = config.get(db, 'passwd')
+            db = db_alter
+            config.add_section(db)
+            if not config.has_option(db, 'user'): configwrite = True;config.set(db, 'user', user)
+            if not config.has_option(db, 'passwd'): configwrite = True;config.set(db, 'passwd', pw1)
+            if not config.has_option(db, 'name'): configwrite = True;config.set(db, 'name', db[3:])
+            if not config.has_option(db, 'server'): configwrite = True;config.set(db, 'server', server_n)
+            if not config.has_option(db, 'port'): configwrite = True;config.set(db, 'port', port_n)
 
     check = True
     if configwrite == True:
