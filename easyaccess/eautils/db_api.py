@@ -285,6 +285,11 @@ class DesCoaddCuts(object):
 
     def get_files(self, folder=None, print_only=False, force=True):
         """Copy all files generated to local folder."""
+        if self.job.status == 'SUCCESS':
+            self._status = 'ok'
+        else:
+            print('Job is not completed yet or there was an error, check job status')
+            return
         if self._status == 'ok':
             self.files = []
             self.links = self.job.links
@@ -331,161 +336,75 @@ class DesCoaddCuts(object):
                 displayed += 1
 
 
-class DesSingleCuts(object):
-    """
-    This Class handles the object for the cutouts for Single Exposures
+class DesSingleCuts(DesCoaddCuts):
+    #def __init__(self):
+    #    super(DesSingleCuts, self).__init__()
 
-    Parameters:
-    -----------
-
-    user (optional)     : DB username
-    passwd (optional)   : DB password
-    root_url (optional) : The url for the cutouts API
-    db (optional)       : DB to be used (default: desoper)
-    verbose (optional)  : print extra information
-    """
-    def __init__(self, user=None, root_url=None, db='desoper', verbose=True):
-        passwd = None
-        self.desconf = config_mod.get_desconfig(DESFILE, db)
-        self._db = db
-        self.verbose = verbose
-        self.jobid = None
-        self.token = None
-        self.submit = None
-        self._status = None
-        self.job = None
-        self.links = None
-        self.files = []
-        if user is not None:
-            if self.verbose:
-                print('Bypassing .desservices file with user : %s' % user)
-            if passwd is None:
-                passwd = getpass.getpass(prompt='Enter password : ')
-            self.desconf.set('db-' + self._db, 'user', user)
-            self.desconf.set('db-' + self._db, 'passwd', passwd)
-        self.user = self.desconf.get('db-' + self._db, 'user')
-        self._passwd = self.desconf.get('db-' + self._db, 'passwd')
-        self.root_url = root_url
-
-    def get_token(self):
-        """Generate a new token using user and password in the API."""
-        ext = '/api/token/?username={0}&password={1}'.format(self.user, self._passwd)
-        req = self.root_url+ext
-        res = requests.get(req)
-        status = res.json()['status']
-        if status == 'ok':
-            self.token = Token(res.json()['token'], self.root_url)
-        else:
-            self.token = None
-        if self.verbose:
-            print(res.json()['message'])
-            return self.token.value
-
-    def make_cuts(self, ra, dec, xsize=None, ysize=None, email=None, bands=None, blacklist=False, wait=False, timeout=3600):
+    def make_cuts(self, ra=None, dec=None, csvfile = None, band=None, blacklist=True, xsize=None, ysize=None, email=None, list_only=False, wait=False, timeout=3600):
         """
         Submit a job to generate the cuts on the server side, if wait keyword id
         True the functions waits until the job is completed
         """
-        assert len(ra) == len(dec), 'ra and dec must have same dimension'
-        req = self.root_url+'/api/?token={}&ra={}&dec={}'.format(self.token, ra, dec)
+        req = self.root_url+'/api/jobs/'
+        self.body = { 'token': self.token.value, 'list_only': 'false', 'job_type':'single' }
+        if ra is not None:
+            try:
+                self.body['ra'] = str(list(ra))
+                self.body['dec'] = str(list(dec))
+            except:
+                self.body['ra'] = str(ra)
+                self.body['dec'] = str(dec)
         if xsize is not None:
-            req += '&xsize={}'.format(xsize)
+            try:
+                self.body['xsize'] = str(list(xsize))
+            except:
+                self.body['xsize'] = str(xsize)
         if ysize is not None:
-            req += '&ysize={}'.format(ysize)
-        if bands is not None:
-            req += '&bands={}'.format(bands)
+            try:
+                self.body['ysize'] = str(list(ysize))
+            except:
+                self.body['ysize'] = str(ysize)
         if email is not None:
-            req += '&email={}'.format(email)
-        self.submit = requests.get(req)
+            self.body['email'] = email
+        if list_only:
+            self.body['list_only'] = 'true'
+        if not blacklist:
+            self.body['no_blacklist'] = 'true'
+        if band is not None:
+            self.body['band'] = str(list(band))
+        if csvfile is not None:
+            self.body['ra'] = '0,0'
+            self.body['dec'] = '0,0'
+            self.body_files = {'csvfile': open(csvfile,'rb')}
+            self.submit = requests.post(req, data=self.body, files=self.body_files)
+        else:
+            self.submit = requests.post(req, data=self.body)
         self._status = 'Submitted'
         if self.verbose:
             print(self.submit.json()['message'])
         if self.submit.json()['status'] == 'ok':
-            self.jobid = self.submit.json()['job']
+            self.job = Job(self.submit.json()['job'], self.user, self.token, self.root_url)  
         elif self.submit.json()['status'] == 'error':
-            self.jobid = None
+            self.job = None
             if not self.verbose:
                 print(self.submit.json()['message'])
         else:
             assert False, self.submit.text
         if wait:
             t_init = time.time()
-            if self.submit.json()['status'] == 'ok':
-                req = self.root_url+'/api/jobs/?token={}&jobid={}'.format(self.token, self.jobid)
-                for _ in range(1000):
-                    self.job = requests.get(req)
-                    if self.job.json()['status'] == 'ok':
-                        self._status = self.job.json()['status']
-                        self.links = self.job.json()['links']
-                        if self.verbose:
-                            print(self.job.json()['message'])
+            if self.job is not None:
+                for _ in range(100000):
+                    if self.job.status == 'SUCCESS':
+                        requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
+                        self._status = self.job.req_status
                         break
                     if time.time() - t_init > timeout:
                         break
+                    time.sleep(0.5)
                 if self._status != 'ok':
                     print('Job is taking longer than expected, will continue running but check status later')
 
-    @property
-    def status(self):
-        """Return the status of the submited job (if any)."""
-        if self.jobid is None:
-            return 'No jobs has been submitted'
-        else:
-            req = self.root_url+'/api/jobs/?token={}&jobid={}'.format(self.token, self.jobid)
-            self.job = requests.get(req)
-            try:
-                self._status = self.job.json()['status']
-                return self.job.json()['message']
-            except:
-                self._status = 'Error!'
-                return self.job.text
 
-    def get_files(self, folder=None, print_only=False, force=True):
-        """Copy all files generated to local folder."""
-        if self._status == 'ok':
-            self.links = self.job.json()['links']
-            if folder is not None:
-                if not os.path.exists(folder):
-                    os.mkdir(folder)
-            else:
-                folder = ''
-            k = 0
-            for link in self.links:
-                link = link.replace('.edu','.edu:8000')
-                if link.endswith('png') or link.endswith('fits'):
-                    temp_file = os.path.join(folder, os.path.basename(link))
-                    self.files.append(temp_file)
-                    if print_only:
-                        print(temp_file)
-                    else:
-                        if not force:
-                            if os.path.exists(temp_file):
-                                continue
-                        req = requests.get(link, stream=True)
-                        if req.status_code == 200:
-                            with open(temp_file, 'wb') as temp_file:
-                                for chunk in req:
-                                    temp_file.write(chunk)
-                            k += 1
-            if self.verbose:
-                print('%d files copied to local server' % k)
-        else:
-            print('Something went wrong with the job')
-
-
-    def show_pngs(self, folder=None, limit=100):
-        """Display all pngs generated after copying files in local directory."""
-        from IPython.display import Image, display
-        if folder is None:
-            folder = ''
-        displayed = 0
-        for file_png in self.files:
-            if file_png.endswith('.png'):
-                if displayed == limit:
-                    break
-                temp_display = Image(filename=file_png)
-                display(temp_display)
-                displayed += 1
 
 class DesSingleExposure(object):
     """
@@ -522,7 +441,6 @@ class DesSingleExposure(object):
         SELECT
         file_archive_info.PATH || '/' || file_archive_info.FILENAME || file_archive_info.COMPRESSION as path,
         image.PFW_ATTEMPT_ID,
-        ops_proctag.UNITNAME,
         image.BAND,
         image.CCDNUM,
         image.NITE,
