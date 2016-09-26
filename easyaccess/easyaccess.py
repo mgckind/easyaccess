@@ -434,40 +434,13 @@ class easy_or(cmd.Cmd, Import, object):
         self.metadata = False
         cmd.Cmd.preloop(self)  # # sets up command completion
         if self.refresh:
-            tcache = threading.Timer(120, self.con.cancel)
-            tcache.start()
             try:
-                if not self.quiet: print('Loading metadata into cache...')
-
-                create_metadata = False
-                check = 'select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
-                self.cur.execute(check)
-                if self.cur.fetchall()[0][0] == 0:
-                    create_metadata = True
-                else:
-                    query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
-                        self.user.upper())
-                    qt = self.cur.execute(query_time)
-                    last = qt.fetchall()
-                    now = datetime.datetime.now()
-                    diff = abs(now - last[0][0]).seconds / (3600.)
-                    if diff >= 24: create_metadata = True
-                if create_metadata:
-                    query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-                    self.cur.execute(query_2)
-
-                self.cache_table_names = self.get_tables_names()
-                self.cache_usernames = self.get_userlist()
-                self.cache_column_names = self.get_columnlist()
-                self.metadata = True
-                tcache.cancel()
-
+                self.do_refresh_metadata('')
+                print()
             except:
                 print(colored(
                     "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
                     "red"))
-                tcache.cancel()
-
 
         # history
         ht = open(history_file, 'r')
@@ -929,6 +902,18 @@ class easy_or(cmd.Cmd, Import, object):
         table_list = tnames.values.flatten().tolist()
         return table_list
 
+    def get_tables_names2(self):
+
+        if self.dbname in ('dessci', 'desoper'):
+            query = """
+            select table_name from CACHE_TABLES  
+            union select table_name from user_tables
+            """
+        temp = self.cur.execute(query)
+        tnames = pd.DataFrame(temp.fetchall())
+        table_list = tnames.values.flatten().tolist()
+        return table_list
+
     def get_tables_names_user(self, user):
         if user == "": return self.do_help('tables_names_user')
         user = user.replace(";", "")
@@ -984,6 +969,13 @@ class easy_or(cmd.Cmd, Import, object):
 
     def get_columnlist(self):
         query = """SELECT distinct column_name from fgottenmetadata  order by column_name"""
+        temp = self.cur.execute(query)
+        cnames = pd.DataFrame(temp.fetchall())
+        col_list = cnames.values.flatten().tolist()
+        return col_list
+    
+    def get_columnlist2(self):
+        query = """SELECT column_name from CACHE_COLUMNS"""
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
@@ -1413,6 +1405,26 @@ class easy_or(cmd.Cmd, Import, object):
             self.cache_column_names = self.get_columnlist()
         except:
             if verb: print(colored("There was an error when refreshing the cache", "red"))
+
+
+    def do_refresh_metadata(self, arg):
+        """
+        DB:Refreshes meta data cache for auto-completion of table
+        names and column names .
+        """
+        verb = True
+        try:
+            if verb: print('Loading metadata into cache...')
+            self.cache_table_names = self.get_tables_names2()
+            self.cache_usernames = self.get_userlist()
+            self.cache_column_names = self.get_columnlist2()
+        except:
+            if verb: print(colored("There was an error when refreshing the metadata", "red"))
+        try:
+            self.cur.execute('create table FGOTTENMETADATA (ID int)')
+        except:
+            pass
+
 
 
     def do_show_db(self, arg):
