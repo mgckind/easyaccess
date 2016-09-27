@@ -906,7 +906,7 @@ class easy_or(cmd.Cmd, Import, object):
 
         if self.dbname in ('dessci', 'desoper'):
             query = """
-            select table_name from CACHE_TABLES  
+            select table_name from MCARRAS2.CACHE_TABLES  
             union select table_name from user_tables
             """
         temp = self.cur.execute(query)
@@ -975,7 +975,7 @@ class easy_or(cmd.Cmd, Import, object):
         return col_list
     
     def get_columnlist2(self):
-        query = """SELECT column_name from CACHE_COLUMNS"""
+        query = """SELECT column_name from MCARRAS2.CACHE_COLUMNS"""
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
@@ -2845,6 +2845,8 @@ if __name__ == '__main__':
             os._exit(0)
         else:
             desconf = config_mod.get_desconfig(desfile, db, verbose=False, user=args.user, pw1=args.password)
+            desconf.set('db-' + db, 'user', args.user)
+            desconf.set('db-' + db, 'passwd', args.password)
     else:
         desconf = config_mod.get_desconfig(desfile, db)
 
