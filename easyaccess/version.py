@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 #    versions.sort()
 #    return versions[-1]
 
-version_tag = (1, 3, 2, 'dev-ac5c35b')
+version_tag = (1, 3, 2, 'dev-0a28d4b')
 __version__ = '.'.join(map(str, version_tag[:3]))
 
 if len(version_tag) > 3:
