@@ -904,7 +904,7 @@ class easy_or(cmd.Cmd, Import, object):
 
     def get_tables_names(self):
 
-        if self.dbname in ('dessci', 'desoper'):
+        if self.dbname in ('dessci', 'desoper', 'destest'):
             query = """
             select table_name from DES_ADMIN.CACHE_TABLES  
             union select table_name from user_tables
