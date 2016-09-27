@@ -435,7 +435,7 @@ class easy_or(cmd.Cmd, Import, object):
         cmd.Cmd.preloop(self)  # # sets up command completion
         if self.refresh:
             try:
-                self.do_refresh_metadata('')
+                self.do_refresh_metadata_cache('')
                 print()
             except:
                 print(colored(
@@ -885,7 +885,7 @@ class easy_or(cmd.Cmd, Import, object):
         data = self.cur.fetchall()
         return data
 
-    def get_tables_names(self):
+    def get_tables_names_old(self):
 
         if self.dbname in ('dessci', 'desoper'):
             query = """
@@ -902,7 +902,7 @@ class easy_or(cmd.Cmd, Import, object):
         table_list = tnames.values.flatten().tolist()
         return table_list
 
-    def get_tables_names2(self):
+    def get_tables_names(self):
 
         if self.dbname in ('dessci', 'desoper'):
             query = """
@@ -967,14 +967,14 @@ class easy_or(cmd.Cmd, Import, object):
         else:
             return options_colnames
 
-    def get_columnlist(self):
+    def get_columnlist_old(self):
         query = """SELECT distinct column_name from fgottenmetadata  order by column_name"""
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
         return col_list
     
-    def get_columnlist2(self):
+    def get_columnlist(self):
         query = """SELECT column_name from MCARRAS2.CACHE_COLUMNS"""
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
@@ -1362,62 +1362,18 @@ class easy_or(cmd.Cmd, Import, object):
                 print(sys.exc_info())
 
 
+
     def do_refresh_metadata_cache(self, arg):
         """
         DB:Refreshes meta data cache for auto-completion of table
         names and column names .
         """
-
-        # Meta data access: With the two linked databases, accessing the
-        # "truth" via fgetmetadata has become very slow.
-        # what it returns is a function of each users's permissions, and their
-        # "mydb". so yet another level of caching is needed. Ta loads a table
-        # called fgottenmetadata in the user's mydb. It refreshes on command
-        # or on timeout (checked at startup).
-
-        # get last update
         verb = True
-        if arg == 'quiet': verb = False
-        query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
-            self.user.upper())
         try:
-            qt = self.cur.execute(query_time)
-            last = qt.fetchall()
-            now = datetime.datetime.now()
-            diff = abs(now - last[0][0]).seconds / (3600.)
-            if verb: print('Updated %.2f hours ago' % diff)
-        except:
-            pass
-        try:
-            query = "DROP TABLE FGOTTENMETADATA"
-            self.cur.execute(query)
-        except:
-            pass
-        try:
-            if verb: print('\nRe-creating metadata table ...')
-            query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-            message = 'FGOTTENMETADATA table Created!'
-            if not verb:  message = ""
-            self.query_and_print(query_2, print_time=False, suc_arg=message)
             if verb: print('Loading metadata into cache...')
             self.cache_table_names = self.get_tables_names()
             self.cache_usernames = self.get_userlist()
             self.cache_column_names = self.get_columnlist()
-        except:
-            if verb: print(colored("There was an error when refreshing the cache", "red"))
-
-
-    def do_refresh_metadata(self, arg):
-        """
-        DB:Refreshes meta data cache for auto-completion of table
-        names and column names .
-        """
-        verb = True
-        try:
-            if verb: print('Loading metadata into cache...')
-            self.cache_table_names = self.get_tables_names2()
-            self.cache_usernames = self.get_userlist()
-            self.cache_column_names = self.get_columnlist2()
         except:
             if verb: print(colored("There was an error when refreshing the metadata", "red"))
         try:
@@ -2462,6 +2418,10 @@ class connect(easy_or):
             desconf.set('db-' + db, 'user', user)
             desconf.set('db-' + db, 'passwd', passwd)
         easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet)
+        try:
+            self.cur.execute('create table FGOTTENMETADATA (ID int)')
+        except:
+            pass
         self.loading_bar = False
 
     def cursor(self):
