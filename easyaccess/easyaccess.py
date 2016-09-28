@@ -1439,6 +1439,8 @@ class easy_or(cmd.Cmd, Import, object):
                 os._exit(0)
             self.cur = self.con.cursor()
             self.cur.arraysize = int(self.prefetch)
+            print()
+            print("Run refresh_metadata_cache to reload the auto-completion metatada")
             return
         else:
             print(colored("DB {} does not exist or you don't have access to it".format(key_db), "red"))
