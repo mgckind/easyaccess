@@ -434,40 +434,13 @@ class easy_or(cmd.Cmd, Import, object):
         self.metadata = False
         cmd.Cmd.preloop(self)  # # sets up command completion
         if self.refresh:
-            tcache = threading.Timer(120, self.con.cancel)
-            tcache.start()
             try:
-                if not self.quiet: print('Loading metadata into cache...')
-
-                create_metadata = False
-                check = 'select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
-                self.cur.execute(check)
-                if self.cur.fetchall()[0][0] == 0:
-                    create_metadata = True
-                else:
-                    query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
-                        self.user.upper())
-                    qt = self.cur.execute(query_time)
-                    last = qt.fetchall()
-                    now = datetime.datetime.now()
-                    diff = abs(now - last[0][0]).seconds / (3600.)
-                    if diff >= 24: create_metadata = True
-                if create_metadata:
-                    query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-                    self.cur.execute(query_2)
-
-                self.cache_table_names = self.get_tables_names()
-                self.cache_usernames = self.get_userlist()
-                self.cache_column_names = self.get_columnlist()
-                self.metadata = True
-                tcache.cancel()
-
+                self.do_refresh_metadata_cache('')
+                print()
             except:
                 print(colored(
                     "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
                     "red"))
-                tcache.cancel()
-
 
         # history
         ht = open(history_file, 'r')
@@ -912,7 +885,7 @@ class easy_or(cmd.Cmd, Import, object):
         data = self.cur.fetchall()
         return data
 
-    def get_tables_names(self):
+    def get_tables_names_old(self):
 
         if self.dbname in ('dessci', 'desoper'):
             query = """
@@ -924,6 +897,18 @@ class easy_or(cmd.Cmd, Import, object):
             select distinct table_name from fgottenmetadata
             union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
             dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
+        temp = self.cur.execute(query)
+        tnames = pd.DataFrame(temp.fetchall())
+        table_list = tnames.values.flatten().tolist()
+        return table_list
+
+    def get_tables_names(self):
+
+        if self.dbname in ('dessci', 'desoper', 'destest'):
+            query = """
+            select table_name from DES_ADMIN.CACHE_TABLES  
+            union select table_name from user_tables
+            """
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         table_list = tnames.values.flatten().tolist()
@@ -982,8 +967,15 @@ class easy_or(cmd.Cmd, Import, object):
         else:
             return options_colnames
 
-    def get_columnlist(self):
+    def get_columnlist_old(self):
         query = """SELECT distinct column_name from fgottenmetadata  order by column_name"""
+        temp = self.cur.execute(query)
+        cnames = pd.DataFrame(temp.fetchall())
+        col_list = cnames.values.flatten().tolist()
+        return col_list
+    
+    def get_columnlist(self):
+        query = """SELECT column_name from DES_ADMIN.CACHE_COLUMNS"""
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
@@ -1370,49 +1362,25 @@ class easy_or(cmd.Cmd, Import, object):
                 print(sys.exc_info())
 
 
+
     def do_refresh_metadata_cache(self, arg):
         """
         DB:Refreshes meta data cache for auto-completion of table
         names and column names .
         """
-
-        # Meta data access: With the two linked databases, accessing the
-        # "truth" via fgetmetadata has become very slow.
-        # what it returns is a function of each users's permissions, and their
-        # "mydb". so yet another level of caching is needed. Ta loads a table
-        # called fgottenmetadata in the user's mydb. It refreshes on command
-        # or on timeout (checked at startup).
-
-        # get last update
         verb = True
-        if arg == 'quiet': verb = False
-        query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
-            self.user.upper())
         try:
-            qt = self.cur.execute(query_time)
-            last = qt.fetchall()
-            now = datetime.datetime.now()
-            diff = abs(now - last[0][0]).seconds / (3600.)
-            if verb: print('Updated %.2f hours ago' % diff)
-        except:
-            pass
-        try:
-            query = "DROP TABLE FGOTTENMETADATA"
-            self.cur.execute(query)
-        except:
-            pass
-        try:
-            if verb: print('\nRe-creating metadata table ...')
-            query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-            message = 'FGOTTENMETADATA table Created!'
-            if not verb:  message = ""
-            self.query_and_print(query_2, print_time=False, suc_arg=message)
             if verb: print('Loading metadata into cache...')
             self.cache_table_names = self.get_tables_names()
             self.cache_usernames = self.get_userlist()
             self.cache_column_names = self.get_columnlist()
         except:
-            if verb: print(colored("There was an error when refreshing the cache", "red"))
+            if verb: print(colored("There was an error when refreshing the metadata", "red"))
+        try:
+            self.cur.execute('create table FGOTTENMETADATA (ID int)')
+        except:
+            pass
+
 
 
     def do_show_db(self, arg):
@@ -2450,6 +2418,10 @@ class connect(easy_or):
             desconf.set('db-' + db, 'user', user)
             desconf.set('db-' + db, 'passwd', passwd)
         easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet)
+        try:
+            self.cur.execute('create table FGOTTENMETADATA (ID int)')
+        except:
+            pass
         self.loading_bar = False
 
     def cursor(self):
@@ -2833,6 +2805,8 @@ if __name__ == '__main__':
             os._exit(0)
         else:
             desconf = config_mod.get_desconfig(desfile, db, verbose=False, user=args.user, pw1=args.password)
+            desconf.set('db-' + db, 'user', args.user)
+            desconf.set('db-' + db, 'passwd', args.password)
     else:
         desconf = config_mod.get_desconfig(desfile, db)
 
