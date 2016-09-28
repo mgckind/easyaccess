@@ -25,6 +25,7 @@ import getpass
 
 try:
     from easyaccess.version import __version__
+    from easyaccess.version import last_pip_version
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     from easyaccess.eautils import des_logo as dl
@@ -35,6 +36,7 @@ try:
 
 except ImportError:
     from version import __version__
+    from version import last_pip_version
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
@@ -991,8 +993,6 @@ class easy_or(cmd.Cmd, Import, object):
 
 
     # # DO METHODS
-
-
     def do_prefetch(self, line):
         """
         Shows, sets or sets to default the number of prefetch rows from Oracle
@@ -2304,9 +2304,14 @@ class easy_or(cmd.Cmd, Import, object):
 
     def do_version(self, line):
         """
-        Print current version of easyacccess
+        Print current  and latest pip version of easyacccess
         """
-        print("\n Current : easyaccess {:} \n".format(__version__))
+        last_version=last_pip_version()
+        print()
+        print(colored("Current version  : easyaccess {}".format(__version__),"green"))
+        print(colored("Last pip version : easyaccess {}".format(last_version),"green"))
+        print()
+        return
 
     # UNDOCCUMENTED DO METHODS
 
