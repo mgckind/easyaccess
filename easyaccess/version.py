@@ -19,7 +19,7 @@ def last_pip_version():
         uploads.append([k,datetime.strptime(up_time,'%Y-%m-%dT%H:%M:%S')])
     return sorted(uploads,key=lambda x: x[1])[-1][0]
 
-version_tag = (1, 3, 2, 'dev-8a3e80b')
+version_tag = (1, 3, 2, 'dev-4b0768b')
 __version__ = '.'.join(map(str, version_tag[:3]))
 
 if len(version_tag) > 3:
