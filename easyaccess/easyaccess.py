@@ -1967,6 +1967,17 @@ class easy_or(cmd.Cmd, Import, object):
             return
         filename = eafile.get_filename(load_args.filename)
         table = load_args.tablename
+        invalid_chars = ['-','$','~','@','*']
+        for obj in [table,name]:
+            if obj is None:
+                if any((char in invalid_chars) for char in filename):
+                    print(colored('\nInvalid table name, change filename or use --tablename\n','red'))
+                    return
+            else:
+                if any((char in invalid_chars) for char in obj):
+                    print(colored('\nInvalid table name\n','red'))
+                    return
+
         chunk = load_args.chunksize
         memchunk = load_args.memsize
         if chunksize is not None:
@@ -2136,6 +2147,17 @@ class easy_or(cmd.Cmd, Import, object):
             return
         filename = eafile.get_filename(append_args.filename)
         table = append_args.tablename
+        invalid_chars = ['-','$','~','@','*']
+        for obj in [table,name]:
+            if obj is None:
+                if any((char in invalid_chars) for char in filename):
+                    print(colored('\nInvalid table name, change filename or use --tablename\n','red'))
+                    return
+            else:
+                if any((char in invalid_chars) for char in obj):
+                    print(colored('\nInvalid table name\n','red'))
+                    return
+        
         chunk = append_args.chunksize
         memchunk = append_args.memsize
         if chunksize is not None:
