@@ -33,7 +33,8 @@ try:
     import easyaccess.eautils.fun_utils as fun_utils
     from easyaccess.eautils.import_utils import Import
 
-except ImportError:
+except ImportError as error:
+    warnings.warn(str(error))
     from version import __version__
     import eautils.dircache as dircache
     import config_ea as config_mod
