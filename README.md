@@ -1,4 +1,4 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.3.0"> <img src="https://img.shields.io/badge/release-v1.3.0-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.3.0"><img src="https://img.shields.io/badge/pypi-v1.3.0-orange.svg" alt="pypi version"/></a>
+# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.3.1"> <img src="https://img.shields.io/badge/release-v1.3.1-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.3.1"><img src="https://img.shields.io/badge/pypi-v1.3.1-orange.svg" alt="pypi version"/></a>
 ![help_screen](data/help_screenshot.png)
 
 Enhanced command line SQL interpreter client for astronomical databases.
@@ -10,7 +10,7 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 (Using des credentials)
 
 
-**Current version = 1.3.0**
+**Current version = 1.3.1**
 
 ## Requirements
 
@@ -29,7 +29,7 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - Very flexible configuration
 - Smart tab completion for commands, table names, column names and file paths accordingly
 - write output results to csv, tab, fits files or HDF5 files
-- load tables from csv, fits or hdf5 directly into DB (memory friendly)
+- load tables from csv, fits or hdf5 directly into DB (memory friendly by using number of rows or memory limit)
 - intrinsic db commands to describe tables, own schema, quota and more
 - It can be imported as module from python, extense python API
 - Can run command directly from command line
@@ -64,7 +64,9 @@ The file types supported so far are: .csv, .tab, .fits, and .h5. Any other exten
 To load a table it needs to be in a csv format with columns names in the first row
 the name of the table is taken from filename or with optional argument --tablename
 
-        DESDB ~> load_table <filename> --tablename <mytable>
+        DESDB ~> load_table <filename> --tablename <mytable> --chunksize <number of rows to read/upload> --memsize <memory in MB to read at a time>
+
+The --chunsize and --memsize are optional arguments to facilitate uploading big files.
 
 ### Load SQL queries
 To load SQL queries just run:

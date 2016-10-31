@@ -122,7 +122,7 @@ def write_config(configfile, config_ob):
         return False
 
 
-def get_desconfig(desfile, db):
+def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     """
     Loads des config file or create one if not
 
@@ -131,14 +131,21 @@ def get_desconfig(desfile, db):
     port_n = '1521'
 
     if not db[:3] == 'db-': db = 'db-' + db
+
+    if db == 'db-dessci':
+        db_alter = 'db-desoper'
+    elif db == 'db-desoper':
+        db_alter = 'db-dessci'
+    else:
+        db_alter = None
     config = configparser.ConfigParser()
     configwrite = False
     check = config.read(desfile)
     if check == []:
         configwrite = True
-        print('\nError in DES_SERVICES config file, creating a new one...')
-        print('File might not exists or is not configured')
-        print()
+        if verbose: print('\nError in DES_SERVICES config file, creating a new one...')
+        if verbose: print('File might not exists or is not configured correctly')
+        if verbose: print()
 
     databases = ['db-desoper', 'db-dessci', 'db-destest']  #most used ones anyways
 
@@ -148,30 +155,31 @@ def get_desconfig(desfile, db):
         if check_db in ('n', 'N', 'no', 'No', 'NO'): sys.exit(0)
 
     if not config.has_section(db):
-        print('\nAdding section %s to des_service file\n' % db)
+        if verbose: print('\nAdding section %s to des_service file\n' % db)
         configwrite = True
         kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
         dsn = cx_Oracle.makedsn(**kwargs)
         good = False
-        for i in range(3):
-            try:
-                user = input('Enter username : ')
-                pw1 = getpass.getpass(prompt='Enter password : ')
-                ctemp = cx_Oracle.connect(user, pw1, dsn=dsn)
-                good = True
-                break
-            except:
-                (type, value, traceback) = sys.exc_info()
-                print(value)
-                if value.message.code == 1017:
-                    pass
-                else:
-                    sys.exit(0)
-        if good:
-            ctemp.close()
-        else:
-            print('\n Check your credentials and/or database access\n')
-            sys.exit(0)
+        if user is None:
+            for i in range(3):
+                try:
+                    user = input('Enter username : ')
+                    pw1 = getpass.getpass(prompt='Enter password : ')
+                    ctemp = cx_Oracle.connect(user, pw1, dsn=dsn)
+                    good = True
+                    break
+                except:
+                    (type, value, traceback) = sys.exc_info()
+                    print(value)
+                    if value.message.code == 1017:
+                        pass
+                    else:
+                        sys.exit(0)
+            if good:
+                ctemp.close()
+            else:
+                if verbose: print('\n Check your credentials and/or database access\n')
+                sys.exit(0)
         config.add_section(db)
 
     if not config.has_option(db, 'user'): configwrite = True;config.set(db, 'user', user)
@@ -179,6 +187,18 @@ def get_desconfig(desfile, db):
     if not config.has_option(db, 'name'): configwrite = True;config.set(db, 'name', db[3:])
     if not config.has_option(db, 'server'): configwrite = True;config.set(db, 'server', server_n)
     if not config.has_option(db, 'port'): configwrite = True;config.set(db, 'port', port_n)
+    
+    if db_alter is not None:
+        if not config.has_section(db_alter):
+            user = config.get(db, 'user')
+            pw1 = config.get(db, 'passwd')
+            db = db_alter
+            config.add_section(db)
+            if not config.has_option(db, 'user'): configwrite = True;config.set(db, 'user', user)
+            if not config.has_option(db, 'passwd'): configwrite = True;config.set(db, 'passwd', pw1)
+            if not config.has_option(db, 'name'): configwrite = True;config.set(db, 'name', db[3:])
+            if not config.has_option(db, 'server'): configwrite = True;config.set(db, 'server', server_n)
+            if not config.has_option(db, 'port'): configwrite = True;config.set(db, 'port', port_n)
 
     check = True
     if configwrite == True:

@@ -35,18 +35,15 @@ def toeasyaccess(custom):
         n_def = len(check.defaults)
     except:
         n_def = 0
-    head = '('
+    nargs_p = len(check.args) - n_def
+    head = []
     for j, ag in enumerate(check.args):
-        if j < len(check.args) - n_def:
-            head += ag + ', '
+        if j < nargs_p:
+            head.append(ag)
         else:
-            head += ag + '=' + str(check.defaults[j - n_def]) + ', '
-    head = head[:-1]
-    if head[-1] == ',': head = head[:-1]
-    head += ')'
-
+            head.append(ag + '=' + str(check.defaults[j-nargs_p]))    
     temp = easy_function
-    temp.__doc1__ = head
+    temp.__doc1__ = '('+', '.join(head)+')'
     temp.in_easyaccess = True
     temp.__doc__ = custom.__doc__
 

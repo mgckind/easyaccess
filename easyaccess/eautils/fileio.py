@@ -21,6 +21,11 @@ except ImportError:
     import eautils.dtypes as eatypes
     import version
 
+try:
+    from termcolor import colored
+except:
+    def colored(line, color): return line
+
 PANDAS_DEFS = ('comma separated text', 'space separated tex', 'HDF5 format')
 PANDAS_EXTS = ('.csv', '.tab', '.h5')
 
@@ -29,6 +34,63 @@ FITS_EXTS = ('.fits',)
 
 FILE_DEFS = PANDAS_DEFS + FITS_DEFS
 FILE_EXTS = PANDAS_EXTS + FITS_EXTS
+
+
+def get_filename(line):
+    """
+    Return filename after checking it has the right structure (no extra periods)
+    """
+    line = line.replace(';', '')
+    if line == "":
+        print('\nMust include table filename!\n')
+        return
+    if line.find('.') == -1:
+        print(colored('\nError in filename\n', "red"))
+        return
+
+    filename = "".join(line.split())
+    basename = os.path.basename(filename)
+    alls = basename.split('.')
+    if len(alls) > 2:
+        # Oracle tables cannot contain a '.'
+        print("\nDo not use extra '.' in filename\n")
+        return
+
+    return filename
+
+
+def get_chunksize(filename, memory=500):
+    """
+    Get the approximate number of lines ot be read given memory constrains
+
+    Parameters:
+    -----------
+    filename : File name
+    memory   : Memory in MB to compute the approximate number of rows
+
+    Returns:
+    --------
+    The number of rows need to be read for each chunk of memory
+    """
+    base, ext = os.path.splitext(filename)
+    check_filetype(ext, FILE_EXTS)
+
+    if ext in PANDAS_EXTS:
+        if ext == '.csv': sepa = ','
+        elif ext == '.tab' : sepa = None
+        elif ext == '.h5':
+            return IOError('\nReading HDF5 files by chunks is not supported yet\n')
+        temp = pd.read_csv(filename, sep=sepa, nrows=100)
+        bytes_per_row = temp.memory_usage(index=True).sum()/100.
+        del temp
+    elif ext in FITS_EXTS:
+        temp = fitsio.FITS(filename)
+        temp_data = temp[1][0:100]
+        bytes_per_row = temp_data.nbytes/100.
+        temp.close()
+        del temp_data
+
+    return int(memory*1024**2/bytes_per_row)
 
 
 def cutquery(query, length):

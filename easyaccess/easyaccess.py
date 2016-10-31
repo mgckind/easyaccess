@@ -25,6 +25,7 @@ import getpass
 
 try:
     from easyaccess.version import __version__
+    from easyaccess.version import last_pip_version
     import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     from easyaccess.eautils import des_logo as dl
@@ -36,6 +37,7 @@ try:
 except ImportError as error:
     warnings.warn(str(error))
     from version import __version__
+    from version import last_pip_version
     import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
@@ -62,6 +64,7 @@ import numpy as np
 import argparse
 import webbrowser
 import signal
+sys.path.insert(0, os.getcwd())
 
 fun_utils.init_func()
 
@@ -251,7 +254,7 @@ class easy_or(cmd.Cmd, Import, object):
             print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
             os._exit(0)
         self.cur = self.con.cursor()
-        self.cur.arraysize = self.prefetch
+        self.cur.arraysize = int(self.prefetch)
         msg = self.last_pass_changed()
         if msg and not self.quiet: print(msg)
 
@@ -434,40 +437,13 @@ class easy_or(cmd.Cmd, Import, object):
         self.metadata = False
         cmd.Cmd.preloop(self)  # # sets up command completion
         if self.refresh:
-            tcache = threading.Timer(120, self.con.cancel)
-            tcache.start()
             try:
-                if not self.quiet: print('Loading metadata into cache...')
-
-                create_metadata = False
-                check = 'select count(table_name) from user_tables where table_name = \'FGOTTENMETADATA\''
-                self.cur.execute(check)
-                if self.cur.fetchall()[0][0] == 0:
-                    create_metadata = True
-                else:
-                    query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
-                        self.user.upper())
-                    qt = self.cur.execute(query_time)
-                    last = qt.fetchall()
-                    now = datetime.datetime.now()
-                    diff = abs(now - last[0][0]).seconds / (3600.)
-                    if diff >= 24: create_metadata = True
-                if create_metadata:
-                    query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-                    self.cur.execute(query_2)
-
-                self.cache_table_names = self.get_tables_names()
-                self.cache_usernames = self.get_userlist()
-                self.cache_column_names = self.get_columnlist()
-                self.metadata = True
-                tcache.cancel()
-
+                self.do_refresh_metadata_cache('')
+                print()
             except:
                 print(colored(
                     "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
                     "red"))
-                tcache.cancel()
-
 
         # history
         ht = open(history_file, 'r')
@@ -490,7 +466,7 @@ class easy_or(cmd.Cmd, Import, object):
             self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
             if self.autocommit: self.con.autocommit = True
             self.cur = self.con.cursor()
-            self.cur.arraysize = self.prefetch
+            self.cur.arraysize = int(self.prefetch)
 
         # handle line continuations -- line terminated with \
         # beware of null lines.
@@ -721,7 +697,7 @@ class easy_or(cmd.Cmd, Import, object):
             p_functions = extra_func[0]
             p_args = extra_func[1]
             p_names = extra_func[2]
-        self.cur.arraysize = self.prefetch
+        self.cur.arraysize = int(self.prefetch)
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
         t1 = time.time()
@@ -829,7 +805,7 @@ class easy_or(cmd.Cmd, Import, object):
             p_args = extra_func[1]
             p_names = extra_func[2]
         fileout_original = fileout
-        self.cur.arraysize = self.prefetch
+        self.cur.arraysize = int(self.prefetch)
         t1 = time.time()
         if self.loading_bar: self.pload = Process(target=loading)
         if self.loading_bar: self.pload.start()
@@ -912,7 +888,7 @@ class easy_or(cmd.Cmd, Import, object):
         data = self.cur.fetchall()
         return data
 
-    def get_tables_names(self):
+    def get_tables_names_old(self):
 
         if self.dbname in ('dessci', 'desoper'):
             query = """
@@ -924,6 +900,18 @@ class easy_or(cmd.Cmd, Import, object):
             select distinct table_name from fgottenmetadata
             union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
             dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
+        temp = self.cur.execute(query)
+        tnames = pd.DataFrame(temp.fetchall())
+        table_list = tnames.values.flatten().tolist()
+        return table_list
+
+    def get_tables_names(self):
+
+        if self.dbname in ('dessci', 'desoper', 'destest'):
+            query = """
+            select table_name from DES_ADMIN.CACHE_TABLES  
+            union select table_name from user_tables
+            """
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         table_list = tnames.values.flatten().tolist()
@@ -982,8 +970,15 @@ class easy_or(cmd.Cmd, Import, object):
         else:
             return options_colnames
 
-    def get_columnlist(self):
+    def get_columnlist_old(self):
         query = """SELECT distinct column_name from fgottenmetadata  order by column_name"""
+        temp = self.cur.execute(query)
+        cnames = pd.DataFrame(temp.fetchall())
+        col_list = cnames.values.flatten().tolist()
+        return col_list
+    
+    def get_columnlist(self):
+        query = """SELECT column_name from DES_ADMIN.CACHE_COLUMNS"""
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
@@ -999,8 +994,6 @@ class easy_or(cmd.Cmd, Import, object):
 
 
     # # DO METHODS
-
-
     def do_prefetch(self, line):
         """
         Shows, sets or sets to default the number of prefetch rows from Oracle
@@ -1024,11 +1017,10 @@ class easy_or(cmd.Cmd, Import, object):
                 self.writeconfig = True
                 print('\nPrefetch value set to  {:}\n'.format(self.prefetch))
         elif line.find('default') > -1:
-            self.prefetch = 10000
-            self.config.set('easyaccess', 'prefetch', '10000')
-            o
+            self.prefetch = 30000
+            self.config.set('easyaccess', 'prefetch', '30000')
             self.writeconfig = True
-            print('\nPrefetch value set to default (10000) \n')
+            print('\nPrefetch value set to default (30000) \n')
         else:
             print('\nPrefetch value = {:}\n'.format(self.prefetch))
 
@@ -1371,49 +1363,25 @@ class easy_or(cmd.Cmd, Import, object):
                 print(sys.exc_info())
 
 
+
     def do_refresh_metadata_cache(self, arg):
         """
         DB:Refreshes meta data cache for auto-completion of table
         names and column names .
         """
-
-        # Meta data access: With the two linked databases, accessing the
-        # "truth" via fgetmetadata has become very slow.
-        # what it returns is a function of each users's permissions, and their
-        # "mydb". so yet another level of caching is needed. Ta loads a table
-        # called fgottenmetadata in the user's mydb. It refreshes on command
-        # or on timeout (checked at startup).
-
-        # get last update
         verb = True
-        if arg == 'quiet': verb = False
-        query_time = "select created from dba_objects where object_name = \'FGOTTENMETADATA\' and owner =\'%s\'  " % (
-            self.user.upper())
         try:
-            qt = self.cur.execute(query_time)
-            last = qt.fetchall()
-            now = datetime.datetime.now()
-            diff = abs(now - last[0][0]).seconds / (3600.)
-            if verb: print('Updated %.2f hours ago' % diff)
-        except:
-            pass
-        try:
-            query = "DROP TABLE FGOTTENMETADATA"
-            self.cur.execute(query)
-        except:
-            pass
-        try:
-            if verb: print('\nRe-creating metadata table ...')
-            query_2 = """create table fgottenmetadata  as  select * from table (fgetmetadata)"""
-            message = 'FGOTTENMETADATA table Created!'
-            if not verb:  message = ""
-            self.query_and_print(query_2, print_time=False, suc_arg=message)
             if verb: print('Loading metadata into cache...')
             self.cache_table_names = self.get_tables_names()
             self.cache_usernames = self.get_userlist()
             self.cache_column_names = self.get_columnlist()
         except:
-            if verb: print(colored("There was an error when refreshing the cache", "red"))
+            if verb: print(colored("There was an error when refreshing the metadata", "red"))
+        try:
+            self.cur.execute('create table FGOTTENMETADATA (ID int)')
+        except:
+            pass
+
 
 
     def do_show_db(self, arg):
@@ -1427,6 +1395,64 @@ class easy_or(cmd.Cmd, Import, object):
         FROM all_db_links where OWNER = '%s'
         """ % (self.user.upper())
         self.query_and_print(query, print_time=False, extra=lines, clear=True)
+
+    def do_change_db(self, line):
+        """
+        DB: Change to another database, namely dessci, desoper or destest
+
+         Usage: 
+            change_db DB     # Changes to DB, it does not refresh metadata, e.g.: change_db desoper
+
+        """
+        if line == '': return self.do_help('change_db')
+        line = " ".join(line.split())
+        key_db = line.split()[0]
+        if key_db in ('dessci', 'desoper', 'destest'):
+            if key_db == self.dbname:
+                print(colored("Already connected to : %s" % key_db, "green"))
+                return
+            self.dbname = key_db
+            # connect to db
+            try:
+                self.user = self.desconfig.get('db-' + self.dbname, 'user')
+                self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
+            except:
+                print(colored("DB {} does not exist in your desservices file".format(key_db), "red"))
+                return
+            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
+            self.dsn = cx_Oracle.makedsn(**kwargs)
+            if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
+            self.con.close()
+            connected = False
+            for tries in range(3):
+                try:
+                    self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
+                    if self.autocommit: self.con.autocommit = True
+                    connected = True
+                    break
+                except Exception as e:
+                    lasterr = str(e).strip()
+                    print(colored("Error when trying to connect to database: %s" % lasterr, "red"))
+                    print("\n   Retrying...\n")
+                    time.sleep(5)
+            if not connected:
+                print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
+                os._exit(0)
+            self.cur = self.con.cursor()
+            self.cur.arraysize = int(self.prefetch)
+            print()
+            print("Run refresh_metadata_cache to reload the auto-completion metatada")
+            return
+        else:
+            print(colored("DB {} does not exist or you don't have access to it".format(key_db), "red"))
+            return
+
+    def complete_change_db(self, text, line, start_index, end_index):
+        options_db = ['desoper','dessci','destest']
+        if text:
+            return [option for option in options_db if option.startswith(text.lower())]
+        else:
+            return options_db
 
     def do_whoami(self, arg):
         """
@@ -1758,25 +1784,7 @@ class easy_or(cmd.Cmd, Import, object):
     def complete_show_index(self, text, line, begidx, lastidx):
         return self._complete_tables(text)
 
-    def get_filename(self, line):
-        # Good to move some of this into eautils.fileio
-        line = line.replace(';', '')
-        if line == "":
-            print('\nMust include table filename!\n')
-            return
-        if line.find('.') == -1:
-            print(colored('\nError in filename\n', "red"))
-            return
 
-        filename = "".join(line.split())
-        basename = os.path.basename(filename)
-        alls = basename.split('.')
-        if len(alls) > 2:
-            # Oracle tables cannot contain a '.'
-            print("\nDo not use extra '.' in filename\n")
-            return
-
-        return filename
 
     def check_table_exists(self, table):
         # check table first
@@ -1833,9 +1841,13 @@ class easy_or(cmd.Cmd, Import, object):
         
         return qtable
 
-    def drop_table(self, table):
-        # Do we want to add a PURGE to this query?
-        qdrop = "DROP TABLE %s" % table.upper()
+    def drop_table(self, table, purge=False):
+        # Added optional argument to purge the table.
+        if not purge:
+            qdrop = "DROP TABLE %s" % table.upper()
+        else:
+            qdrop = "DROP TABLE %s PURGE" % table.upper()
+
         try:
             self.cur.execute(qdrop)
         except cx_Oracle.DatabaseError:
@@ -1912,11 +1924,11 @@ class easy_or(cmd.Cmd, Import, object):
                 niter+1, len(values), len(columns), table.upper(), t2 - t1), "green"))
 
 
-    def do_load_table(self, line, name=None, chunksize=None):
+    def do_load_table(self, line, name=None, chunksize=None, memsize=None):
         """
         DB:Loads a table from a file (csv or fits) taking name from filename and columns from header
 
-        Usage: load_table <filename> [--tablename NAME] [--chunksize CHUNK]
+        Usage: load_table <filename> [--tablename NAME] [--chunksize CHUNK] [--memsize MEMCHUNK]
         Ex: example.csv has the following content
              RA,DEC,MAG
              1.23,0.13,23
@@ -1929,6 +1941,8 @@ class easy_or(cmd.Cmd, Import, object):
             --tablename NAME            given name for the table, default is taken from filename
             --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
                                         that do not fit in memory
+            --memsize MEMCHUNK          The size in Mb to be read in chunks. If both specified, the lower
+                                        number of rows is selected (the lower memory limitations)
 
         Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
         as data (using ',' or space)
@@ -1940,7 +1954,9 @@ class easy_or(cmd.Cmd, Import, object):
         load_parser.add_argument('filename', help='name for the file', action='store', default=None)
         load_parser.add_argument('--tablename', help='name for the table', action='store', default=None)
         load_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
-    'issues', action='store', type=int, default=None)
+                                                     'issues', action='store', type=int, default=None)
+        load_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ',
+                                 action='store', type=int, default=None)
         load_parser.add_argument('-h', '--help', help='print help', action='store_true')
         try:
             load_args = load_parser.parse_args(line.split())
@@ -1950,11 +1966,31 @@ class easy_or(cmd.Cmd, Import, object):
         if load_args.help:
             self.do_help('load_table')
             return
-        filename = self.get_filename(load_args.filename)
+        filename = eafile.get_filename(load_args.filename)
         table = load_args.tablename
+        invalid_chars = ['-','$','~','@','*']
+        for obj in [table,name]:
+            if obj is None:
+                if any((char in invalid_chars) for char in filename):
+                    print(colored('\nInvalid table name, change filename or use --tablename\n','red'))
+                    return
+            else:
+                if any((char in invalid_chars) for char in obj):
+                    print(colored('\nInvalid table name\n','red'))
+                    return
+
         chunk = load_args.chunksize
+        memchunk = load_args.memsize
         if chunksize is not None:
             chunk = chunksize
+        if memsize is not None:
+            memchunk = memsize
+        if memchunk is not None:
+            memchunk_rows = eafile.get_chunksize(filename, memory=memchunk)
+            if chunk is not None:
+                chunk = min(chunk, memchunk_rows)
+            else:
+                chunk = memchunk_rows
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -1975,7 +2011,7 @@ class easy_or(cmd.Cmd, Import, object):
             return
 
         try:
-            data, iterator = self.load_data(filename)
+            data, iterator = eafile.read_file(filename)
         except:
             print_exception()
             return
@@ -2067,11 +2103,11 @@ class easy_or(cmd.Cmd, Import, object):
         return _complete_path(line)
 
 
-    def do_append_table(self, line, name=None, chunksize=None):
+    def do_append_table(self, line, name=None, chunksize=None, memsize=None):
         """
         DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
 
-        Usage: append_table <filename> [--tablename NAME] [--chunksize CHUNK]
+        Usage: append_table <filename> [--tablename NAME] [--chunksize CHUNK] [--memsize MEMCHUNK]
         Ex: example.csv has the following content
              RA,DEC,MAG
              1.23,0.13,23
@@ -2084,7 +2120,9 @@ class easy_or(cmd.Cmd, Import, object):
     
               --tablename NAME            given name for the table, default is taken from filename
               --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
-                                        that do not fit in memory
+                                         that do not fit in memory
+              --memsize MEMCHUNK         The size in Mb to be read in chunks. If both specified, the lower
+                                        number of rows is selected (the lower memory limitations)
 
         Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
         as data (using ',' or space)
@@ -2097,6 +2135,8 @@ class easy_or(cmd.Cmd, Import, object):
         append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default=None)
         append_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
                                                        'issues', action='store', default=None, type=int)
+        append_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ', action='store',
+                                   type=int, default=None)
         append_parser.add_argument('-h', '--help', help='print help', action='store_true')
         try:
             append_args = append_parser.parse_args(line.split())
@@ -2106,11 +2146,32 @@ class easy_or(cmd.Cmd, Import, object):
         if append_args.help:
             self.do_help('append_table')
             return
-        filename = self.get_filename(append_args.filename)
+        filename = eafile.get_filename(append_args.filename)
         table = append_args.tablename
+        invalid_chars = ['-','$','~','@','*']
+        for obj in [table,name]:
+            if obj is None:
+                if any((char in invalid_chars) for char in filename):
+                    print(colored('\nInvalid table name, change filename or use --tablename\n','red'))
+                    return
+            else:
+                if any((char in invalid_chars) for char in obj):
+                    print(colored('\nInvalid table name\n','red'))
+                    return
+        
         chunk = append_args.chunksize
+        memchunk = append_args.memsize
         if chunksize is not None:
             chunk = chunksize
+        if memsize is not None:
+            memchunk = memsize
+        if memchunk is not None:
+            memchunk_rows = eafile.get_chunksize(filename, memory=memchunk)
+            if chunk is not None:
+                chunk = min(chunk, memchunk_rows)
+            else:
+                chunk = memchunk_rows
+
         if filename is None: return
         base, ext = os.path.splitext(os.path.basename(filename))
 
@@ -2131,7 +2192,7 @@ class easy_or(cmd.Cmd, Import, object):
                   '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
-            data, iterator = self.load_data(filename)
+            data, iterator = eafile.read_file(filename)
         except:
             print_exception()
             return
@@ -2268,9 +2329,14 @@ class easy_or(cmd.Cmd, Import, object):
 
     def do_version(self, line):
         """
-        Print current version of easyacccess
+        Print current  and latest pip version of easyacccess
         """
-        print("\n Current : easyaccess {:} \n".format(__version__))
+        last_version=last_pip_version()
+        print()
+        print(colored("Current version  : easyaccess {}".format(__version__),"green"))
+        print(colored("Last pip version : easyaccess {}".format(last_version),"green"))
+        print()
+        return
 
     # UNDOCCUMENTED DO METHODS
 
@@ -2382,11 +2448,15 @@ class connect(easy_or):
             desconf.set('db-' + db, 'user', user)
             desconf.set('db-' + db, 'passwd', passwd)
         easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet)
+        try:
+            self.cur.execute('create table FGOTTENMETADATA (ID int)')
+        except:
+            pass
         self.loading_bar = False
 
     def cursor(self):
         cursor = self.con.cursor()
-        cursor.arraysize = self.prefetch
+        cursor.arraysize = int(self.prefetch)
         return cursor
 
     def ping(self, quiet = None):
@@ -2416,8 +2486,8 @@ class connect(easy_or):
 
         Use:
         ----
-        import('module as name')
-        import('my_module')
+        ea_import('module as name')
+        ea_import('my_module')
 
         Returns:
         --------
@@ -2452,8 +2522,8 @@ class connect(easy_or):
         to retrieve data one piece at a time.
         """
         cursor = self.con.cursor()
-        cursor.arraysize = self.prefetch
-        if prefetch != '': cursor.arraysize = prefetch
+        cursor.arraysize = int(self.prefetch)
+        if prefetch != '': cursor.arraysize = int(prefetch)
         query = query.replace(';' , '')
         query, funs, args, names = fun_utils.parseQ(query, myglobals=globals())
         extra_func = [funs, args, names]
@@ -2505,7 +2575,7 @@ class connect(easy_or):
         """
         self.do_myquota('')
 
-    def load_table(self, table_file, name=None, chunksize=None):
+    def load_table(self, table_file, name=None, chunksize=None, memsize=None):
         """
         Loads and create a table in the DB. If name is not passed, is taken from
         the filename. Formats supported are 'fits', 'csv' and 'tab' files
@@ -2515,6 +2585,7 @@ class connect(easy_or):
         table_file : Filename to be uploaded as table (.csv, .fits, .tab)
         name       : Name of the table to be created
         chunksize  : Number of rows to upload at a time to avoid memory issues
+        memsize    : Size of chunk to be read. In Mb. If both specified, the lower number of rows is selected
 
         Returns:
         --------
@@ -2522,14 +2593,14 @@ class connect(easy_or):
 
         """
         try:
-            self.do_load_table(table_file, name=name, chunksize=chunksize)
+            self.do_load_table(table_file, name=name, chunksize=chunksize, memsize=memsize)
             return True
         except:
             # exception
             return False
             
 
-    def append_table(self, table_file, name=None, chunksize=None):
+    def append_table(self, table_file, name=None, chunksize=None, memsize=None):
         """
         Appends data to a table in the DB. If name is not passed, is taken from
         the filename. Formats supported are 'fits', 'csv' and 'tab' files
@@ -2539,13 +2610,14 @@ class connect(easy_or):
         table_file : Filename to be uploaded as table (.csv, .fits, .tab)
         name       : Name of the table to be created
         chunksize  : Number of rows to upload at a time to avoid memory issues
+        memsize    : Size of chunk to be read. In Mb. If both specified, the lower number of rows is selected
 
         Returns:
         --------
         True if success otherwise False
         """
         try:
-            self.do_append_table(table_file, name=name, chunksize=chunksize)
+            self.do_append_table(table_file, name=name, chunksize=chunksize, memsize=memsize)
             return True
         except:
             return False
@@ -2661,7 +2733,10 @@ if __name__ == '__main__':
                         or --append_table")
     parser.add_argument("--chunksize", dest='chunksize', type=int, default = None,
                         help="Number of rows to be inserted at a time. Useful for large files \
-                                        that do not fit in memory. Use with --load_table")
+                                        that do not fit in memory. Use with --load_table or --append_table")
+    parser.add_argument("--memsize", dest='memsize', type=int, default = None,
+                        help=" Size of chunk to be read at a time in Mb. Use with --load_table or "
+                             "--append_table")
     parser.add_argument("-s", "--db",dest='db', #choices=[...]?
                         help="Override database name [dessci,desoper,destest]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
@@ -2752,7 +2827,6 @@ if __name__ == '__main__':
     else:
         db = conf.get('easyaccess', 'database')
 
-    desconf = config_mod.get_desconfig(desfile, db)
 
     if args.user is not None:
         print('Bypassing .desservices file with user : %s' % args.user)
@@ -2760,8 +2834,11 @@ if __name__ == '__main__':
             print('Must include password')
             os._exit(0)
         else:
+            desconf = config_mod.get_desconfig(desfile, db, verbose=False, user=args.user, pw1=args.password)
             desconf.set('db-' + db, 'user', args.user)
             desconf.set('db-' + db, 'passwd', args.password)
+    else:
+        desconf = config_mod.get_desconfig(desfile, db)
 
     if args.command is not None:
         initial_message(args.quiet, clear=False)
@@ -2782,6 +2859,8 @@ if __name__ == '__main__':
             linein += ' --tablename ' + args.tablename
         if args.chunksize is not None:
             linein += ' --chunksize ' + str(args.chunksize)
+        if args.memsize is not None:
+            linein += ' --memsize ' + str(args.memsize)
         cmdinterp.onecmd(linein)
         os._exit(0)
     elif args.appendtable is not None:
@@ -2792,6 +2871,8 @@ if __name__ == '__main__':
             linein += ' --tablename ' + args.tablename
         if args.chunksize is not None:
             linein += ' --chunksize ' + str(args.chunksize)
+        if args.memsize is not None:
+            linein += ' --memsize ' + str(args.memsize)
         cmdinterp.onecmd(linein)
         os._exit(0)
     else:

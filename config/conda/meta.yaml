@@ -1,11 +1,11 @@
 package:
   name: easyaccess
-  version: "1.3.0"
+  version: "1.3.1"
 
 source:
-  fn: easyaccess-1.3.0.tar.gz
-  md5: f3160dcc95de2a0fe7c29a08c4aa14dd
-  url: https://pypi.python.org/packages/22/a9/28586f7623f15ebbfea8c983300b9e3fd7201bf07ca0463a787a2f6329b3/easyaccess-1.3.0.tar.gz
+  fn: easyaccess-1.3.1.tar.gz
+  md5: 52eab3638697249f7cfda79fdd665bab
+  url: https://pypi.python.org/packages/c3/47/39a31eb7e3c1cc5b34a7cbd42ad6f881a810fd9e0598319404222a137599/easyaccess-1.3.1.tar.gz
   
 
 build:
