@@ -791,10 +791,10 @@ Connected as {user} to {db}.
             print(colored(value, "red"))
             print()
             if t2 - t1 > self.timeout:
-                print('\nQuery is taking too long for printing on screen')
-                print('Try to output the results to a file')
-                print('Using > FILENAME after query, ex: select from ... ; > test.csv')
-                print('To see a list of compatible format\n')
+                print(colored('Query is taking too long on the interpreter',"red"))
+                msg = colored('Try to output the results to a file\nor increase timeout (now is {} s) using:'.format(self.timeout),'green')
+                print(msg)
+                print("\'config timeout set XXXXX\'")
 
 
     def query_and_save(self, query, fileout, print_time=True, extra_func=None):
