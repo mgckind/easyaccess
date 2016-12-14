@@ -52,10 +52,17 @@ import getpass
 import itertools
 import logging
 
+def without_color(line, color, mode=0) : return line
 try:
-    from termcolor import colored
+    from termcolor import colored as with_color
+    def colored(line, color, mode=1):
+        if mode == 1:
+            return with_color(line,color)
+        else:
+            return line
 except:
-    def colored(line, color): return line
+    colored = without_color
+
 
 import pandas as pd
 import datetime
@@ -109,13 +116,13 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
 
-def print_exception(pload=None):
+def print_exception(pload=None,mode=1):
     (type, value, traceback) = sys.exc_info()
     if pload and (pload.pid is not None):
         os.kill(pload.pid, signal.SIGKILL)
     print()
-    print(colored(type, "red"))
-    print(colored(value, "red"))
+    print(colored(type, "red",mode))
+    print(colored(value, "red",mode))
     print()
 
 
@@ -200,17 +207,27 @@ def read_buf(fbuf):
 class easy_or(cmd.Cmd, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
 
-    def __init__(self, conf, desconf, db, interactive=True, quiet=False, refresh=True):
-        cmd.Cmd.__init__(self)
-        intro_keys = {'db':colored(db,"green"), 'user':colored(desconf.get('db-' + db, 'user'),"green"),
-         'ea_version':colored("easyaccess "+__version__,"cyan")}
+    def set_messages(self):
+        intro_keys = {'db':colored(db,"green",self.ct), 'user':colored(desconf.get('db-' + db, 'user'),"green", self.ct),
+         'ea_version':colored("easyaccess "+__version__,"cyan",self.ct)}
         self.intro = colored(
             """
 {ea_version}. The DESDM Database shell.
 Connected as {user} to {db}.
-** Type 'help' or '?' to list commands. **\n""".format(**intro_keys),"cyan")
-        self.writeconfig = False
+** Type 'help' or '?' to list commands. **\n""".format(**intro_keys),"cyan",self.ct)
+        self.savePrompt = colored('_________', 'magenta',self.ct) + '\nDESDB ~> '
+        self.prompt = self.savePrompt
+        self.doc_header = colored(' *General Commands*', "cyan",self.ct) + ' (type help <command>):'
+        self.docdb_header = colored('\n *DB Commands*', "cyan",self.ct) + '      (type help <command>):'
+
+
+
+    def __init__(self, conf, desconf, db, interactive=True, quiet=False, refresh=True):
+        cmd.Cmd.__init__(self)
         self.config = conf
+        self.ct = int(self.config.getboolean('display', 'color_terminal'))
+
+        self.writeconfig = False
         self.quiet = quiet
         self.refresh = refresh
         self.desconfig = desconf
@@ -224,16 +241,11 @@ Connected as {user} to {db}.
         self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
         self.desdm_coldefs = self.config.getboolean('easyaccess', 'desdm_coldefs')
         self.trim_whitespace = self.config.getboolean('easyaccess', 'trim_whitespace')
-
         self.dbname = db
-        self.savePrompt = colored('_________', 'cyan') + '\nDESDB ~> '
-        self.prompt = self.savePrompt
         self.buff = None
         self.interactive = interactive
         self.undoc_header = None
         self.metadata = True
-        self.doc_header = colored(' *General Commands*', "cyan") + ' (type help <command>):'
-        self.docdb_header = colored('\n *DB Commands*', "cyan") + '      (type help <command>):'
         # connect to db
         self.user = self.desconfig.get('db-' + self.dbname, 'user')
         self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
@@ -251,7 +263,7 @@ Connected as {user} to {db}.
                 break
             except Exception as e:
                 lasterr = str(e).strip()
-                print(colored("Error when trying to connect to database: %s" % lasterr, "red"))
+                print(colored("Error when trying to connect to database: %s" % lasterr, "red",self.ct))
                 print("\n   Retrying...\n")
                 time.sleep(5)
         if not connected:
@@ -261,6 +273,7 @@ Connected as {user} to {db}.
         self.cur.arraysize = int(self.prefetch)
         msg = self.last_pass_changed()
         if msg and not self.quiet: print(msg)
+        self.set_messages()
 
 
     def handler(self, signum, frame):
@@ -269,8 +282,8 @@ Connected as {user} to {db}.
         """
         print('Ctrl+Z pressed')
         print('Job = %d Stopped' % pid)
-        print(colored(' * Type bg to send this job to the background *', 'cyan'))
-        print(colored(' * Type fg to bring this job to the foreground *', 'cyan'))
+        print(colored(' * Type bg to send this job to the background *', 'cyan',self.ct))
+        print(colored(' * Type fg to bring this job to the foreground *', 'cyan',self.ct))
         print()
         os.kill(pid, signal.SIGSTOP)
         try:
@@ -318,7 +331,7 @@ Connected as {user} to {db}.
                     if self.metadata:
                         # self.do_clear(None) #not cleaning screen
                         print()
-                    dl.print_deslogo(color_term)
+                    dl.print_deslogo(self.ct)
                     self.stdout.write(str(self.intro) + "\n")
             stop = None
             while not stop:
@@ -374,7 +387,7 @@ Connected as {user} to {db}.
             func()
         else:
             self.do_clear(None)
-            dl.print_deslogo(color_term)
+            dl.print_deslogo(self.ct)
             self.stdout.write(str(self.intro) + "\n")
             names = self.get_names()
             cmds_doc = []
@@ -410,11 +423,11 @@ Connected as {user} to {db}.
             self.print_topics(self.misc_header, list(help.keys()), 15, 80)
             self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
-            print(colored(' *Default Input*', 'cyan'))
+            print(colored(' *Default Input*', 'cyan',self.ct))
             print('===================================================')
             print("* To run SQL queries just add ; at the end of query")
             print("* To write to a file  : select ... from ... where ... ; > filename")
-            print(colored("* Supported file formats (.csv, .tab., .fits, .h5) ", "green"))
+            print(colored("* Supported file formats (.csv, .tab., .fits, .h5) ", "green",self.ct))
             print("* To check SQL syntax : select ... from ... where ... ; < check")
             print("* To see the Oracle execution plan  : select ... from ... where ... ; < explain")
             print()
@@ -448,7 +461,7 @@ Connected as {user} to {db}.
             except:
                 print(colored(
                     "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
-                    "red"))
+                    "red",self.ct))
 
         # history
         ht = open(history_file, 'r')
@@ -583,7 +596,7 @@ Connected as {user} to {db}.
             try:
                 query, funs, args, names = fun_utils.parseQ(query)
             except:
-                print_exception()
+                print_exception(mode=self.ct)
                 return
             extra_func = [funs, args, names]
             if funs is None : extra_func = None
@@ -593,13 +606,13 @@ Connected as {user} to {db}.
                     print('\nChecking statement...')
                     try:
                         self.cur.parse(query)
-                        print(colored('Ok!\n', 'green'))
+                        print(colored('Ok!\n', 'green',self.ct))
                         return
                     except:
-                        print_exception()
+                        print_exception(mode=self.ct)
                         return
                 elif app.find('submit') > -1:
-                    print(colored('\nTo be done: Submit jobs to the DB cluster', 'cyan'))
+                    print(colored('\nTo be done: Submit jobs to the DB cluster', 'cyan',self.ct))
                     return
                 elif app.find('explain') > -1:
                     exquery = 'explain plan for ' + query
@@ -620,13 +633,13 @@ Connected as {user} to {db}.
                     eafile.check_filetype(fileout)
                     self.query_and_save(query, fileout, extra_func=extra_func)
                 except KeyboardInterrupt or EOFError:
-                    print(colored('\n\nAborted \n', "red"))
+                    print(colored('\n\nAborted \n', "red",self.ct))
                 except IndexError:
-                    print(colored('\nMust indicate output file\n', "red"))
+                    print(colored('\nMust indicate output file\n', "red",self.ct))
                     print('Format:\n')
                     print('DESDB ~> select ... from ... where ... ; > example.csv \n')
                 except:
-                    print_exception()
+                    print_exception(mode=self.ct)
             else:
                 try:
                     self.query_and_print(query, extra_func=extra_func)
@@ -635,7 +648,7 @@ Connected as {user} to {db}.
                         self.con.cancel()
                     except:
                         pass
-                    print(colored('\n\nAborted \n', "red"))
+                    print(colored('\n\nAborted \n', "red",self.ct))
 
         else:
             print()
@@ -687,10 +700,10 @@ Connected as {user} to {db}.
             return None
         if ptime > 200:
             msg = colored("*Important* ", "red") + 'Last time password change was ' + colored("%d" % ptime,
-                                                                                              "red") + " days ago"
-            if ptime == ctime: msg += colored(" (Never in your case!)", "red")
+                                                                                              "red",self.ct) + " days ago"
+            if ptime == ctime: msg += colored(" (Never in your case!)", "red",self.ct)
             msg += '\n Please change it using the ' + colored("set_password",
-                                                                   "cyan") + ' command to get rid of this message\n'
+                                                                   "cyan",self.ct) + ' command to get rid of this message\n'
             return msg
 
 
@@ -726,7 +739,7 @@ Connected as {user} to {db}.
                         updated = True
                     rowline = ' Rows : %d, Rows/sec: %d ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
-                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
+                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow',self.ct))
                     if self.loading_bar: sys.stdout.flush()
                     if self.loading_bar: sys.stdout.write('\b' * len(rowline))
                     if self.loading_bar: sys.stdout.flush()
@@ -746,21 +759,21 @@ Connected as {user} to {db}.
                     if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 if clear: self.do_clear(None)
                 print()
-                if print_time: print(colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green"))
+                if print_time: print(colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green",self.ct))
                 if print_time: print()
                 if len(data) == 0:
                     fline = '   '
                     for col in header: fline += '%s  ' % col
                     if extra != "":
-                        print(colored(extra + '\n', "cyan"))
+                        print(colored(extra + '\n', "cyan",self.ct))
                     print(fline)
-                    print(colored(err_arg, "red"))
+                    print(colored(err_arg, "red",self.ct))
                 else:
                     if extra_func is None:
                         data.columns = header
                     data.index += 1
                     if extra != "":
-                        print(colored(extra + '\n', "cyan"))
+                        print(colored(extra + '\n', "cyan",self.ct))
                     ## # ADW: Oracle distinguishes between NaN and Null while pandas
                     ## # does not making this replacement confusing...
                     ## try:
@@ -776,7 +789,7 @@ Connected as {user} to {db}.
                     # self.pload.terminate()
                     if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
                 if clear: self.do_clear(None)
-                print(colored(suc_arg, "green"))
+                print(colored(suc_arg, "green",self.ct))
                 if self.autocommit: self.con.commit()
             print()
         except:
@@ -787,12 +800,12 @@ Connected as {user} to {db}.
                 # self.pload.terminate()
                 if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
             print()
-            print(colored(type, "red"))
-            print(colored(value, "red"))
+            print(colored(type, "red",self.ct))
+            print(colored(value, "red",self.ct))
             print()
             if t2 - t1 > self.timeout:
-                print(colored('Query is taking too long on the interpreter',"red"))
-                msg = colored('Try to output the results to a file\nor increase timeout (now is {} s) using:'.format(self.timeout),'green')
+                print(colored('Query is taking too long on the interpreter',"red",self.ct))
+                msg = colored('Try to output the results to a file\nor increase timeout (now is {} s) using:'.format(self.timeout),'green',self.ct)
                 print(msg)
                 print("\'config timeout set XXXXX\'")
 
@@ -830,7 +843,7 @@ Connected as {user} to {db}.
                     data = pd.DataFrame(self.cur.fetchmany())
                     rowline = ' Rows : %d, Rows/sec: %d ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
-                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
+                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow',self.ct))
                     if self.loading_bar: sys.stdout.flush()
                     if self.loading_bar: sys.stdout.write('\b' * len(rowline))
                     if self.loading_bar: sys.stdout.flush()
@@ -872,7 +885,7 @@ Connected as {user} to {db}.
                 elapsed = '%.1f seconds' % (t2 - t1)
                 print()
                 if print_time: print(colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
-                    self.cur.rowcount, fileout, (t2 - t1), com_it - 1), "green"))
+                    self.cur.rowcount, fileout, (t2 - t1), com_it - 1), "green",self.ct))
                 if print_time: print()
             else:
                 pass
@@ -883,8 +896,8 @@ Connected as {user} to {db}.
                 # self.pload.terminate()
                 if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
             print()
-            print(colored(type, "red"))
-            print(colored(value, "red"))
+            print(colored(type, "red",self.ct))
+            print(colored(value, "red",self.ct))
             print()
 
 
@@ -930,7 +943,7 @@ Connected as {user} to {db}.
         tnames = pd.DataFrame(temp.fetchall())
         self.do_clear(None)
         if len(tnames) > 0:
-            print(colored('\nPublic tables from %s' % user.upper(), "cyan"))
+            print(colored('\nPublic tables from %s' % user.upper(), "cyan",self.ct))
             print(tnames)
             # Add tname to cache (no longer needed)
             # table_list=tnames.values.flatten().tolist()
@@ -947,9 +960,9 @@ Connected as {user} to {db}.
             temp = self.cur.execute(query)
             tnames = temp.fetchall()
             if tnames[0][0] == 0:
-                print(colored('User %s does not exist in DB' % user.upper(), 'red'))
+                print(colored('User %s does not exist in DB' % user.upper(), 'red',self.ct))
             else:
-                print(colored('User %s has no tables' % user.upper(), 'cyan'))
+                print(colored('User %s has no tables' % user.upper(), 'cyan',self.ct))
 
     def get_userlist(self):
         if self.dbname in ('dessci', 'desoper'):
@@ -1205,7 +1218,7 @@ Connected as {user} to {db}.
             width             : Width of the output format on the screen
             max_columns       : Max number of columns to display on the screen. Doesn't apply to output files
             max_colwidth      : Max number of characters per column at display. Doesn't apply to output files
-            color_terminal    : yes/no toggles the color for terminal std output. Need to restart easyaccess
+            color_terminal    : yes/no toggles the color for terminal std output
             loading_bar       : yes/no toggles the loading bar. Useful for background jobs
 
         """
@@ -1244,6 +1257,9 @@ Connected as {user} to {db}.
                 if self.config.has_option(section, key):
                     self.config.set(section, key, str(val))
                     if key == 'loading_bar': load_bar = True if val == 'yes' else False
+                    if key == 'color_terminal':
+                        self.ct = True if val == 'yes' else False
+                        self.set_messages()
                     self.writeconfig = True
                     break
             self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')
@@ -1316,9 +1332,9 @@ Connected as {user} to {db}.
             return
         try:
             outproc=self.cur.callproc(proc_name, arguments)
-            print(colored('Done!', "green"))
+            print(colored('Done!', "green",self.ct))
         except:
-            print_exception()
+            print_exception(mode=self.ct)
 
 
     def do_set_password(self, arg):
@@ -1330,15 +1346,15 @@ Connected as {user} to {db}.
         print()
         pw1 = getpass.getpass(prompt='Enter new password:')
         if re.search('\W', pw1):
-            print(colored("\nPassword contains whitespace, not set\n", "red"))
+            print(colored("\nPassword contains whitespace, not set\n", "red",self.ct))
             return
         if not pw1:
-            print(colored("\nPassword cannot be blank\n", "red"))
+            print(colored("\nPassword cannot be blank\n", "red",self.ct))
             return
         pw2 = getpass.getpass(prompt='Re-Enter new password:')
         print()
         if pw1 != pw2:
-            print(colored("Passwords don't match, not set\n", "red"))
+            print(colored("Passwords don't match, not set\n", "red",self.ct))
             return
 
         query = """alter user %s identified by "%s"  """ % (self.user, pw1)
@@ -1355,7 +1371,7 @@ Connected as {user} to {db}.
             try:
                 temp_cur.execute(query)
                 confirm = 'Password changed in %s\n' % db.upper()
-                print(colored(confirm, "green"))
+                print(colored(confirm, "green",self.ct))
                 temp_con.commit()
                 temp_cur.close()
                 temp_con.close()
@@ -1364,7 +1380,7 @@ Connected as {user} to {db}.
                 config_mod.write_desconfig(desfile, self.desconfig)
             except:
                 confirm = 'Password could not be changed in %s\n' % db.upper()
-                print(colored(confirm, "red"))
+                print(colored(confirm, "red",self.ct))
                 print(sys.exc_info())
 
 
@@ -1381,7 +1397,7 @@ Connected as {user} to {db}.
             self.cache_usernames = self.get_userlist()
             self.cache_column_names = self.get_columnlist()
         except:
-            if verb: print(colored("There was an error when refreshing the metadata", "red"))
+            if verb: print(colored("There was an error when refreshing the metadata", "red",self.ct))
         try:
             self.cur.execute('create table FGOTTENMETADATA (ID int)')
         except:
@@ -1414,7 +1430,7 @@ Connected as {user} to {db}.
         key_db = line.split()[0]
         if key_db in ('dessci', 'desoper', 'destest'):
             if key_db == self.dbname:
-                print(colored("Already connected to : %s" % key_db, "green"))
+                print(colored("Already connected to : %s" % key_db, "green",self.ct))
                 return
             self.dbname = key_db
             # connect to db
@@ -1422,7 +1438,7 @@ Connected as {user} to {db}.
                 self.user = self.desconfig.get('db-' + self.dbname, 'user')
                 self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
             except:
-                print(colored("DB {} does not exist in your desservices file".format(key_db), "red"))
+                print(colored("DB {} does not exist in your desservices file".format(key_db), "red",self.ct))
                 return
             kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
             self.dsn = cx_Oracle.makedsn(**kwargs)
@@ -1437,7 +1453,7 @@ Connected as {user} to {db}.
                     break
                 except Exception as e:
                     lasterr = str(e).strip()
-                    print(colored("Error when trying to connect to database: %s" % lasterr, "red"))
+                    print(colored("Error when trying to connect to database: %s" % lasterr, "red",self.ct))
                     print("\n   Retrying...\n")
                     time.sleep(5)
             if not connected:
@@ -1449,7 +1465,7 @@ Connected as {user} to {db}.
             print("Run refresh_metadata_cache to reload the auto-completion metatada")
             return
         else:
-            print(colored("DB {} does not exist or you don't have access to it".format(key_db), "red"))
+            print(colored("DB {} does not exist or you don't have access to it".format(key_db), "red",self.ct))
             return
 
     def complete_change_db(self, text, line, start_index, end_index):
@@ -1474,7 +1490,7 @@ Connected as {user} to {db}.
             trunc(sysdate-t.ctime,0)||' days ago' created
             from des_users d, sys.user$ t  where d.username = '""" + self.user + """' and t.name=upper(d.username)"""
         if self.dbname in ('destest'):
-            print(colored('\nThis function is not implemented in destest\n', 'red'))
+            print(colored('\nThis function is not implemented in destest\n', 'red',self.ct))
             sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
         self.query_and_print(sql_getUserDetails, print_time=False, clear=True)
 
@@ -1651,7 +1667,7 @@ Connected as {user} to {db}.
             where atc.table_name = '%s'""" % (link, table)
             comment_table = self.query_results(qcom)[0][0]
         except:
-            print(colored("Table not found.", "red"))
+            print(colored("Table not found.", "red",self.ct))
             return
 
         # String formatting parameters
@@ -1767,7 +1783,7 @@ Connected as {user} to {db}.
             schema,table,link = self.get_tablename_tuple(tablename)
             link = "@" + link if link else ""
         except:
-            print(colored("Table not found.", "red"))
+            print(colored("Table not found.", "red",self.ct))
             return
 
         # Parse tablename for simple name or owner.tablename.
@@ -1857,7 +1873,7 @@ Connected as {user} to {db}.
             self.cur.execute(qdrop)
         except cx_Oracle.DatabaseError:
             print(colored(
-                "\n Couldn't drop '%s' (doesn't exist)."%(table.upper()),'red'))
+                "\n Couldn't drop '%s' (doesn't exist)."%(table.upper()),'red',self.ct))
         if self.autocommit: self.con.commit()
 
     def create_table(self, table, columns, dtypes):
@@ -1926,7 +1942,7 @@ Connected as {user} to {db}.
 
         print(colored(
             '\n [Iter: %d] Inserted %d rows and %d columns into table %s in %.2f seconds' % (
-                niter+1, len(values), len(columns), table.upper(), t2 - t1), "green"))
+                niter+1, len(values), len(columns), table.upper(), t2 - t1), "green",self.ct))
 
 
     def do_load_table(self, line, name=None, chunksize=None, memsize=None):
@@ -1977,11 +1993,11 @@ Connected as {user} to {db}.
         for obj in [table,name]:
             if obj is None:
                 if any((char in invalid_chars) for char in filename):
-                    print(colored('\nInvalid table name, change filename or use --tablename\n','red'))
+                    print(colored('\nInvalid table name, change filename or use --tablename\n','red',self.ct))
                     return
             else:
                 if any((char in invalid_chars) for char in obj):
-                    print(colored('\nInvalid table name\n','red'))
+                    print(colored('\nInvalid table name\n','red',self.ct))
                     return
 
         chunk = load_args.chunksize
@@ -2001,7 +2017,7 @@ Connected as {user} to {db}.
 
         if ext == '.h5' and chunk is not None:
             print(colored("\nHDF5 file upload with chunksize is not supported yet. Try without "
-                          "--chunksize\n","red"))
+                          "--chunksize\n","red",self.ct))
             return
 
         if table is None:
@@ -2011,14 +2027,14 @@ Connected as {user} to {db}.
 
         # check table first
         if self.check_table_exists(table):
-            print(colored('\n Table already exists. Table can be removed with:','red'))
-            print(colored(' DESDB ~> DROP TABLE %s;\n' % table.upper(),'red'))
+            print(colored('\n Table already exists. Table can be removed with:','red',self.ct))
+            print(colored(' DESDB ~> DROP TABLE %s;\n' % table.upper(),'red',self.ct))
             return
 
         try:
             data, iterator = eafile.read_file(filename)
         except:
-            print_exception()
+            print_exception(mode=self.ct)
             return
 
         # Get the data in a way that Oracle understands
@@ -2046,7 +2062,7 @@ Connected as {user} to {db}.
                     try:
                         self.create_table(table, columns, dtypes)
                     except:
-                        print_exception()
+                        print_exception(mode=self.ct)
                         self.drop_table(table)
                         return
                 try:
@@ -2055,7 +2071,7 @@ Connected as {user} to {db}.
                         iteration += 1
                         if not iterator: done =True
                 except:
-                    print_exception()
+                    print_exception(mode=self.ct)
                     self.drop_table(table)
                     return
 
@@ -2078,7 +2094,7 @@ Connected as {user} to {db}.
                     try:
                         self.create_table(table, columns, dtypes)
                     except:
-                        print_exception()
+                        print_exception(mode=self.ct)
                         self.drop_table(table)
                         return
 
@@ -2087,20 +2103,20 @@ Connected as {user} to {db}.
                         self.insert_data(table, columns, values, dtypes, iteration)
                         iteration += 1
                 except:
-                    print_exception()
+                    print_exception(mode=self.ct)
                     self.drop_table(table)
                     return
 
 
 
         print(colored('\n ** Table %s loaded successfully with %d rows.\n' % (table.upper(), total_rows),
-                      "green"))
-        print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion',"cyan"))
-        print(colored(' DESDB ~> refresh_metadata_cache;',"cyan"))
+                      "green",self.ct))
+        print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion',"cyan",self.ct))
+        print(colored(' DESDB ~> refresh_metadata_cache;',"cyan",self.ct))
 
         print()
-        print(colored(' To make this table public run:', "blue"))
-        print(colored(' DESDB ~> grant select on %s to DES_READER;' % table.upper(), "blue"), '\n')
+        print(colored(' To make this table public run:', "blue",self.ct))
+        print(colored(' DESDB ~> grant select on %s to DES_READER;' % table.upper(), "blue",self.ct), '\n')
         return
 
 
@@ -2157,11 +2173,11 @@ Connected as {user} to {db}.
         for obj in [table,name]:
             if obj is None:
                 if any((char in invalid_chars) for char in filename):
-                    print(colored('\nInvalid table name, change filename or use --tablename\n','red'))
+                    print(colored('\nInvalid table name, change filename or use --tablename\n','red',self.ct))
                     return
             else:
                 if any((char in invalid_chars) for char in obj):
-                    print(colored('\nInvalid table name\n','red'))
+                    print(colored('\nInvalid table name\n','red',self.ct))
                     return
 
         chunk = append_args.chunksize
@@ -2182,7 +2198,7 @@ Connected as {user} to {db}.
 
         if ext == '.h5' and chunk is not None:
             print(colored("\nHDF5 file upload with chunksize is not supported yet. Try without "
-                          "--chunksize\n","red"))
+                          "--chunksize\n","red",self.ct))
             return
 
 
@@ -2199,7 +2215,7 @@ Connected as {user} to {db}.
         try:
             data, iterator = eafile.read_file(filename)
         except:
-            print_exception()
+            print_exception(mode=self.ct)
             return
 
 
@@ -2228,7 +2244,7 @@ Connected as {user} to {db}.
                         iteration += 1
                         if not iterator: done = True
                 except:
-                    print_exception()
+                    print_exception(mode=self.ct)
                     return
 
         if data.file_type == 'fits':
@@ -2251,11 +2267,11 @@ Connected as {user} to {db}.
                         self.insert_data(table, columns, values, dtypes, iteration)
                         iteration += 1
                 except:
-                    print_exception()
+                    print_exception(mode=self.ct)
                     return
 
         print(colored('\n ** Table %s appended successfully with %d rows.' % (table.upper(), total_rows),
-                      "green"))
+                      "green",self.ct))
 
 
     def complete_append_table(self, text, line, start_idx, end_idx):
@@ -2283,11 +2299,11 @@ Connected as {user} to {db}.
         oneline = "".join(keys)
         if oneline.find('table') > -1:
             if len(keys) == 1:
-                print(colored('\nMissing table name\n', "red"))
+                print(colored('\nMissing table name\n', "red",self.ct))
                 return
             table = keys[1]
             if len(keys) == 2:
-                print(colored('\nMissing comment for table %s\n' % table, "red"))
+                print(colored('\nMissing comment for table %s\n' % table, "red",self.ct))
                 return
             comm = " ".join(keys[2:])
             if comm[0] == "'": comm = comm[1:-1]
@@ -2296,14 +2312,14 @@ Connected as {user} to {db}.
             self.query_and_print(qcom, print_time=False, suc_arg=message)
         elif oneline.find('column') > -1:
             if len(keys) == 1:
-                print(colored('\nMissing column name (TABLE.COLUMN)\n', "red"))
+                print(colored('\nMissing column name (TABLE.COLUMN)\n', "red",self.ct))
                 return
             col = keys[1]
             if len(keys) == 2:
-                print(colored('\nMissing comment for column %s\n' % col, "red"))
+                print(colored('\nMissing comment for column %s\n' % col, "red",self.ct))
                 return
             if len(keys) > 2 and col.find('.') == -1:
-                print(colored('\nMissing column name for table %s\n', "red") % col)
+                print(colored('\nMissing column name for table %s\n', "red",self.ct) % col)
                 return
             comm = " ".join(keys[2:])
             if comm[0] == "'": comm = comm[1:-1]
@@ -2311,7 +2327,7 @@ Connected as {user} to {db}.
             message = "Comment added to column: %s in table %s" % (col.split('.')[1], col.split('.')[0])
             self.query_and_print(qcom, print_time=False, suc_arg=message)
         else:
-            print(colored('\nMissing arguments\n', "red"))
+            print(colored('\nMissing arguments\n', "red",self.ct))
             self.do_help('add_comment')
 
     def complete_add_comment(self, text, line, begidx, lastidx):
@@ -2338,8 +2354,8 @@ Connected as {user} to {db}.
         """
         last_version=last_pip_version()
         print()
-        print(colored("Current version  : easyaccess {}".format(__version__),"green"))
-        print(colored("Last pip version : easyaccess {}".format(last_version),"green"))
+        print(colored("Current version  : easyaccess {}".format(__version__),"green",self.ct))
+        print(colored("Last pip version : easyaccess {}".format(last_version),"green",self.ct))
         print()
         return
 
@@ -2663,8 +2679,8 @@ class connect(easy_or):
             print("Please indicate a tablename to be ingested in the DB")
             return False
         if self.check_table_exists(tablename) and not append:
-            print(colored('\n Table already exists. Table can be removed with:','red'))
-            print(colored(' DESDB ~> DROP TABLE %s;\n' % tablename.upper(),'red'))
+            print(colored('\n Table already exists. Table can be removed with:','red',self.ct))
+            print(colored(' DESDB ~> DROP TABLE %s;\n' % tablename.upper(),'red',self.ct))
             return False
         df.file_type = 'pandas'
         if len(df) == 0:
@@ -2818,8 +2834,7 @@ if __name__ == '__main__':
 
     color_term = True
     if not conf.getboolean('display', 'color_terminal'):
-        # Careful, this is duplicated from imports at the top of the file
-        def colored(line, color): return line
+        colored = without_color
         color_term = False
 
 
