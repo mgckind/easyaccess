@@ -126,7 +126,7 @@ def loading():
     print()
     cc = 0
     spinner = itertools.cycle(list(range(13)) + list(range(1, 14, 1))[::-1])
-    line2 = "  Press Ctrl-C to abort "
+    line2 = "  Ctrl-C to abort; "
     try:
         while True:
             line = list('    |              |')
@@ -720,7 +720,7 @@ class easy_or(cmd.Cmd, Import, object):
                         for kf in range(len(p_functions)):
                             data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
                         updated = True
-                    rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
+                    rowline = ' Rows : %d, Rows/sec: %d ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
                     if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
                     if self.loading_bar: sys.stdout.flush()
@@ -824,7 +824,7 @@ class easy_or(cmd.Cmd, Import, object):
                 com_it = 0
                 while True:
                     data = pd.DataFrame(self.cur.fetchmany())
-                    rowline = '   Rows : %d, Avg time (rows/sec): %.1f ' % (
+                    rowline = ' Rows : %d, Rows/sec: %d ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
                     if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow'))
                     if self.loading_bar: sys.stdout.flush()
