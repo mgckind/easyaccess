@@ -56,7 +56,7 @@ try:
     from termcolor import colored
 except:
     def colored(line, color): return line
-        
+
 import pandas as pd
 import datetime
 import fitsio
@@ -202,9 +202,13 @@ class easy_or(cmd.Cmd, Import, object):
 
     def __init__(self, conf, desconf, db, interactive=True, quiet=False, refresh=True):
         cmd.Cmd.__init__(self)
+        intro_keys = {'db':colored(db,"green"), 'user':colored(desconf.get('db-' + db, 'user'),"green"),
+         'ea_version':colored("easyaccess "+__version__,"cyan")}
         self.intro = colored(
-            "\neasyaccess  %s. The DESDM Database shell. \n* Type 'help' or '?' to list commands. *\n" % __version__,
-            "cyan")
+            """
+{ea_version}. The DESDM Database shell.
+Connected as {user} to {db}.
+** Type 'help' or '?' to list commands. **\n""".format(**intro_keys),"cyan")
         self.writeconfig = False
         self.config = conf
         self.quiet = quiet
@@ -757,7 +761,7 @@ class easy_or(cmd.Cmd, Import, object):
                     data.index += 1
                     if extra != "":
                         print(colored(extra + '\n', "cyan"))
-                    ## # ADW: Oracle distinguishes between NaN and Null while pandas 
+                    ## # ADW: Oracle distinguishes between NaN and Null while pandas
                     ## # does not making this replacement confusing...
                     ## try:
                     ##     data.fillna('Null', inplace=True)
@@ -832,7 +836,7 @@ class easy_or(cmd.Cmd, Import, object):
                     if self.loading_bar: sys.stdout.flush()
                     com_it += 1
                     # 1-indexed for backwards compatibility
-                    if first: fileindex = 1  
+                    if first: fileindex = 1
                     info2 = info
                     if not data.empty:
                         data.columns = header
@@ -854,7 +858,7 @@ class easy_or(cmd.Cmd, Import, object):
                         fileindex = eafile.write_file(fileout,data,info2,fileindex,
                                                       mode_write,
                                                       max_mb=self.outfile_max_mb,query=query)
-                        
+
                         if first:
                             mode_write = 'a'
                             header_out = False
@@ -910,7 +914,7 @@ class easy_or(cmd.Cmd, Import, object):
 
         if self.dbname in ('dessci', 'desoper', 'destest'):
             query = """
-            select table_name from DES_ADMIN.CACHE_TABLES  
+            select table_name from DES_ADMIN.CACHE_TABLES
             union select table_name from user_tables
             """
         temp = self.cur.execute(query)
@@ -977,7 +981,7 @@ class easy_or(cmd.Cmd, Import, object):
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
         return col_list
-    
+
     def get_columnlist(self):
         query = """SELECT column_name from DES_ADMIN.CACHE_COLUMNS"""
         temp = self.cur.execute(query)
@@ -1401,7 +1405,7 @@ class easy_or(cmd.Cmd, Import, object):
         """
         DB: Change to another database, namely dessci, desoper or destest
 
-         Usage: 
+         Usage:
             change_db DB     # Changes to DB, it does not refresh metadata, e.g.: change_db desoper
 
         """
@@ -1481,7 +1485,7 @@ class easy_or(cmd.Cmd, Import, object):
         Usage: myquota
         """
         query = """
-        SELECT tablespace_name, mbytes_used/1024 as GBYTES_USED, 
+        SELECT tablespace_name, mbytes_used/1024 as GBYTES_USED,
         mbytes_left/1024 as GBYTES_LEFT from myquota
         """
         self.query_and_print(query, print_time=False, clear=True)
@@ -1494,8 +1498,8 @@ class easy_or(cmd.Cmd, Import, object):
         """
         # query = "SELECT table_name FROM user_tables"
         query = """
-        SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES 
-        FROM user_segments s, user_tables t 
+        SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES
+        FROM user_segments s, user_tables t
         WHERE s.segment_name = t.table_name
         """
 
@@ -1506,7 +1510,7 @@ class easy_or(cmd.Cmd, Import, object):
         """
         DB:Finds users given 1 criteria (either first name or last name)
 
-        Usage: 
+        Usage:
             - find_user Doe     # Finds all users with Doe in their names
             - find_user John%   # Finds all users with John IN their names (John, Johnson, etc...)
             - find_user P%      # Finds all users with first, lastname or username starting with P
@@ -1556,7 +1560,7 @@ class easy_or(cmd.Cmd, Import, object):
         table = tablename
         schema = self.user.upper()  # default --- Mine
         link = ""  # default no link
-        
+
         if "." in table: (schema, table) = table.split(".")
         if "@" in table: (table, link) = table.split("@")
 
@@ -1638,35 +1642,35 @@ class easy_or(cmd.Cmd, Import, object):
         except:
             pass
 
-        try: 
+        try:
             schema,table,link = self.get_tablename_tuple(tablename)
             # schema, table and link are now valid.
             link = "@" + link if link else ""
-            qcom = """ 
-            select comments from all_tab_comments%s atc 
+            qcom = """
+            select comments from all_tab_comments%s atc
             where atc.table_name = '%s'""" % (link, table)
             comment_table = self.query_results(qcom)[0][0]
-        except: 
+        except:
             print(colored("Table not found.", "red"))
             return
 
         # String formatting parameters
         params = dict(schema=schema, table=table, link=link,
                       pattern=pattern, comment=comment_table)
-                      
+
         if pattern:
             comm = """Description of %(table)s with pattern %(pattern)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
-            case atc.data_type 
+            case atc.data_type
             when 'NUMBER' then '(' || atc.data_precision || ',' || atc.data_scale || ')'
             when 'VARCHAR2' then atc.CHAR_LENGTH || ' characters'
             else atc.data_length || ''  end as DATA_FORMAT,
             acc.comments
             from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
-            and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
-            and acc.column_name = atc.column_name 
+            and acc.owner = '%(schema)s' and acc.table_name = '%(table)s'
+            and acc.column_name = atc.column_name
             and atc.column_name like '%(pattern)s'
             order by atc.column_name
             """ % params
@@ -1674,18 +1678,18 @@ class easy_or(cmd.Cmd, Import, object):
             comm = """Description of %(table)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
-            case atc.data_type 
+            case atc.data_type
             when 'NUMBER' then '(' || atc.data_precision || ',' || atc.data_scale || ')'
             when 'VARCHAR2' then atc.CHAR_LENGTH || ' characters'
             else atc.data_length || ''  end as DATA_FORMAT,
             acc.comments
             from all_tab_cols%(link)s atc , all_col_comments%(link)s acc
             where atc.owner = '%(schema)s' and atc.table_name = '%(table)s'
-            and acc.owner = '%(schema)s' and acc.table_name = '%(table)s' 
+            and acc.owner = '%(schema)s' and acc.table_name = '%(table)s'
             and acc.column_name = atc.column_name
             order by atc.column_name
             """ % params
-        
+
         if extra is None:
             extra = comm
         df = self.query_and_print(q, print_time=False,
@@ -1701,7 +1705,7 @@ class easy_or(cmd.Cmd, Import, object):
     def do_find_tables(self, arg, extra=None, return_df=False):
         """
         DB:Lists tables and views matching an oracle pattern  e.g %SVA%,
-        
+
         Usage : find_tables PATTERN
         """
         if extra is None:
@@ -1718,20 +1722,20 @@ class easy_or(cmd.Cmd, Import, object):
 
 
     def do_find_tables_with_column(self, arg):
-        """           
+        """
         DB:Finds tables having a column name matching column-name-string.
-        
-        Usage: find_tables_with_column  <column-name-substring>                                                                 
-        Example: find_tables_with_column %MAG%  # hunt for columns with MAG 
+
+        Usage: find_tables_with_column  <column-name-substring>
+        Example: find_tables_with_column %MAG%  # hunt for columns with MAG
         """
         # query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
         if arg == '': return self.do_help('find_tables_with_column')
         query = """
-           SELECT table_name, column_name 
-           FROM fgottenmetadata 
-           WHERE column_name LIKE '%s'  
+           SELECT table_name, column_name
+           FROM fgottenmetadata
+           WHERE column_name LIKE '%s'
            UNION
-           SELECT LOWER(owner) || '.' || table_name, column_name 
+           SELECT LOWER(owner) || '.' || table_name, column_name
            FROM all_tab_cols
            WHERE column_name LIKE '%s'
            AND owner NOT LIKE '%%SYS'
@@ -1759,10 +1763,10 @@ class easy_or(cmd.Cmd, Import, object):
         tablename = arg.split()[0]
         tablename = tablename.upper()
 
-        try: 
+        try:
             schema,table,link = self.get_tablename_tuple(tablename)
             link = "@" + link if link else ""
-        except: 
+        except:
             print(colored("Table not found.", "red"))
             return
 
@@ -1839,7 +1843,7 @@ class easy_or(cmd.Cmd, Import, object):
 
         # cut last ',' and close paren
         qtable = qtable[:-1] + ')'
-        
+
         return qtable
 
     def drop_table(self, table, purge=False):
@@ -1859,7 +1863,7 @@ class easy_or(cmd.Cmd, Import, object):
     def create_table(self, table, columns, dtypes):
         """
         Create a DB table from a list of columns and numpy dtypes.
-        
+
         Parameters:
         ----------
         table   : Name of the Oracle table to create
@@ -1876,11 +1880,11 @@ class easy_or(cmd.Cmd, Import, object):
         if self.autocommit: self.con.commit()
 
     def insert_data(self, table, columns, values, dtypes=None, niter = 0):
-        """Insert data into a DB table. 
+        """Insert data into a DB table.
 
         Trim trailing whitespace from string columns. Because of the
         way `executemany` works, input needs to by python lists.
-        
+
         Parameters:
         -----------
         table   : Name of the table to insert into
@@ -1902,13 +1906,13 @@ class easy_or(cmd.Cmd, Import, object):
                 cvals.append('TRIM(TRAILING FROM :%s)'%column)
             else:
                 cvals.append(':%s'%column)
-            
+
         cols = ','.join(columns)
         vals = ','.join(cvals)
 
         qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
         self.msg = ''
-        try: 
+        try:
             t1 = time.time()
             self.cur.executemany(qinsert, values)
             t2 = time.time()
@@ -1919,7 +1923,7 @@ class easy_or(cmd.Cmd, Import, object):
                 self.msg += "\n If you are sure, you can disable DESDM column typing: \n"
                 self.msg += " DESDB ~> config desdm_coldefs set no"
             raise cx_Oracle.DatabaseError(self.msg)
-                
+
         print(colored(
             '\n [Iter: %d] Inserted %d rows and %d columns into table %s in %.2f seconds' % (
                 niter+1, len(values), len(columns), table.upper(), t2 - t1), "green"))
@@ -2118,7 +2122,7 @@ class easy_or(cmd.Cmd, Import, object):
         It is meant to use after load_table command
 
          Optional Arguments:
-    
+
               --tablename NAME            given name for the table, default is taken from filename
               --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
                                          that do not fit in memory
@@ -2159,7 +2163,7 @@ class easy_or(cmd.Cmd, Import, object):
                 if any((char in invalid_chars) for char in obj):
                     print(colored('\nInvalid table name\n','red'))
                     return
-        
+
         chunk = append_args.chunksize
         memchunk = append_args.memsize
         if chunksize is not None:
@@ -2187,7 +2191,7 @@ class easy_or(cmd.Cmd, Import, object):
             if name is not None:
                 table = name
 
-        # check table first 
+        # check table first
         if not self.check_table_exists(table):
             print('\n Table does not exist. Table can be created with:' \
                   '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
@@ -2262,14 +2266,14 @@ class easy_or(cmd.Cmd, Import, object):
         """
         DB:Add comments to table and/or columns inside tables
 
-        Usage: 
+        Usage:
             - add_comment table <TABLE> 'Comments on table'
             - add_comment column <TABLE.COLUMN> 'Comments on columns'
 
         Ex:  add_comment table MY_TABLE 'This table contains info'
              add_comment columns MY_TABLE.ID 'Id for my objects'
 
-        This command supports smart-autocompletion. No `;` is 
+        This command supports smart-autocompletion. No `;` is
         necessary (and it will be inserted into comment if used).
 
         """
@@ -2379,7 +2383,7 @@ class IterData(object):
         if self.extra_func is not None and not self.data.empty:
             funs, args, names = self.extra_func
             for kf in range(len(funs)):
-                self.data = fun_utils.updateDF(self.data, funs, args, names, kf)  
+                self.data = fun_utils.updateDF(self.data, funs, args, names, kf)
     def __iter__(self):
         return self
 
@@ -2391,17 +2395,17 @@ class IterData(object):
             if self.extra_func is not None and not self.data.empty:
                 funs, args, names = self.extra_func
                 for kf in range(len(funs)):
-                    self.data = fun_utils.updateDF(self.data, funs, args, names, kf)  
+                    self.data = fun_utils.updateDF(self.data, funs, args, names, kf)
             return data
         else:
             self.cursor.close()
             raise StopIteration('No more data in the DB')
-        
-        
+
+
 
 def to_pandas(cur):
     """
-    Returns a pandas DataFrame from a executed query 
+    Returns a pandas DataFrame from a executed query
     """
     if cur.description != None:
         data = pd.DataFrame(cur.fetchall(), columns=[rec[0] for rec in cur.description])
@@ -2507,18 +2511,18 @@ class connect(easy_or):
 
     def query_to_pandas(self, query, prefetch='', iterator = False):
         """
-        Executes a query and return the results in pandas DataFrame. If result is too big 
+        Executes a query and return the results in pandas DataFrame. If result is too big
         it is better to save results to a file
 
         Parameters:
         -----------
-        query     : The SQL query to be executed 
+        query     : The SQL query to be executed
         prefetch  : Number of rows to retrieve at each trip to the DB
         iterator  : Return interator, get data with .next() method (to avoid get all data at once)
 
         Returns:
         --------
-        If iterator is False (default) the function returns a pandas DataFrame 
+        If iterator is False (default) the function returns a pandas DataFrame
         with the result of the query. If the iterator is True, it will return an iterator
         to retrieve data one piece at a time.
         """
@@ -2537,7 +2541,7 @@ class connect(easy_or):
                 data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
                 if extra_func is not None:
                     for kf in range(len(funs)):
-                        data = fun_utils.updateDF(data, funs, args, names, kf)  
+                        data = fun_utils.updateDF(data, funs, args, names, kf)
         else:
             data = ""
         if not iterator: cursor.close()
@@ -2599,7 +2603,7 @@ class connect(easy_or):
         except:
             # exception
             return False
-            
+
 
     def append_table(self, table_file, name=None, chunksize=None, memsize=None):
         """
@@ -2625,7 +2629,7 @@ class connect(easy_or):
 
     def find_tables(self, pattern=''):
         """
-        Lists tables and views matching an oracle pattern. 
+        Lists tables and views matching an oracle pattern.
 
         Parameters:
         -----------
@@ -2649,11 +2653,11 @@ class connect(easy_or):
         df        : The DataFrame to be loaded to the DB
         tablename : The name of the table to be created
         append    : Set True if appending to existing table, if table doesn't exists it is created
-        
+
 
         Returns:
         --------
-        True or False depending on the success 
+        True or False depending on the success
         """
         if tablename is None:
             print("Please indicate a tablename to be ingested in the DB")
@@ -2715,21 +2719,21 @@ if __name__ == '__main__':
     # ADW: Add this to a separate 'parser' module?
     parser = MyParser(
         description='Easy access to the DES database. There is a configuration file located in %s for more customizable options' % config_file)
-    parser.add_argument("-v", "--version", action = "store_true", 
+    parser.add_argument("-v", "--version", action = "store_true",
                         help="print version number and exit")
-    parser.add_argument("-c", "--command", dest='command', 
+    parser.add_argument("-c", "--command", dest='command',
                         help="Executes command and exit")
-    parser.add_argument("-l", "--loadsql", dest='loadsql', 
+    parser.add_argument("-l", "--loadsql", dest='loadsql',
                         help="Loads a sql command, execute it and exit")
-    parser.add_argument("-lt", "--load_table", dest='loadtable', 
+    parser.add_argument("-lt", "--load_table", dest='loadtable',
                         help="Loads data from a csv, tab, or fits formatted file \
                         into a DB table using the filename as the table name or a custom \
                         name with --tablename MYTABLE")
-    parser.add_argument("-at", "--append_table", dest='appendtable', 
+    parser.add_argument("-at", "--append_table", dest='appendtable',
                         help="Appends data from a csv, tab, or fits formatted file \
                         into a DB table using the filename as the table name or a custom \
                         name with --tablename MYABLE")
-    parser.add_argument("--tablename", dest='tablename', 
+    parser.add_argument("--tablename", dest='tablename',
                         help="Custom table name to be used with --load_table\
                         or --append_table")
     parser.add_argument("--chunksize", dest='chunksize', type=int, default = None,
@@ -2740,7 +2744,7 @@ if __name__ == '__main__':
                              "--append_table")
     parser.add_argument("-s", "--db",dest='db', #choices=[...]?
                         help="Override database name [dessci,desoper,destest]")
-    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet', 
+    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet',
                         help="Silence initialization, no loading bar")
     parser.add_argument("-u", "--user", dest='user')
     parser.add_argument("-p", "--password", dest='password')
