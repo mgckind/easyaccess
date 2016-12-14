@@ -34,7 +34,8 @@ try:
     import easyaccess.eautils.fun_utils as fun_utils
     from easyaccess.eautils.import_utils import Import
 
-except ImportError:
+except ImportError as error:
+    warnings.warn(str(error))
     from version import __version__
     from version import last_pip_version
     import eautils.dircache as dircache
@@ -370,6 +371,7 @@ class easy_or(cmd.Cmd, Import, object):
         else:
             self.do_clear(None)
             dl.print_deslogo(color_term)
+            self.stdout.write(str(self.intro) + "\n")
             names = self.get_names()
             cmds_doc = []
             cmds_undoc = []
@@ -2337,7 +2339,7 @@ class easy_or(cmd.Cmd, Import, object):
         print()
         return
 
-    # UNDOCCUMENTED DO METHODS
+    # UNDOCUMENTED DO METHODS
 
     def do_EOF(self, line):
         # Exit program on ^D (Ctrl+D)
