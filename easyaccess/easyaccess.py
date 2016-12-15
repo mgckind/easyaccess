@@ -208,7 +208,7 @@ class easy_or(cmd.Cmd, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
 
     def set_messages(self):
-        intro_keys = {'db':colored(db,"green",self.ct), 'user':colored(desconf.get('db-' + db, 'user'),"green", self.ct),
+        intro_keys = {'db':colored(self.dbname,"green",self.ct), 'user':colored(desconf.get('db-' + self.dbname, 'user'),"green", self.ct),
          'ea_version':colored("easyaccess "+__version__,"cyan",self.ct)}
         self.intro = colored(
             """
@@ -1463,6 +1463,7 @@ Connected as {user} to {db}.
             self.cur.arraysize = int(self.prefetch)
             print()
             print("Run refresh_metadata_cache to reload the auto-completion metatada")
+            self.set_messages()
             return
         else:
             print(colored("DB {} does not exist or you don't have access to it".format(key_db), "red",self.ct))
