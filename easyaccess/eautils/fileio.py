@@ -233,10 +233,10 @@ def write_pandas(filename, df, fileindex, mode='w', header=True, query=''):
 
     if ext == '.csv':
         df.to_csv(filename, index=False, float_format='%.8f', sep=',',
-                  mode=mode, header=header, encoding='ascii')
+                  mode=mode, header=header, encoding='utf-8')
     if ext == '.tab':
         df.to_csv(filename, index=False, float_format='%.8f', sep=' ',
-                  mode=mode, header=header, encoding='ascii')
+                  mode=mode, header=header, encoding='utf-8')
     if ext == '.h5':
         df.to_hdf(filename, 'data', mode=mode, index=False,
                   header=header)  # , complevel=9,complib='bzip2'
