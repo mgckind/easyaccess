@@ -208,7 +208,7 @@ class easy_or(cmd.Cmd, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
 
     def set_messages(self):
-        intro_keys = {'db':colored(self.dbname,"green",self.ct), 'user':colored(desconf.get('db-' + self.dbname, 'user'),"green", self.ct),
+        intro_keys = {'db':colored(self.dbname,"green",self.ct), 'user':colored(self.desconfig.get('db-' + self.dbname, 'user'),"green", self.ct),
          'ea_version':colored("easyaccess "+__version__,"cyan",self.ct)}
         self.intro = colored(
             """
