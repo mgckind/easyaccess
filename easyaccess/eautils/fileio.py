@@ -4,8 +4,8 @@ Module for file input/output with pandas, fitsio, ...
 
 Some useful documentation:
 fitsio: https://github.com/esheldon/fitsio
-numpy: 
-pandas: 
+numpy:
+pandas:
 
 """
 import os
@@ -107,7 +107,7 @@ def unrecognized_filetype(filename, types=None):
     Parameters:
     -----------
     filename : File name (or extension)
-    
+
     Returns:
     --------
     msg : Unrecognized file message
@@ -131,7 +131,7 @@ def check_filetype(filename, types=None):
     Parameters:
     -----------
     filename : Name (or extension) of file
-    
+
     Returns:
     --------
     True : (Or raises IOError)
@@ -165,7 +165,7 @@ def write_file(filename, data, desc, fileindex=1, mode='w', max_mb=1000, query='
     fileindex: The index of the file to write.
     mode :     The write-mode: 'w'=write new file, 'a'=append to existing file
     max_mb :   Maximum file size.
-    
+
     Returns:
     fileindex: The (possibly incremented) fileindex.
     """
@@ -233,10 +233,10 @@ def write_pandas(filename, df, fileindex, mode='w', header=True, query=''):
 
     if ext == '.csv':
         df.to_csv(filename, index=False, float_format='%.8f', sep=',',
-                  mode=mode, header=header)
+                  mode=mode, header=header, encoding='ascii')
     if ext == '.tab':
         df.to_csv(filename, index=False, float_format='%.8f', sep=' ',
-                  mode=mode, header=header)
+                  mode=mode, header=header, encoding='ascii')
     if ext == '.h5':
         df.to_hdf(filename, 'data', mode=mode, index=False,
                   header=header)  # , complevel=9,complib='bzip2'
@@ -311,17 +311,17 @@ def write_fitsio(filename, df, desc, fileindex, mode='w', query=''):
 
 def read_file(filename):
     """
-    Read an input file with pandas or fitsio. 
+    Read an input file with pandas or fitsio.
 
     Unfortunately, the conversion between pandas and numpy is too slow
-    to put data into a consistent framework.  
+    to put data into a consistent framework.
 
     Accepted file extensions are defined by 'FILE_EXTS'.
 
     Parameters:
     ----------
     filename : Input filename
-    
+
     Returns:
     --------
     data    : pandas.DataFrame or fitsio.FITS object
@@ -361,7 +361,7 @@ def read_pandas(filename):
     Parameters:
     ----------
     filename : Input filename
-    
+
     Returns:
     --------
     df : pandas.DataFrame object
@@ -404,7 +404,7 @@ def read_fitsio(filename):
     Parameters:
     ----------
     filename : Input filename
-    
+
     Returns:
     --------
     fits : fitsio.FITS object
@@ -426,7 +426,7 @@ def read_fitsio(filename):
 
     # ## # Hack to just get a subset of columns
     ### x1,x2 = 25,37
-    ###  
+    ###
     ### fits.ea_get_columns = lambda: fits[1].get_colnames()[x1:x2]
     ### print fits.ea_get_columns()
     ### fits.ea_get_values = lambda: fits[1].read(columns=fits.ea_get_columns()).tolist()
