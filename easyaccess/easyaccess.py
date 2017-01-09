@@ -22,6 +22,7 @@ import shutil
 import stat
 import re
 import getpass
+from multiprocessing import Process
 
 try:
     from easyaccess.version import __version__
@@ -84,7 +85,6 @@ class KeyParser(argparse.ArgumentParser):
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p')
 
-global load_bar
 pid = os.getpid()
 
 # FILES
@@ -2712,6 +2712,7 @@ def cli():
     """
     Main function to run the command line interpreter either interactively or just simple commands
     """
+    global load_bar
     conf = config_mod.get_config(config_file)
 
     # ADW: What about all the readline imports in the code?
@@ -2737,14 +2738,11 @@ def cli():
     pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
 
     load_bar = conf.getboolean('display', 'loading_bar')
-    if load_bar:
-        from multiprocessing import Process
 
     color_term = True
     if not conf.getboolean('display', 'color_terminal'):
         colored = without_color
         color_term = False
-
 
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
@@ -2754,7 +2752,6 @@ def cli():
         if db[:3] == 'db-': db = db[3:]
     else:
         db = conf.get('easyaccess', 'database')
-
 
     if args.user is not None:
         print('Bypassing .desservices file with user : %s' % args.user)
@@ -2768,19 +2765,15 @@ def cli():
     else:
         desconf = config_mod.get_desconfig(desfile, db)
 
-    if args.command is not None:
         initial_message(args.quiet, clear=False)
+    if args.command is not None:
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
         cmdinterp.onecmd(args.command)
-        os._exit(0)
     elif args.loadsql is not None:
-        initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
-        os._exit(0)
     elif args.loadtable is not None:
-        initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
         linein = "load_table " + args.loadtable
         if args.tablename is not None:
@@ -2790,9 +2783,7 @@ def cli():
         if args.memsize is not None:
             linein += ' --memsize ' + str(args.memsize)
         cmdinterp.onecmd(linein)
-        os._exit(0)
     elif args.appendtable is not None:
-        initial_message(args.quiet, clear=False)
         cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
         linein = "append_table " + args.appendtable
         if args.tablename is not None:
@@ -2802,10 +2793,11 @@ def cli():
         if args.memsize is not None:
             linein += ' --memsize ' + str(args.memsize)
         cmdinterp.onecmd(linein)
-        os._exit(0)
     else:
         initial_message(args.quiet, clear=True)
         easy_or(conf, desconf, db, quiet=args.quiet, refresh= not args.norefresh).cmdloop()
+    os._exit(0)
 
 if __name__ == '__main__':
+    "Main function"
     cli()
