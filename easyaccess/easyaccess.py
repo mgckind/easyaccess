@@ -27,7 +27,6 @@ from multiprocessing import Process
 try:
     from easyaccess.version import __version__
     from easyaccess.version import last_pip_version
-    import easyaccess.eautils.dircache as dircache
     import easyaccess.config_ea as config_mod
     from easyaccess.eautils import des_logo as dl
     import easyaccess.eautils.dtypes as eatypes
@@ -35,25 +34,24 @@ try:
     import easyaccess.eautils.fun_utils as fun_utils
     import easyaccess.eaparser as eaparser
     from easyaccess.eautils.import_utils import Import
+    from easyaccess.eautils.ea_utils import *
 
 except ImportError as error:
     warnings.warn(str(error))
     from version import __version__
     from version import last_pip_version
-    import eautils.dircache as dircache
     import config_ea as config_mod
     import eautils.des_logo as dl
     import eautils.dtypes as eatypes
     import eautils.fileio as eafile
     import eaparser as eaparser
     import eautils.fun_utils as fun_utils
+    from eautils.ea_utils import *
     from eautils.import_utils import Import
 
 import threading
 import time
 import getpass
-import itertools
-import logging
 
 def without_color(line, color, mode=0) : return line
 try:
@@ -71,20 +69,12 @@ import pandas as pd
 import datetime
 import fitsio
 import numpy as np
-import argparse
 import webbrowser
 import signal
+
 sys.path.insert(0, os.getcwd())
-
+# For python functions to work
 fun_utils.init_func()
-
-class KeyParser(argparse.ArgumentParser):
-    def error(self, message):
-        sys.exit(2)
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
-
 pid = os.getpid()
 
 # FILES
@@ -109,6 +99,7 @@ if not os.path.exists(history_file):
 if not os.path.exists(config_file):
     os.system('echo $null >> ' + config_file)
 
+# DES SERVICES FILE
 desfile = os.getenv("DES_SERVICES")
 if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
 if os.path.exists(desfile):
@@ -127,29 +118,6 @@ def print_exception(pload=None,mode=1):
     print(colored(value, "red",mode))
     print()
 
-
-def loading():
-    char_s = u"\u2606"
-    if sys.stdout.encoding != 'UTF-8':
-        char_s = "o"
-    print()
-    cc = 0
-    spinner = itertools.cycle(list(range(13)) + list(range(1, 14, 1))[::-1])
-    line2 = "  Ctrl-C to abort; "
-    try:
-        while True:
-            line = list('    |              |')
-            time.sleep(0.1)
-            idx = int(next(spinner))
-            line[5 + idx] = char_s
-            sys.stdout.write("".join(line))
-            sys.stdout.write(line2)
-            sys.stdout.flush()
-            sys.stdout.write('\b' * len(line) + '\b' * len(line2))
-    except:
-        pass
-
-
 options_prefetch = ['show', 'set', 'default']
 options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
@@ -164,27 +132,7 @@ options_config2 = ['show', 'set']
 options_app = ['check', 'submit', 'explain']
 
 
-def _complete_path(line):
-    line = line.split()
-    if len(line) < 2:
-        filename = ''
-        path = './'
-    else:
-        path = line[1]
-        if '/' in path:
-            i = path.rfind('/')
-            filename = path[i + 1:]
-            path = path[:i]
-        else:
-            filename = path
-            path = './'
-    ls = dircache.listdir(path)
-    ls = ls[:]
-    dircache.annotate(path, ls)
-    if filename == '':
-        return ls
-    else:
-        return [f for f in ls if f.startswith(filename)]
+
 
 
 def read_buf(fbuf):
