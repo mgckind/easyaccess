@@ -41,7 +41,7 @@ def toeasyaccess(custom):
         if j < nargs_p:
             head.append(ag)
         else:
-            head.append(ag + '=' + str(check.defaults[j-nargs_p]))    
+            head.append(ag + '=' + str(check.defaults[j-nargs_p]))
     temp = easy_function
     temp.__doc1__ = '('+', '.join(head)+')'
     temp.in_easyaccess = True
@@ -110,7 +110,7 @@ def updateDF(D, f, a, n, idx, myglobals=None):
             if myglobals is not None:
                 HM = myglobals[modname]
             else:
-                HM = ea_func_dictionary[func] 
+                HM = ea_func_dictionary[func]
         except:
             print(colored("\n\nYou might need to import %s" % modname, "red"))
             raise
@@ -135,17 +135,3 @@ def updateDF(D, f, a, n, idx, myglobals=None):
     for j in range(a[idx][1]):
         D.drop('F' + str(idx) + 'ARG' + str(j), 1, inplace=True)
     return D
-
-
-
-
-
-
-
-
-
-
-
-
-
-
