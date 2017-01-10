@@ -108,52 +108,6 @@ if os.path.exists(desfile):
         print('Changing permissions to des_service file to read/write only by user')
         os.chmod(desfile, 2 ** 8 + 2 ** 7)
 
-
-def print_exception(pload=None,mode=1):
-    (type, value, traceback) = sys.exc_info()
-    if pload and (pload.pid is not None):
-        os.kill(pload.pid, signal.SIGKILL)
-    print()
-    print(colored(type, "red",mode))
-    print(colored(value, "red",mode))
-    print()
-
-options_prefetch = ['show', 'set', 'default']
-options_add_comment = ['table', 'column']
-options_edit = ['show', 'set_editor']
-options_out = eafile.FILE_EXTS
-options_def = eafile.FILE_DEFS
-# ADW: It would be better to grab these from the config object
-options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
-                  'max_columns',
-                  'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue',
-                  'autocommit', 'trim_whitespace', 'desdm_coldefs']
-options_config2 = ['show', 'set']
-options_app = ['check', 'submit', 'explain']
-
-
-
-
-
-def read_buf(fbuf):
-    """
-    Read SQL files, sql statement should end with ';' if parsing to a file to write.
-    """
-    try:
-        with open(fbuf) as f:
-            content = f.read()
-    except:
-        print('\n' + 'Fail to load the file "{:}"'.format(fbuf))
-        return ""
-    list = [item for item in content.split('\n')]
-    newquery = ''
-    for line in list:
-        if line[0:2] == '--': continue
-        newquery += ' ' + line.split('--')[0]
-    # newquery = newquery.split(';')[0]
-    return newquery
-
-
 class easy_or(cmd.Cmd, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
 
