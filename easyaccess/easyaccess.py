@@ -565,7 +565,7 @@ Connected as {user} to {db}.
         if qstop > -1:
             if line[qstop:].find('>') > -1:
                 line = line[qstop + 1:]
-                return _complete_path(line)
+                return complete_path(line)
             if line[qstop:].find('<') > -1:
                 if text:
                     return [option for option in options_app if option.startswith(text.lower())]
@@ -574,7 +574,7 @@ Connected as {user} to {db}.
 
         if line[0] == '@':
             line = '@ ' + line[1:]
-            return _complete_path(line)
+            return complete_path(line)
         if line.upper().find('SELECT') > -1:
             # return self._complete_colnames(text)
             if line.upper().find('FROM') == -1:
@@ -981,7 +981,7 @@ Connected as {user} to {db}.
     def complete_shell(self, text, line, start_idx, end_idx):
         if line:
             line = ' '.join(line.split()[1:])
-            return _complete_path(line)
+            return complete_path(line)
 
 
     def do_edit(self, line):
@@ -1059,7 +1059,7 @@ Connected as {user} to {db}.
 
 
     def complete_loadsql(self, text, line, start_idx, end_idx):
-        return _complete_path(line)
+        return complete_path(line)
 
     def do_exit(self, line):
         """
@@ -2026,7 +2026,7 @@ Connected as {user} to {db}.
 
 
     def complete_load_table(self, text, line, start_idx, end_idx):
-        return _complete_path(line)
+        return complete_path(line)
 
 
     def do_append_table(self, line, name=None, chunksize=None, memsize=None):
@@ -2180,7 +2180,7 @@ Connected as {user} to {db}.
 
 
     def complete_append_table(self, text, line, start_idx, end_idx):
-        return _complete_path(line)
+        return complete_path(line)
 
 
     def do_add_comment(self, line):

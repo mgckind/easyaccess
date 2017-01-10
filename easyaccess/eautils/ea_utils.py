@@ -73,7 +73,7 @@ def loading():
     except:
         pass
 
-def _complete_path(line):
+def complete_path(line):
     line = line.split()
     if len(line) < 2:
         filename = ''
