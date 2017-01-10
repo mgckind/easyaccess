@@ -5,6 +5,8 @@ import dircache
 import sys
 import os
 import time
+import fileio as eafile
+
 
 def print_exception(pload=None,mode=1):
     (type, value, traceback) = sys.exc_info()
