@@ -24,17 +24,16 @@ import re
 import getpass
 from multiprocessing import Process
 
-    #warnings.warn(str(error))
-from .version import __version__
-from .version import last_pip_version
-import .config_ea as config_mod
-import .eautils.des_logo as dl
-import .eautils.dtypes as eatypes
-import .eautils.fileio as eafile
-import .eaparser as eaparser
-import .eautils.fun_utils as fun_utils
-from .eautils.ea_utils import *
-from .eautils.import_utils import Import
+from easyaccess.version import __version__
+from easyaccess.version import last_pip_version
+import easyaccess.config_ea as config_mod
+from easyaccess.eautils import des_logo as dl
+import easyaccess.eautils.dtypes as eatypes
+import easyaccess.eautils.fileio as eafile
+import easyaccess.eautils.fun_utils as fun_utils
+import easyaccess.eaparser as eaparser
+from easyaccess.eautils.import_utils import Import
+from easyaccess.eautils.ea_utils import *
 
 import threading
 import time
