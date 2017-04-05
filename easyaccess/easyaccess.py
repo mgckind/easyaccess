@@ -2271,7 +2271,7 @@ Connected as {user} to {db}.
     def do_SELECT(self, line):
         self.default('SELECT ' + line)
 
-    def do_clean_history(self, line):
+    def do_clear_history(self, line):
         if readline_present: readline.clear_history()
 
     def do_online_tutorial(self, line):
