@@ -954,9 +954,16 @@ Connected as {user} to {db}.
         if readline_present:
             nall = readline.get_current_history_length()
             firstprint = 0
-            if arg.strip(): firstprint = max(nall - int(arg), 0)
+            if arg.strip():
+                firstprint = max(nall - int(arg), 0)
             for index in range(firstprint, nall):
                 print(index, readline.get_history_item(index))
+            #if arg.strip():
+            #    self.do_clear(None)
+            #    line = readline.get_history_item(int(arg))
+            #    line = self.precmd(line)
+            #    self.onecmd(line)
+
 
 
     def do_shell(self, line):
@@ -1083,8 +1090,13 @@ Connected as {user} to {db}.
         # TODO: platform dependent
         # tmp = sp.call('clear', shell=True)
         sys.stdout.flush()
-        #tmp = os.system(['clear', 'cls'][os.name == 'nt'])
-        pass
+        try:
+            tmp = os.system('clear')
+        except:
+            try:
+                tmp = os.system('cls')
+            except:
+                pass
 
     def do_config(self, line):
         """
