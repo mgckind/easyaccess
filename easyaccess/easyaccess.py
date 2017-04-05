@@ -33,7 +33,7 @@ import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.fun_utils as fun_utils
 import easyaccess.eaparser as eaparser
 from easyaccess.eautils.import_utils import Import
-from easyaccess.eautils.ea_utils import *
+from easyaccess.eautils.ea_utils import  *
 
 import threading
 import time
@@ -57,6 +57,11 @@ import fitsio
 import numpy as np
 import webbrowser
 import signal
+try:
+    import readline
+    readline_present = True
+except:
+    readline_present = False
 
 sys.path.insert(0, os.getcwd())
 # For python functions to work
@@ -2602,13 +2607,6 @@ def cli():
     """
     global load_bar
     conf = config_mod.get_config(config_file)
-
-    # ADW: What about all the readline imports in the code?
-    try:
-        import readline
-        readline_present = True
-    except:
-        readline_present = False
 
     if readline_present:
         try:
