@@ -37,7 +37,8 @@ except ImportError:
 __author__ = 'Matias Carrasco Kind'
 
 
-def without_color(line, color, mode=0): return line
+def without_color(line, color, mode=0):
+    return line
 
 
 try:
@@ -376,7 +377,8 @@ Connected as {user} to {db}.
                 print()
             except:
                 print(colored(
-                    "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
+                    "\n Couldn't load metadata into cache (try later), no"
+                    " autocompletion for tables, columns or users this time\n",
                     "red", self.ct))
 
         # history
@@ -615,7 +617,8 @@ Connected as {user} to {db}.
         Return creation time and last time password was modified
         """
         query = """
-        select sysdate-ctime creation, sysdate-ptime passwd from sys.user$ where name = '%s' """ % self.user.upper()
+        select sysdate-ctime creation,
+        sysdate-ptime passwd from sys.user$ where name = '%s' """ % self.user.upper()
         try:
             self.cur.execute(query)
             TT = self.cur.fetchall()
@@ -624,12 +627,13 @@ Connected as {user} to {db}.
         except:
             return None
         if ptime > 200:
-            msg = colored("*Important* ", "red") + 'Last time password change was ' + colored("%d" % ptime,
-                                                                                              "red", self.ct) + " days ago"
+            msg = colored("*Important* ", "red") + 'Last time password change was '
+            msg += colored("%d" % ptime, "red", self.ct) + " days ago"
             if ptime == ctime:
                 msg += colored(" (Never in your case!)", "red", self.ct)
-            msg += '\n Please change it using the ' + colored("set_password",
-                                                              "cyan", self.ct) + ' command to get rid of this message\n'
+            msg += '\n Please change it using the '
+            msg += colored("set_password", "cyan", self.ct)
+            msg += ' command to get rid of this message\n'
             return msg
 
     def query_and_print(self, query, print_time=True,
@@ -750,17 +754,16 @@ Connected as {user} to {db}.
             print(colored(value, "red", self.ct))
             print()
             if t2 - t1 > self.timeout:
-                print(
-                    colored('Query is taking too long on the interpreter', "red", self.ct))
-                msg = colored('Try to output the results to a file\nor increase timeout (now is {} s) using:'.format(
-                    self.timeout), 'green', self.ct)
+                print(colored('Query is taking too long on the interpreter', "red", self.ct))
+                mt = 'Try to output the results to a file\nor increase timeout (now is {} s) using:'
+                msg = colored(mt.format(self.timeout), 'green', self.ct)
                 print(msg)
                 print("\'config timeout set XXXXX\'")
 
     def query_and_save(self, query, fileout, print_time=True, extra_func=None):
         """
-        Executes a query and save the results to a file, Supported
-        formats are: '.csv', '.tab', '.h5', and '.fits'
+        Execute a query and save the results to a file.
+        Supported formats are: '.csv', '.tab', '.h5', and '.fits'
         """
         # to be safe
         query = query.replace(';', '')
@@ -769,7 +772,6 @@ Connected as {user} to {db}.
             p_functions = extra_func[0]
             p_args = extra_func[1]
             p_names = extra_func[2]
-        fileout_original = fileout
         self.cur.arraysize = int(self.prefetch)
         t1 = time.time()
         if self.loading_bar:
@@ -873,12 +875,14 @@ Connected as {user} to {db}.
             query = """
             select distinct table_name from fgottenmetadata
             union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-            des_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('DES_ADMIN')"""
+            des_users t2 where upper(t1.owner)=upper(t2.username) and
+             t1.owner not in ('DES_ADMIN')"""
         if self.dbname in ('destest'):
             query = """
             select distinct table_name from fgottenmetadata
             union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-            dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
+            dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in
+             ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         table_list = tnames.values.flatten().tolist()
@@ -900,7 +904,9 @@ Connected as {user} to {db}.
         if user == "":
             return self.do_help('tables_names_user')
         user = user.replace(";", "")
-        query = "select distinct table_name from all_tables where owner=\'%s\' order by table_name" % user.upper()
+        query = """
+            select distinct table_name from all_tables
+             where owner=\'%s\' order by table_name""" % user.upper()
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         self.do_clear(None)
@@ -908,18 +914,15 @@ Connected as {user} to {db}.
             print(colored('\nPublic tables from %s' %
                           user.upper(), "cyan", self.ct))
             print(tnames)
-            # Add tname to cache (no longer needed)
-            # table_list=tnames.values.flatten().tolist()
-            # for table in table_list:
-            # tn=user.upper()+'.'+table.upper()
-            # try : self.cache_table_names.index(tn)
-            # except: self.cache_table_names.append(tn)
-            # self.cache_table_names.sort()
         else:
             if self.dbname in ('dessci', 'desoper'):
-                query = """select count(username) as cc  from des_users where upper(username) = upper('%s')""" % user
+                query = """
+                    select count(username) as cc  from des_users
+                     where upper(username) = upper('%s')""" % user
             if self.dbname in ('destest'):
-                query = """select count(username) as cc from dba_users where upper(username) = upper('%s')""" % user
+                query = """
+                    select count(username) as cc from dba_users
+                     where upper(username) = upper('%s')""" % user
             temp = self.cur.execute(query)
             tnames = temp.fetchall()
             if tnames[0][0] == 0:
@@ -968,7 +971,9 @@ Connected as {user} to {db}.
         return col_list
 
     def get_columnlist_table(self, tablename):
-        query = """SELECT distinct column_name from fgottenmetadata where table_name = %s order by column_name""" % (
+        query = """
+            SELECT distinct column_name from fgottenmetadata where
+             table_name = %s order by column_name""" % (
             tablename)
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
@@ -1227,8 +1232,9 @@ Connected as {user} to {db}.
             val = oneline.split('set')[1]
             if val == '':
                 return self.do_help('config')
-            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
-                        'nullvalue', 'loading_bar', 'autocommit', 'max_col_width']
+            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width',
+                        'max_columns', 'outfile_max_mb', 'nullvalue', 'loading_bar',
+                        'autocommit', 'max_col_width']
             # if key in int_keys: val=int(val)
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
@@ -1327,7 +1333,9 @@ Connected as {user} to {db}.
             arguments.append(arg)
         if line[line.index(')'):].find('describe') > -1:
             comm = """\n Description of procedure '%s' """ % proc_name
-            query = """select argument_name, data_type,position,in_out from all_arguments where object_name = '%s' order by position""" % proc_name.upper()
+            query = """
+                select argument_name, data_type,position,in_out from all_arguments where
+                 object_name = '%s' order by position""" % proc_name.upper()
             self.query_and_print(query, print_time=False, clear=True,
                                  extra=comm, err_arg="Procedure does not exist")
             return
@@ -1500,9 +1508,11 @@ Connected as {user} to {db}.
 
         if self.dbname in ('dessci', 'desoper'):
             sql_getUserDetails = """
-            select d.username, d.email, d.firstname as first, d.lastname as last, trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
+            select d.username, d.email, d.firstname as first, d.lastname as last,
+             trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
             trunc(sysdate-t.ctime,0)||' days ago' created
-            from des_users d, sys.user$ t  where d.username = '""" + self.user + """' and t.name=upper(d.username)"""
+            from des_users d, sys.user$ t  where
+             d.username = '""" + self.user + """' and t.name=upper(d.username)"""
         if self.dbname in ('destest'):
             print(
                 colored('\nThis function is not implemented in destest\n', 'red', self.ct))
@@ -1558,8 +1568,9 @@ Connected as {user} to {db}.
         if self.dbname in ('destest'):
             query = 'select * from dba_users where '
         if len(keys) >= 1:
-            query += 'upper(firstname) like upper(\'' + keys[0] + '\') or upper(lastname) like upper(\'' + keys[
-                0] + '\') or upper(username) like upper (\'' + keys[0] + '\')'
+            query += 'upper(firstname) like upper(\'' + keys[0] + '\') or '
+            query += 'upper(lastname) like upper(\'' + keys[0] + '\') or '
+            query += 'upper(username) like upper (\'' + keys[0] + '\')'
         self.query_and_print(query, print_time=False, clear=True)
 
     def complete_find_user(self, text, line, start_index, end_index):
@@ -1694,7 +1705,8 @@ Connected as {user} to {db}.
                       pattern=pattern, comment=comment_table)
 
         if pattern:
-            comm = """Description of %(table)s with pattern %(pattern)s commented as: '%(comment)s'""" % params
+            comm = """Description of %(table)s with """
+            comm += """pattern %(pattern)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
             case atc.data_type
@@ -1727,9 +1739,9 @@ Connected as {user} to {db}.
 
         if extra is None:
             extra = comm
+        err_msg = 'Table does not exist or it is not accessible by user or pattern do not match'
         df = self.query_and_print(q, print_time=False,
-                                  err_arg='Table does not exist or it is not accessible by user or pattern do not match',
-                                  extra=extra, clear=clear, return_df=return_df)
+                                  err_arg=err_msg, extra=extra, clear=clear, return_df=return_df)
         if return_df:
             return df
         return
@@ -1744,7 +1756,8 @@ Connected as {user} to {db}.
         Usage : find_tables PATTERN
         """
         if extra is None:
-            extra = 'To select from a table use owner.table_name except for DESADMIN where only table_name is enough'
+            extra = 'To select from a table use owner.table_name' \
+                    ' except for DESADMIN where only table_name is enough'
         if arg == '':
             return self.do_help('find_tables')
         arg = arg.replace(';', '')
@@ -1764,7 +1777,6 @@ Connected as {user} to {db}.
         Usage: find_tables_with_column  <column-name-substring>
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG
         """
-        # query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
         if arg == '':
             return self.do_help('find_tables_with_column')
         query = """
@@ -1979,18 +1991,20 @@ Connected as {user} to {db}.
              1.23,0.13,23
              0.13,0.01,22
 
-        This command will create a table named EXAMPLE with 3 columns RA,DEC and MAG and values taken from file
+        This command will create a table named EXAMPLE with 3 columns RA,DEC and MAG and
+        values taken from file
 
         Optional Arguments:
 
             --tablename NAME            given name for the table, default is taken from filename
-            --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
-                                        that do not fit in memory
-            --memsize MEMCHUNK          The size in Mb to be read in chunks. If both specified, the lower
-                                        number of rows is selected (the lower memory limitations)
+            --chunksize CHUNK           Number of rows to be inserted at a time.
+                                        Useful for large files that do not fit in memory
+            --memsize MEMCHUNK          The size in Mb to be read in chunks. If both specified,
+                                        the lower number of rows is selected
+                                        (the lower memory limitations)
 
-        Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
-        as data (using ',' or space)
+        Note: - For csv or tab files, first line must have the column names (without # or any
+        other comment) and same format as data (using ',' or space)
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
@@ -2000,8 +2014,9 @@ Connected as {user} to {db}.
             'filename', help='name for the file', action='store', default=None)
         load_parser.add_argument(
             '--tablename', help='name for the table', action='store', default=None)
-        load_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
-                                                     'issues', action='store', type=int, default=None)
+        load_parser.add_argument('--chunksize',
+                                 help='number of rows to read in blocks to avoid memory issues',
+                                 action='store', type=int, default=None)
         load_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ',
                                  action='store', type=int, default=None)
         load_parser.add_argument(
@@ -2020,8 +2035,9 @@ Connected as {user} to {db}.
         for obj in [table, name]:
             if obj is None:
                 if any((char in invalid_chars) for char in filename):
+                    print()
                     print(colored(
-                        '\nInvalid table name, change filename or use --tablename\n', 'red', self.ct))
+                        'Invalid table name, change filename or use --tablename\n', 'red', self.ct))
                     return
             else:
                 if any((char in invalid_chars) for char in obj):
@@ -2144,9 +2160,12 @@ Connected as {user} to {db}.
                     self.drop_table(table)
                     return
 
-        print(colored('\n ** Table %s loaded successfully with %d rows.\n' % (table.upper(), total_rows),
-                      "green", self.ct))
-        print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion', "cyan", self.ct))
+        print(colored(
+            '\n ** Table %s loaded successfully '
+            'with %d rows.\n' % (table.upper(), total_rows), "green", self.ct))
+        print(colored(
+            ' You may want to refresh the metadata so your new '
+            'table appears during\n autocompletion', "cyan", self.ct))
         print(colored(' DESDB ~> refresh_metadata_cache;', "cyan", self.ct))
 
         print()
