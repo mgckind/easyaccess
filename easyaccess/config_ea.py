@@ -152,6 +152,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     Loads des config file or create one if it does not exist.
     """
     server_n = 'leovip148.ncsa.uiuc.edu'
+    server_2 = 'desdb.ncsa.illinois.edu'
     port_n = '1521'
 
     if not db[:3] == 'db-':
@@ -175,11 +176,11 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         if verbose:
             print()
 
-    databases = ['db-desoper', 'db-dessci', 'db-destest']  # most used ones anyways
+    databases = ['db-desoper', 'db-dessci', 'db-destest', 'db-newsci']  # most used ones anyways
 
     if db not in databases and not config.has_section(db):
         check_db = input(
-            '\nDB entered not dessci, desoper or destest '
+            '\nDB entered is not dessci, desoper, destest or newsci '
             'or in DES_SERVICE file, continue anyway [y]/n\n')
         if check_db in ('n', 'N', 'no', 'No', 'NO'):
             sys.exit(0)
@@ -188,7 +189,10 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         if verbose:
             print('\nAdding section %s to des_service file\n' % db)
         configwrite = True
-        kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
+        if db == 'db-newsci':
+            kwargs = {'host': server_2, 'port': port_n, 'service_name': 'dessci'}
+        else:
+            kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
         dsn = cx_Oracle.makedsn(**kwargs)
         good = False
         if user is None:
@@ -220,12 +224,20 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     if not config.has_option(db, 'passwd'):
         configwrite = True
         config.set(db, 'passwd', pw1)
-    if not config.has_option(db, 'name'):
-        configwrite = True
-        config.set(db, 'name', db[3:])
-    if not config.has_option(db, 'server'):
-        configwrite = True
-        config.set(db, 'server', server_n)
+    if db == 'db-newsci':
+        if not config.has_option(db, 'name'):
+            configwrite = True
+            config.set(db, 'name', 'dessci')
+            if not config.has_option(db, 'server'):
+                configwrite = True
+                config.set(db, 'server', server_2)
+    else:
+        if not config.has_option(db, 'name'):
+            configwrite = True
+            config.set(db, 'name', db[3:])
+            if not config.has_option(db, 'server'):
+                configwrite = True
+                config.set(db, 'server', server_n)
     if not config.has_option(db, 'port'):
         configwrite = True
         config.set(db, 'port', port_n)

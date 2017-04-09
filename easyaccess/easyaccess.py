@@ -153,10 +153,10 @@ Connected as {user} to {db}.
         # connect to db
         self.user = self.desconfig.get('db-' + self.dbname, 'user')
         self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
+        self.service_name = self.desconfig.get('db-' + self.dbname, 'name')
         self.port = self.desconfig.get('db-' + self.dbname, 'port')
         self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
-        kwargs = {'host': self.dbhost, 'port': self.port,
-                  'service_name': self.dbname}
+        kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
         self.dsn = cx_Oracle.makedsn(**kwargs)
         if not self.quiet:
             print('Connecting to DB ** %s ** ...' % self.dbname)
@@ -890,7 +890,7 @@ Connected as {user} to {db}.
 
     def get_tables_names(self):
 
-        if self.dbname in ('dessci', 'desoper', 'destest'):
+        if self.dbname in ('dessci', 'desoper', 'destest', 'newsci'):
             query = """
             select table_name from DES_ADMIN.CACHE_TABLES
             union select table_name from user_tables
@@ -1373,13 +1373,13 @@ Connected as {user} to {db}.
         query = """alter user %s identified by "%s"  """ % (self.user, pw1)
         confirm = 'Password changed in %s' % self.dbname.upper()
         self.query_and_print(query, print_time=False, suc_arg=confirm)
-
+        self.desconfig.set('db-'+self.dbname, 'passwd', pw1)
+        config_mod.write_desconfig(desfile, self.desconfig)
+        if self.dbname not in ('dessci', 'desoper'):
+            return
         dbases = ['DESSCI', 'DESOPER']
         for db in dbases:
-            if db == self.dbname.upper():
-                continue
-            kwargs = {'host': self.dbhost,
-                      'port': self.port, 'service_name': db}
+            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
             dsn = cx_Oracle.makedsn(**kwargs)
             temp_con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
             temp_cur = temp_con.cursor()
@@ -1444,23 +1444,22 @@ Connected as {user} to {db}.
             return self.do_help('change_db')
         line = " ".join(line.split())
         key_db = line.split()[0]
-        if key_db in ('dessci', 'desoper', 'destest'):
+        if key_db in ('dessci', 'desoper', 'destest', 'newsci'):
             if key_db == self.dbname:
-                print(colored("Already connected to : %s" %
-                              key_db, "green", self.ct))
+                print(colored("Already connected to : %s" % key_db, "green", self.ct))
                 return
             self.dbname = key_db
             # connect to db
             try:
                 self.user = self.desconfig.get('db-' + self.dbname, 'user')
-                self.password = self.desconfig.get(
-                    'db-' + self.dbname, 'passwd')
+                self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
+                self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
+                self.service_name = self.desconfig.get('db-' + self.dbname, 'name')
             except:
                 print(colored("DB {} does not exist in your desservices file".format(
                     key_db), "red", self.ct))
                 return
-            kwargs = {'host': self.dbhost, 'port': self.port,
-                      'service_name': self.dbname}
+            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
             self.dsn = cx_Oracle.makedsn(**kwargs)
             if not self.quiet:
                 print('Connecting to DB ** %s ** ...' % self.dbname)
@@ -1496,7 +1495,7 @@ Connected as {user} to {db}.
             return
 
     def complete_change_db(self, text, line, start_index, end_index):
-        options_db = ['desoper', 'dessci', 'destest']
+        options_db = ['desoper', 'dessci', 'destest', 'newsci']
         if text:
             return [option for option in options_db if option.startswith(text.lower())]
         else:
@@ -2522,7 +2521,7 @@ class connect(easy_or):
 
         Parameters:
         -----------
-        section :  DB connection : dessci, desoper, destest
+        section :  DB connection : dessci, desoper, destest, newsci
         user    :  Manualy use username
         passwd  :  password for username (if not enter is prompted)
         quiet   :  Don't print much
