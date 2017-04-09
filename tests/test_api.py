@@ -426,6 +426,7 @@ class TestApi(unittest.TestCase):
         self.con.outfile_max_mb = 1000
         self.con.drop_table(self.tablename)
 
+    @unittest.skip("need to reealuate")
     def test_inline_functions(self):
         print('\n*** test_inline_functions ***\n')
         data = create_test_data()
