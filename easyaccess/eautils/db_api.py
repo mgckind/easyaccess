@@ -20,23 +20,28 @@ if os.path.exists(DESFILE):
         print('Changing permissions to des_service file to read/write only by user')
         os.chmod(DESFILE, 2 ** 8 + 2 ** 7)
 
+
 class Token(object):
     """
     Token object that keeps track of tockes created to make requests
     """
+
     def __init__(self, token, url):
         self.value = token
         self.url = url
         self._active = True
+
     def __repr__(self):
         return 'Token(token=%s, url=%s)' % (self.value, self.url)
+
     def __str__(self):
         return self.value
+
     def ttl(self):
         """
         Time-To-Live (ttl) prints out the time in seconds for the current token
         """
-        req = self.url+'/api/token/?token=%s' % self.value
+        req = self.url + '/api/token/?token=%s' % self.value
         temp = requests.get(req)
         if temp.json()['status'] == 'ok':
             self._active = True
@@ -49,7 +54,7 @@ class Token(object):
         """
         Checks whether the token is still active and valid
         """
-        req = self.url+'/api/token/?token=%s' % self.value
+        req = self.url + '/api/token/?token=%s' % self.value
         temp = requests.get(req)
         if temp.json()['status'] == 'ok':
             self._active = True
@@ -59,18 +64,22 @@ class Token(object):
 
 
 class Job(object):
-    def __init__(self,jobid, user, token, url):
+    def __init__(self, jobid, user, token, url):
         self._jobid = jobid
         self._user = user
         self._token = token
         self._url = url
+
     def __repr__(self):
-        return 'Job(jobid=%s, user=%s, token=%s, url=%s)' % (self._jobid, self._user, self._token, self._url)
+        return 'Job(jobid=%s, user=%s, token=%s, url=%s)' % (self._jobid,
+                                                             self._user, self._token, self._url)
+
     def __str__(self):
         return self._jobid
+
     @property
     def status(self):
-        req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
+        req = self._url + '/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
         temp = requests.get(req)
         self.req_status = temp.json()['status']
         self.message = temp.json()['message']
@@ -83,7 +92,7 @@ class Job(object):
         return self._status
 
     def __delete__(self):
-        req = self._url+'/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
+        req = self._url + '/api/jobs/?token=%s&jobid=%s' % (self._token, self._jobid)
         temp = requests.delete(req)
         if temp.json()['status'] == 'ok':
             print('Job %s was deleted from the DB' % self._jobid)
@@ -93,12 +102,9 @@ class Job(object):
     def delete(self):
         return self.__delete__()
 
-        
-
-
 
 class MyJobs(object):
-    
+
     def __init__(self, user=None, token=None, root_url=None, db='desoper', verbose=False):
         passwd = None
         self.desconf = config_mod.get_desconfig(DESFILE, db)
@@ -122,23 +128,23 @@ class MyJobs(object):
         self._passwd = self.desconf.get('db-' + self._db, 'passwd')
         self.root_url = root_url.strip('/')
         self.get_token()
-        self.jobs_info = requests.get(self.root_url+'/api/jobs/?token=%s&list_jobs' % self.token).json()
-        self._jobs = [Job(j, self.user, self.token, self.root_url) for j in self.jobs_info['list_jobs']]
-        self.creation_times=self.jobs_info['creation_time']
-        self.job_types=self.jobs_info['job_type']
-
+        self.jobs_info = requests.get(
+            self.root_url + '/api/jobs/?token=%s&list_jobs' % self.token).json()
+        self._jobs = [Job(j, self.user, self.token, self.root_url)
+                      for j in self.jobs_info['list_jobs']]
+        self.creation_times = self.jobs_info['creation_time']
+        self.job_types = self.jobs_info['job_type']
 
     def get_token(self):
         """Generate a new token using user and password in the API."""
         ext = '/api/token/'
-        req = self.root_url+ext
-        res = requests.post(req, data={'username': self.user, 'password' : self._passwd})
+        req = self.root_url + ext
+        res = requests.post(req, data={'username': self.user, 'password': self._passwd})
         status = res.json()['status']
         if status == 'ok':
             self.token = Token(res.json()['token'], self.root_url)
         else:
             self.token = None
-
 
     def __len__(self):
         return len(self._jobs)
@@ -146,16 +152,17 @@ class MyJobs(object):
     def __repr__(self):
         return 'My Jobs (%d in total)' % len(self._jobs)
 
-    def __getitem__(self,index):
+    def __getitem__(self, index):
         return self._jobs[index]
 
-    def __delitem__(self,index):
+    def __delitem__(self, index):
         del self._jobs[index]
         return
 
     @property
     def list(self):
         return self._jobs
+
 
 class DesCoaddCuts(object):
     """
@@ -170,6 +177,7 @@ class DesCoaddCuts(object):
     db (optional)       : DB to be used (default: desoper)
     verbose (optional)  : print extra information
     """
+
     def __init__(self, user=None, root_url=None, db='desoper', verbose=True):
         passwd = None
         self.desconf = config_mod.get_desconfig(DESFILE, db)
@@ -196,8 +204,8 @@ class DesCoaddCuts(object):
     def get_token(self):
         """Generate a new token using user and password in the API."""
         ext = '/api/token/'
-        req = self.root_url+ext
-        res = requests.post(req, data={'username': self.user, 'password' : self._passwd})
+        req = self.root_url + ext
+        res = requests.post(req, data={'username': self.user, 'password': self._passwd})
         status = res.json()['status']
         if status == 'ok':
             self.token = Token(res.json()['token'], self.root_url)
@@ -207,13 +215,14 @@ class DesCoaddCuts(object):
             print(res.json()['message'])
             return self.token.value
 
-    def make_cuts(self, ra=None, dec=None, csvfile = None, xsize=None, ysize=None, email=None, list_only=False, wait=False, timeout=3600):
+    def make_cuts(self, ra=None, dec=None, csvfile=None, xsize=None,
+                  ysize=None, email=None, list_only=False, wait=False, timeout=3600):
         """
         Submit a job to generate the cuts on the server side, if wait keyword id
         True the functions waits until the job is completed
         """
-        req = self.root_url+'/api/jobs/'
-        self.body = { 'token': self.token.value, 'list_only': 'false', 'job_type':'coadd' }
+        req = self.root_url + '/api/jobs/'
+        self.body = {'token': self.token.value, 'list_only': 'false', 'job_type': 'coadd'}
         if ra is not None:
             try:
                 self.body['ra'] = str(list(ra))
@@ -238,7 +247,7 @@ class DesCoaddCuts(object):
         if csvfile is not None:
             self.body['ra'] = '0,0'
             self.body['dec'] = '0,0'
-            self.body_files = {'csvfile': open(csvfile,'rb')}
+            self.body_files = {'csvfile': open(csvfile, 'rb')}
             self.submit = requests.post(req, data=self.body, files=self.body_files)
         else:
             self.submit = requests.post(req, data=self.body)
@@ -246,7 +255,7 @@ class DesCoaddCuts(object):
         if self.verbose:
             print(self.submit.json()['message'])
         if self.submit.json()['status'] == 'ok':
-            self.job = Job(self.submit.json()['job'], self.user, self.token, self.root_url)  
+            self.job = Job(self.submit.json()['job'], self.user, self.token, self.root_url)
         elif self.submit.json()['status'] == 'error':
             self.job = None
             if not self.verbose:
@@ -258,14 +267,16 @@ class DesCoaddCuts(object):
             if self.job is not None:
                 for _ in range(100000):
                     if self.job.status == 'SUCCESS':
-                        requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
+                        requests.get(self.root_url +
+                                     '/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
                         self._status = self.job.req_status
                         break
                     if time.time() - t_init > timeout:
                         break
                     time.sleep(0.5)
                 if self._status != 'ok':
-                    print('Job is taking longer than expected, will continue running but check status later')
+                    print('Job is taking longer than expected, '
+                          'will continue running but check status later')
 
     @property
     def status(self):
@@ -277,7 +288,8 @@ class DesCoaddCuts(object):
                 status = self.job.status
                 if status == 'SUCCESS':
                     self._status = 'ok'
-                    requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
+                    requests.get(self.root_url +
+                                 '/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
                 return status
             except:
                 self._status = 'Error!'
@@ -320,7 +332,6 @@ class DesCoaddCuts(object):
         else:
             print('Something went wrong with the job')
 
-
     def show_pngs(self, folder=None, limit=100):
         """Display all pngs generated after copying files in local directory."""
         from IPython.display import Image, display
@@ -337,16 +348,17 @@ class DesCoaddCuts(object):
 
 
 class DesSingleCuts(DesCoaddCuts):
-    #def __init__(self):
+    # def __init__(self):
     #    super(DesSingleCuts, self).__init__()
 
-    def make_cuts(self, ra=None, dec=None, csvfile = None, band=None, blacklist=True, xsize=None, ysize=None, email=None, list_only=False, wait=False, timeout=3600):
+    def make_cuts(self, ra=None, dec=None, csvfile=None, band=None, blacklist=True,
+                  xsize=None, ysize=None, email=None, list_only=False, wait=False, timeout=3600):
         """
         Submit a job to generate the cuts on the server side, if wait keyword id
         True the functions waits until the job is completed
         """
-        req = self.root_url+'/api/jobs/'
-        self.body = { 'token': self.token.value, 'list_only': 'false', 'job_type':'single' }
+        req = self.root_url + '/api/jobs/'
+        self.body = {'token': self.token.value, 'list_only': 'false', 'job_type': 'single'}
         if ra is not None:
             try:
                 self.body['ra'] = str(list(ra))
@@ -375,7 +387,7 @@ class DesSingleCuts(DesCoaddCuts):
         if csvfile is not None:
             self.body['ra'] = '0,0'
             self.body['dec'] = '0,0'
-            self.body_files = {'csvfile': open(csvfile,'rb')}
+            self.body_files = {'csvfile': open(csvfile, 'rb')}
             self.submit = requests.post(req, data=self.body, files=self.body_files)
         else:
             self.submit = requests.post(req, data=self.body)
@@ -383,7 +395,7 @@ class DesSingleCuts(DesCoaddCuts):
         if self.verbose:
             print(self.submit.json()['message'])
         if self.submit.json()['status'] == 'ok':
-            self.job = Job(self.submit.json()['job'], self.user, self.token, self.root_url)  
+            self.job = Job(self.submit.json()['job'], self.user, self.token, self.root_url)
         elif self.submit.json()['status'] == 'error':
             self.job = None
             if not self.verbose:
@@ -395,15 +407,16 @@ class DesSingleCuts(DesCoaddCuts):
             if self.job is not None:
                 for _ in range(100000):
                     if self.job.status == 'SUCCESS':
-                        requests.get(self.root_url+'/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
+                        requests.get(self.root_url +
+                                     '/api/refresh/?user={}&jid={}'.format(self.user, self.jobid))
                         self._status = self.job.req_status
                         break
                     if time.time() - t_init > timeout:
                         break
                     time.sleep(0.5)
                 if self._status != 'ok':
-                    print('Job is taking longer than expected, will continue running but check status later')
-
+                    print('Job is taking longer than expected,'
+                          'will continue running but check status later')
 
 
 class DesSingleExposure(object):
@@ -420,7 +433,9 @@ class DesSingleExposure(object):
     verbose (optional)  : print extra information
     """
 
-    def __init__(self, user=None, root_url='https://desar2.cosmology.illinois.edu/DESFiles/desarchive/', db='desoper', verbose=True):
+    def __init__(self, user=None,
+                 root_url='https://desar2.cosmology.illinois.edu/DESFiles/desarchive/',
+                 db='desoper', verbose=True):
         passwd = None
         self.desconf = config_mod.get_desconfig(DESFILE, db)
         self._db = db
@@ -437,9 +452,10 @@ class DesSingleExposure(object):
         self.user = self.desconf.get('db-' + self._db, 'user')
         self._passwd = self.desconf.get('db-' + self._db, 'passwd')
         self.root_url = root_url
-        self.base_query="""
+        self.base_query = """
         SELECT
-        file_archive_info.PATH || '/' || file_archive_info.FILENAME || file_archive_info.COMPRESSION as path,
+        file_archive_info.PATH || '/' || file_archive_info.FILENAME || file_archive_info.COMPRESSION
+         as path,
         image.PFW_ATTEMPT_ID,
         image.BAND,
         image.CCDNUM,
@@ -451,14 +467,14 @@ class DesSingleExposure(object):
         file_archive_info.FILENAME = image.FILENAME AND
         image.PFW_ATTEMPT_ID = ops_proctag.PFW_ATTEMPT_ID AND
         image.FILETYPE = 'red_immask' AND
-        ops_proctag.TAG = '{tag}' AND 
+        ops_proctag.TAG = '{tag}' AND
         image.EXPNUM = {expnum} AND image.CCDNUM in ({ccd});
         """
 
     def get_paths(self, expnum, ccd, tag='Y3A1_FINALCUT'):
-       
+
         try:
-            ccd=','.join(map(str,ccd))
+            ccd = ','.join(map(str, ccd))
         except:
             pass
         inputs = dict(expnum=expnum, ccd=ccd, tag=tag)
@@ -469,7 +485,6 @@ class DesSingleExposure(object):
         print(self.data)
         for j in range(len(self.data)):
             self.links.append(self.root_url + self.data.PATH.ix[j])
-
 
     def get_files(self, folder=None, print_only=False, force=True):
         """Copy all files to local folder."""
@@ -497,4 +512,3 @@ class DesSingleExposure(object):
                     k += 1
         if self.verbose:
             print('%d files copied to local server' % k)
-

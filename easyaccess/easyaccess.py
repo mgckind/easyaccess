@@ -2513,8 +2513,7 @@ def to_pandas(cur):
 
 
 class connect(easy_or):
-    def __init__(self, section='', user=None,
-                 passwd=None, quiet=False, refresh=False):
+    def __init__(self, section='', user=None, passwd=None, quiet=False, refresh=False):
         """
         Creates a connection to the DB as easyaccess commands, section is
          obtained from config file, can be bypass here, e.g., section = desoper
@@ -2550,8 +2549,7 @@ class connect(easy_or):
                 passwd = getpass.getpass(prompt='Enter password : ')
             desconf.set('db-' + db, 'user', user)
             desconf.set('db-' + db, 'passwd', passwd)
-        easy_or.__init__(self, conf, desconf, db,
-                         interactive=False, quiet=quiet)
+        easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet)
         try:
             self.cur.execute('create table FGOTTENMETADATA (ID int)')
         except:
