@@ -1186,17 +1186,22 @@ Connected as {user} to {db}.
             editor            : Editor for editing sql queries, see --> help edit
             prefetch          : Number of rows prefetched by Oracle, see --> help prefetch
             histcache         : Length of the history of commands
-            timeout           : Timeout for a query to be printed on the screen. Doesn't apply to output files
+            timeout           : Timeout for a query to be printed on the screen.
+                                Doesn't apply to output files
             nullvalue         : value to replace Null entries when writing a file (default = -9999)
             outfile_max_mb    : Max size of each fits file in MB
             autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
-            trim_whitespace   : Trim whitespace from strings when uploading data to the DB (default yes)
+            trim_whitespace   : Trim whitespace from strings when uploading data to the DB
+                                (default yes)
             desdm_coldefs     : Use DESDM DB compatible data types when uploading data (default yes)
 
-            max_rows          : Max number of rows to display on the screen. Doesn't apply to output files
+            max_rows          : Max number of rows to display on the screen.
+                                Doesn't apply to output files
             width             : Width of the output format on the screen
-            max_columns       : Max number of columns to display on the screen. Doesn't apply to output files
-            max_colwidth      : Max number of characters per column at display. Doesn't apply to output files
+            max_columns       : Max number of columns to display on the screen.
+                                Doesn't apply to output files
+            max_colwidth      : Max number of characters per column at display.
+                                Doesn't apply to output files
             color_terminal    : yes/no toggles the color for terminal std output
             loading_bar       : yes/no toggles the loading bar. Useful for background jobs
 
@@ -2179,7 +2184,8 @@ Connected as {user} to {db}.
 
     def do_append_table(self, line, name=None, chunksize=None, memsize=None):
         """
-        DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
+        DB:Appends a table from a file (csv or fits) taking its name from filename
+        and the columns from header.
 
         Usage: append_table <filename> [--tablename NAME] [--chunksize CHUNK] [--memsize MEMCHUNK]
         Ex: example.csv has the following content
@@ -2192,14 +2198,15 @@ Connected as {user} to {db}.
 
          Optional Arguments:
 
-              --tablename NAME            given name for the table, default is taken from filename
-              --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
-                                         that do not fit in memory
-              --memsize MEMCHUNK         The size in Mb to be read in chunks. If both specified, the lower
-                                        number of rows is selected (the lower memory limitations)
+              --tablename NAME           given name for the table, default is taken from filename
+              --chunksize CHUNK          Number of rows to be inserted at a time. Useful for large
+                                         files that do not fit in memory
+              --memsize MEMCHUNK         The size in Mb to be read in chunks. If both specified,
+                                         the lower number of rows is selected
+                                         (the lower memory limitations)
 
-        Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
-        as data (using ',' or space)
+        Note: - For csv or tab files, first line must have the column names
+        (without # or any other comment) and same format as data (using ',' or space)
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
@@ -2209,10 +2216,11 @@ Connected as {user} to {db}.
             'filename', help='name for the file', action='store', default=None)
         append_parser.add_argument(
             '--tablename', help='name for the table to append to', action='store', default=None)
-        append_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
-                                                       'issues', action='store', default=None, type=int)
-        append_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ', action='store',
-                                   type=int, default=None)
+        append_parser.add_argument('--chunksize',
+                                   help='number of rows to read in blocks to avoid memory '
+                                        'issues', action='store', default=None, type=int)
+        append_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ',
+                                   action='store', type=int, default=None)
         append_parser.add_argument(
             '-h', '--help', help='print help', action='store_true')
         try:
@@ -2229,8 +2237,8 @@ Connected as {user} to {db}.
         for obj in [table, name]:
             if obj is None:
                 if any((char in invalid_chars) for char in filename):
-                    print(colored(
-                        '\nInvalid table name, change filename or use --tablename\n', 'red', self.ct))
+                    print(colored('\nInvalid table name, change filename '
+                                  'or use --tablename\n', 'red', self.ct))
                     return
             else:
                 if any((char in invalid_chars) for char in obj):
@@ -2267,7 +2275,8 @@ Connected as {user} to {db}.
         # check table first
         if not self.check_table_exists(table):
             print('\n Table does not exist. Table can be created with:'
-                  '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
+                  '\n DESDB ~> CREATE TABLE %s '
+                  '(COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
             data, iterator = eafile.read_file(filename)
@@ -2332,8 +2341,8 @@ Connected as {user} to {db}.
                     print_exception(mode=self.ct)
                     return
 
-        print(colored('\n ** Table %s appended successfully with %d rows.' % (table.upper(), total_rows),
-                      "green", self.ct))
+        print(colored('\n ** Table %s appended '
+                      'successfully with %d rows.' % (table.upper(), total_rows), "green", self.ct))
 
     def complete_append_table(self, text, line, start_idx, end_idx):
         return complete_path(line)
@@ -2405,7 +2414,8 @@ Connected as {user} to {db}.
                 if oneline.find('.') > -1:
                     colname = text.split('.')[-1]
                     tablename = text.split('.')[0]
-                    return [tablename + '.' + cn for cn in self._complete_colnames(colname) if cn.startswith(colname)]
+                    return [tablename + '.' + cn for cn in
+                            self._complete_colnames(colname) if cn.startswith(colname)]
                 else:
                     return self._complete_tables(text)
             else:
@@ -2449,9 +2459,10 @@ Connected as {user} to {db}.
     def do_online_tutorial(self, line):
         tut = webbrowser.open_new_tab(
             'http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
+        del tut
 
 
-############### PYTOHN API ###############################
+# ############## PYTOHN API ###############################
 
 class IterData(object):
     """
@@ -2500,9 +2511,6 @@ def to_pandas(cur):
     else:
         data = ""
     return data
-
-
-color_term = True
 
 
 class connect(easy_or):
@@ -2685,7 +2693,8 @@ class connect(easy_or):
         table_file : Filename to be uploaded as table (.csv, .fits, .tab)
         name       : Name of the table to be created
         chunksize  : Number of rows to upload at a time to avoid memory issues
-        memsize    : Size of chunk to be read. In Mb. If both specified, the lower number of rows is selected
+        memsize    : Size of chunk to be read. In Mb.
+                     If both specified, the lower number of rows is selected
 
         Returns:
         --------
@@ -2710,7 +2719,8 @@ class connect(easy_or):
         table_file : Filename to be uploaded as table (.csv, .fits, .tab)
         name       : Name of the table to be created
         chunksize  : Number of rows to upload at a time to avoid memory issues
-        memsize    : Size of chunk to be read. In Mb. If both specified, the lower number of rows is selected
+        memsize    : Size of chunk to be read. In Mb.
+                     If both specified, the lower number of rows is selected
 
         Returns:
         --------
@@ -2792,7 +2802,7 @@ def cli():
     """
     Main function to run the command line interpreter either interactively or just simple commands
     """
-    global load_bar
+    global load_bar, colored
     conf = config_mod.get_config(config_file)
 
     if readline_present:
@@ -2808,15 +2818,12 @@ def cli():
     pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
     pd.set_option('display.width', conf.getint('display', 'width'))
     pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
-    pd.set_option('display.max_colwidth',
-                  conf.getint('display', 'max_colwidth'))
+    pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
 
     load_bar = conf.getboolean('display', 'loading_bar')
 
-    color_term = True
     if not conf.getboolean('display', 'color_terminal'):
         colored = without_color
-        color_term = False
 
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
