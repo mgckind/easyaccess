@@ -9,7 +9,7 @@ import pandas as pd
 
 try:
     from termcolor import colored
-except:
+except ImportError:
     def colored(line, color):
         return line
 
@@ -41,9 +41,9 @@ def toeasyaccess(custom):
         if j < nargs_p:
             head.append(ag)
         else:
-            head.append(ag + '=' + str(check.defaults[j-nargs_p]))    
+            head.append(ag + '=' + str(check.defaults[j - nargs_p]))
     temp = easy_function
-    temp.__doc1__ = '('+', '.join(head)+')'
+    temp.__doc1__ = '(' + ', '.join(head) + ')'
     temp.in_easyaccess = True
     temp.__doc__ = custom.__doc__
 
@@ -67,7 +67,8 @@ def parseQ(query, myglobals=None):
                 name = None
             temp = "".join(e.split())
             f = temp[:temp.find('(')]
-            if name is None: name = f.lower()
+            if name is None:
+                name = f.lower()
             ar = temp[temp.find('(') + 1:temp.find(')')]
             funs.append(f)  # f.lower()
             all_args = ar.split(',')
@@ -87,7 +88,8 @@ def parseQ(query, myglobals=None):
             nf += 1
         for f in funs:
             modname = f
-            if f.find('.') > -1: modname, func_name = f.split('.')
+            if f.find('.') > -1:
+                modname, func_name = f.split('.')
             try:
                 if myglobals is None:
                     _ = ea_func_dictionary[f]
@@ -101,7 +103,7 @@ def updateDF(D, f, a, n, idx, myglobals=None):
     """
     Updates a data frame in place.
     """
-    #ii = np.where(D.columns.values == 'F' + str(idx) + 'ARG0')[0][0]
+    # ii = np.where(D.columns.values == 'F' + str(idx) + 'ARG0')[0][0]
     ii = D.columns.get_loc('F' + str(idx) + 'ARG0')
     func = f[idx]
     if func.find('.') > -1:
@@ -110,7 +112,7 @@ def updateDF(D, f, a, n, idx, myglobals=None):
             if myglobals is not None:
                 HM = myglobals[modname]
             else:
-                HM = ea_func_dictionary[func] 
+                HM = ea_func_dictionary[func]
         except:
             print(colored("\n\nYou might need to import %s" % modname, "red"))
             raise
@@ -135,17 +137,3 @@ def updateDF(D, f, a, n, idx, myglobals=None):
     for j in range(a[idx][1]):
         D.drop('F' + str(idx) + 'ARG' + str(j), 1, inplace=True)
     return D
-
-
-
-
-
-
-
-
-
-
-
-
-
-

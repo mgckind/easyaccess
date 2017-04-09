@@ -1,6 +1,9 @@
 # Changes
 
 
+## v1.4.0
+#### 2017-XXX-XX
+- Refactor and general clean up, now bin/ folder has the startup script
 ## v1.3.1
 #### 2016-MAY-24
 - Adds optional purge to drop_table (see PR #74)

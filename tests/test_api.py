@@ -6,15 +6,17 @@ import pandas as pd
 import os
 import fitsio
 
+
 def create_test_data():
-    r = np.linspace(0,360,100)
-    d = np.linspace(-90,90,100)
-    ra,dec = np.meshgrid(r,d)
-    dtype = [('RA',float),('DEC',float)]
-    return np.rec.fromarrays([ra.flat,dec.flat],dtype=dtype)
+    r = np.linspace(0, 360, 100)
+    d = np.linspace(-90, 90, 100)
+    ra, dec = np.meshgrid(r, d)
+    dtype = [('RA', float), ('DEC', float)]
+    return np.rec.fromarrays([ra.flat, dec.flat], dtype=dtype)
+
 
 class TestApi(unittest.TestCase):
-    
+
     con = ea.connect(quiet=True)
     tablename = 'testtable'
     nrows = 10000
@@ -26,7 +28,6 @@ class TestApi(unittest.TestCase):
     fitsfile = 'temp.fits'
     h5file = 'temp.h5'
 
-    
     def test_ea_import(self):
         print('\n*** test_ea_import ***\n')
         test1 = self.con.ea_import('wrapped')
@@ -40,7 +41,7 @@ class TestApi(unittest.TestCase):
         print('\n*** test_pandas_to_db ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         try:
             self.con.drop_table(self.tablename)
         except:
@@ -55,7 +56,7 @@ class TestApi(unittest.TestCase):
         self.assertTrue(self.con.pandas_to_db(df, tablename=self.tablename, append=True))
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         self.con.drop_table(self.tablename)
         self.assertTrue(self.con.pandas_to_db(df, tablename=self.tablename, append=True))
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
@@ -68,7 +69,7 @@ class TestApi(unittest.TestCase):
         print('\n*** test_query_to_pandas ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         try:
             self.con.drop_table(self.tablename)
         except:
@@ -76,20 +77,21 @@ class TestApi(unittest.TestCase):
         self.assertTrue(self.con.pandas_to_db(df, tablename=self.tablename))
         query = 'select RA,DEC from {:}'.format(self.tablename.upper())
         df2 = self.con.query_to_pandas(query)
-        self.assertEqual( len(df), len(df2))
-        self.assertEqual( df.columns.values.tolist().sort(), df2.columns.values.tolist().sort())
-        #iterator
+        self.assertEqual(len(df), len(df2))
+        self.assertEqual(df.columns.values.tolist().sort(), df2.columns.values.tolist().sort())
+        # iterator
         df3 = self.con.query_to_pandas(query, prefetch=4000, iterator=True)
-        self.assertEqual( len(df3.next()), 4000)
-        self.assertEqual( df3.next().columns.values.tolist().sort(), df.columns.values.tolist().sort())
-        self.assertEqual( len(df3.next()), 2000)
+        self.assertEqual(len(df3.next()), 4000)
+        self.assertEqual(df3.next().columns.values.tolist().sort(),
+                         df.columns.values.tolist().sort())
+        self.assertEqual(len(df3.next()), 2000)
         self.con.drop_table(self.tablename)
 
     def test_describe_table(self):
         print('\n*** test_describe_table ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         try:
             self.con.drop_table(self.tablename)
         except:
@@ -102,7 +104,7 @@ class TestApi(unittest.TestCase):
         print('\n*** test_loadsql ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         try:
             self.con.drop_table(self.tablename)
         except:
@@ -112,33 +114,33 @@ class TestApi(unittest.TestCase):
         -- This is a comment
         select RA, DEC from %s -- this is another comment
         """ % self.tablename
-        with open(self.sqlfile,'w') as F: F.write(query)
+        with open(self.sqlfile, 'w') as F:
+            F.write(query)
         df2 = self.con.query_to_pandas(self.con.loadsql(self.sqlfile))
-        self.assertEqual( len(df), len(df2))
-        self.assertEqual( df.columns.values.tolist().sort(), df2.columns.values.tolist().sort())
+        self.assertEqual(len(df), len(df2))
+        self.assertEqual(df.columns.values.tolist().sort(), df2.columns.values.tolist().sort())
         query = """
         -- This is a comment
         select RA, DEC from %s ; -- this is another comment
         """ % self.tablename
-        with open(self.sqlfile,'w') as F: F.write(query)
+        with open(self.sqlfile, 'w') as F:
+            F.write(query)
         df2 = self.con.query_to_pandas(self.con.loadsql(self.sqlfile))
-        self.assertEqual( len(df), len(df2))
-        self.assertEqual( df.columns.values.tolist().sort(), df2.columns.values.tolist().sort())
+        self.assertEqual(len(df), len(df2))
+        self.assertEqual(df.columns.values.tolist().sort(), df2.columns.values.tolist().sort())
         self.con.drop_table(self.tablename)
         os.remove(self.sqlfile)
-
 
     def test_mytables(self):
         print('\n*** test_mytables ***\n')
         df = self.con.mytables()
         self.assertTrue('FGOTTENMETADATA' in df['TABLE_NAME'].values.tolist())
 
-
     def test_load_table_csv(self):
         print('\n*** test_load_table_csv ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',')
         self.assertTrue(os.path.exists(self.csvfile))
         self.con.drop_table(os.path.splitext(self.csvfile)[0].upper())
@@ -148,12 +150,12 @@ class TestApi(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.csvfile)[0].upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows)
-        ## appending
+        # appending
         self.assertTrue(self.con.append_table(self.csvfile))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.csvfile)[0].upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         self.con.drop_table(os.path.splitext(self.csvfile)[0].upper())
         # name from tablename
         self.con.drop_table(self.tablename)
@@ -162,52 +164,56 @@ class TestApi(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows)
-        ## appending
+        # appending
         self.assertTrue(self.con.append_table(self.csvfile, name=self.tablename))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         # chunksize
         self.con.drop_table(self.tablename)
-        self.assertTrue(self.con.load_table(self.csvfile, name=self.tablename, chunksize=self.chunk))
+        self.assertTrue(self.con.load_table(
+            self.csvfile, name=self.tablename, chunksize=self.chunk))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows)
-        ## appending
-        self.assertTrue(self.con.append_table(self.csvfile, name=self.tablename, chunksize=self.chunk))
+        # appending
+        self.assertTrue(self.con.append_table(
+            self.csvfile, name=self.tablename, chunksize=self.chunk))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         self.con.drop_table(self.tablename)
         os.remove(self.csvfile)
-
 
     def test_load_append_table_memory_csv(self):
         print('\n*** test_load_append_table_memory_csv ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',')
         for i in range(9):
-            df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',',mode='a',header=False)
+            df.to_csv(self.csvfile, index=False, float_format='%.8f',
+                      sep=',', mode='a', header=False)
         self.assertTrue(os.path.exists(self.csvfile))
         # memsize
         self.con.drop_table(self.tablename)
-        self.assertTrue(self.con.load_table(self.csvfile, name=self.tablename, memsize=self.memsize))
+        self.assertTrue(self.con.load_table(
+            self.csvfile, name=self.tablename, memsize=self.memsize))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*10)
+        self.assertEqual(len(fetch), self.nrows * 10)
         # appending
-        self.assertTrue(self.con.append_table(self.csvfile, name=self.tablename, memsize=self.memsize))
+        self.assertTrue(self.con.append_table(
+            self.csvfile, name=self.tablename, memsize=self.memsize))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*20)
-        ## end
+        self.assertEqual(len(fetch), self.nrows * 20)
+        # end
         os.remove(self.csvfile)
         self.con.drop_table(self.tablename)
 
@@ -215,25 +221,28 @@ class TestApi(unittest.TestCase):
         print('\n*** test_load_append_table_memory_chunk_csv ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',')
         for i in range(9):
-            df.to_csv(self.csvfile, index=False, float_format='%.8f', sep=',',mode='a',header=False)
+            df.to_csv(self.csvfile, index=False, float_format='%.8f',
+                      sep=',', mode='a', header=False)
         self.assertTrue(os.path.exists(self.csvfile))
         # memsize
         self.con.drop_table(self.tablename)
-        self.assertTrue(self.con.load_table(self.csvfile, name=self.tablename, memsize=self.memsize, chunksize=self.chunk*10))
+        self.assertTrue(self.con.load_table(self.csvfile, name=self.tablename,
+                                            memsize=self.memsize, chunksize=self.chunk * 10))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*10)
+        self.assertEqual(len(fetch), self.nrows * 10)
         # appending
-        self.assertTrue(self.con.append_table(self.csvfile, name=self.tablename, memsize=self.memsize, chunksize=self.chunk*200))
+        self.assertTrue(self.con.append_table(self.csvfile, name=self.tablename,
+                                              memsize=self.memsize, chunksize=self.chunk * 200))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*20)
-        ## end
+        self.assertEqual(len(fetch), self.nrows * 20)
+        # end
         os.remove(self.csvfile)
         self.con.drop_table(self.tablename)
 
@@ -249,12 +258,12 @@ class TestApi(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.fitsfile)[0].upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows)
-        ## appending
+        # appending
         self.assertTrue(self.con.append_table(self.fitsfile))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.fitsfile)[0].upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         self.con.drop_table(os.path.splitext(self.fitsfile)[0].upper())
         # name from tablename
         self.con.drop_table(self.tablename)
@@ -263,25 +272,27 @@ class TestApi(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows)
-        ## appending
+        # appending
         self.assertTrue(self.con.append_table(self.fitsfile, name=self.tablename))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         # chunksize
         self.con.drop_table(self.tablename)
-        self.assertTrue(self.con.load_table(self.fitsfile, name=self.tablename, chunksize=self.chunk))
+        self.assertTrue(self.con.load_table(
+            self.fitsfile, name=self.tablename, chunksize=self.chunk))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows)
-        ## appending
-        self.assertTrue(self.con.append_table(self.fitsfile, name=self.tablename, chunksize=self.chunk))
+        # appending
+        self.assertTrue(self.con.append_table(
+            self.fitsfile, name=self.tablename, chunksize=self.chunk))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         self.con.drop_table(self.tablename)
         os.remove(self.fitsfile)
 
@@ -289,23 +300,25 @@ class TestApi(unittest.TestCase):
         print('\n*** test_load_append_table_memory_fits ***\n')
         data = create_test_data()
         for i in range(4):
-            data = np.concatenate((data,data))
+            data = np.concatenate((data, data))
         fitsio.write(self.fitsfile, data, clobber=True)
         self.assertTrue(os.path.exists(self.fitsfile))
         # memsize
         self.con.drop_table(self.tablename)
-        self.assertTrue(self.con.load_table(self.fitsfile, name=self.tablename, memsize=self.memsize))
+        self.assertTrue(self.con.load_table(
+            self.fitsfile, name=self.tablename, memsize=self.memsize))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*16)
+        self.assertEqual(len(fetch), self.nrows * 16)
         # appending
-        self.assertTrue(self.con.append_table(self.fitsfile, name=self.tablename, memsize=self.memsize))
+        self.assertTrue(self.con.append_table(
+            self.fitsfile, name=self.tablename, memsize=self.memsize))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2*16)
-        ## end
+        self.assertEqual(len(fetch), self.nrows * 2 * 16)
+        # end
         os.remove(self.fitsfile)
         self.con.drop_table(self.tablename)
 
@@ -313,32 +326,33 @@ class TestApi(unittest.TestCase):
         print('\n*** test_load_append_table_memory_chunk_fits ***\n')
         data = create_test_data()
         for i in range(4):
-            data = np.concatenate((data,data))
+            data = np.concatenate((data, data))
         fitsio.write(self.fitsfile, data, clobber=True)
         self.assertTrue(os.path.exists(self.fitsfile))
         # memsize
         self.con.drop_table(self.tablename)
-        self.assertTrue(self.con.load_table(self.fitsfile, name=self.tablename, memsize=self.memsize, chunksize=self.chunk*10))
+        self.assertTrue(self.con.load_table(self.fitsfile, name=self.tablename,
+                                            memsize=self.memsize, chunksize=self.chunk * 10))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*16)
+        self.assertEqual(len(fetch), self.nrows * 16)
         # appending
-        self.assertTrue(self.con.append_table(self.fitsfile, name=self.tablename, memsize=self.memsize, chunksize=self.chunk*200))
+        self.assertTrue(self.con.append_table(self.fitsfile, name=self.tablename,
+                                              memsize=self.memsize, chunksize=self.chunk * 200))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2*16)
-        ## end
+        self.assertEqual(len(fetch), self.nrows * 2 * 16)
+        # end
         os.remove(self.fitsfile)
         self.con.drop_table(self.tablename)
-
 
     def test_load_table_hdf5(self):
         print('\n*** test_load_table_hdf5 ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         df.to_hdf(self.h5file, key='data')
         self.assertTrue(os.path.exists(self.h5file))
         self.con.drop_table(os.path.splitext(self.h5file)[0].upper())
@@ -348,12 +362,12 @@ class TestApi(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.h5file)[0].upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows)
-        ## appending
+        # appending
         self.assertTrue(self.con.append_table(self.h5file))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % os.path.splitext(self.h5file)[0].upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         self.con.drop_table(os.path.splitext(self.h5file)[0].upper())
         # name from tablename
         self.con.drop_table(self.tablename)
@@ -362,21 +376,20 @@ class TestApi(unittest.TestCase):
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows)
-        ## appending
+        # appending
         self.assertTrue(self.con.append_table(self.h5file, name=self.tablename))
         cursor = self.con.cursor()
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*2)
+        self.assertEqual(len(fetch), self.nrows * 2)
         self.con.drop_table(self.tablename)
         os.remove(self.h5file)
-
 
     def test_query_and_save(self):
         print('\n*** test_query_and_save ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         cursor = self.con.cursor()
         try:
             self.con.drop_table(self.tablename)
@@ -397,25 +410,28 @@ class TestApi(unittest.TestCase):
             self.assertTrue(self.con.pandas_to_db(df, tablename=self.tablename, append=True))
         temp = cursor.execute('select RA,DEC from %s' % self.tablename.upper())
         fetch = temp.fetchall()
-        self.assertEqual(len(fetch), self.nrows*35)
+        self.assertEqual(len(fetch), self.nrows * 35)
         self.con.outfile_max_mb = 1
         self.con.query_and_save(query, self.csvfile, print_time=False)
         for i in range(4):
-            self.assertTrue(os.path.exists(os.path.splitext(self.csvfile)[0]+'_00000'+str(i+1)+'.csv'))
-            os.remove(os.path.splitext(self.csvfile)[0]+'_00000'+str(i+1)+'.csv')
+            self.assertTrue(os.path.exists(os.path.splitext(
+                self.csvfile)[0] + '_00000' + str(i + 1) + '.csv'))
+            os.remove(os.path.splitext(self.csvfile)[0] + '_00000' + str(i + 1) + '.csv')
         self.con.query_and_save(query, self.fitsfile, print_time=False)
         for i in range(4):
-            self.assertTrue(os.path.exists(os.path.splitext(self.fitsfile)[0]+'_00000'+str(i+1)+'.fits'))
-            os.remove(os.path.splitext(self.fitsfile)[0]+'_00000'+str(i+1)+'.fits')
+            self.assertTrue(os.path.exists(os.path.splitext(self.fitsfile)
+                                           [0] + '_00000' + str(i + 1) + '.fits'))
+            os.remove(os.path.splitext(self.fitsfile)[0] + '_00000' + str(i + 1) + '.fits')
 
         self.con.outfile_max_mb = 1000
         self.con.drop_table(self.tablename)
 
+    @unittest.skip("need to reealuate")
     def test_inline_functions(self):
         print('\n*** test_inline_functions ***\n')
         data = create_test_data()
         df = pd.DataFrame(data)
-        self.assertEqual( len(df), self.nrows)
+        self.assertEqual(len(df), self.nrows)
         cursor = self.con.cursor()
         try:
             self.con.drop_table(self.tablename)

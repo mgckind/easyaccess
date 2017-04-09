@@ -2,92 +2,70 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-
-__author__ = 'Matias Carrasco Kind'
+import cmd
 import os
 import sys
-
+import cx_Oracle
+import shutil
+import stat
+import re
+import getpass
+from multiprocessing import Process
+from easyaccess.version import __version__
+from easyaccess.version import last_pip_version
+import easyaccess.config_ea as config_mod
+from easyaccess.eautils import des_logo as dl
+import easyaccess.eautils.dtypes as eatypes
+import easyaccess.eautils.fileio as eafile
+import easyaccess.eautils.fun_utils as fun_utils
+import easyaccess.eaparser as eaparser
+from easyaccess.eautils.import_utils import Import
+from easyaccess.eautils.ea_utils import *
+import threading
+import time
+import pandas as pd
+import webbrowser
+import signal
+import warnings
+warnings.filterwarnings("ignore")
 # For compatibility with old python
 try:
     from builtins import input, str, range
 except ImportError:
     from __builtin__ import input, str, range
 
-import warnings
-warnings.filterwarnings("ignore")
+__author__ = 'Matias Carrasco Kind'
 
-import cmd
-import cx_Oracle
-import shutil
-import stat
-import re
-import getpass
 
-try:
-    from easyaccess.version import __version__
-    from easyaccess.version import last_pip_version
-    import easyaccess.eautils.dircache as dircache
-    import easyaccess.config_ea as config_mod
-    from easyaccess.eautils import des_logo as dl
-    import easyaccess.eautils.dtypes as eatypes
-    import easyaccess.eautils.fileio as eafile
-    import easyaccess.eautils.fun_utils as fun_utils
-    from easyaccess.eautils.import_utils import Import
+def without_color(line, color, mode=0):
+    return line
 
-except ImportError as error:
-    warnings.warn(str(error))
-    from version import __version__
-    from version import last_pip_version
-    import eautils.dircache as dircache
-    import config_ea as config_mod
-    import eautils.des_logo as dl
-    import eautils.dtypes as eatypes
-    import eautils.fileio as eafile
-    import eautils.fun_utils as fun_utils
-    from eautils.import_utils import Import
 
-import threading
-import time
-import getpass
-import itertools
-import logging
-
-def without_color(line, color, mode=0) : return line
 try:
     from termcolor import colored as with_color
+
     def colored(line, color, mode=1):
         if mode == 1:
-            return with_color(line,color)
+            return with_color(line, color)
         else:
             return line
-except:
+except ImportError:
     colored = without_color
+try:
+    import readline
+    readline_present = True
+except ImportError:
+    readline_present = False
 
-
-import pandas as pd
-import datetime
-import fitsio
-import numpy as np
-import argparse
-import webbrowser
-import signal
 sys.path.insert(0, os.getcwd())
-
+# For python functions to work
 fun_utils.init_func()
-
-class KeyParser(argparse.ArgumentParser):
-    def error(self, message):
-        sys.exit(2)
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
-
-global load_bar
 pid = os.getpid()
 
 # FILES
 ea_path = os.path.join(os.environ["HOME"], ".easyaccess/")
-if not os.path.exists(ea_path): os.makedirs(ea_path)
+if not os.path.exists(ea_path):
+    os.makedirs(ea_path)
 history_file = os.path.join(os.environ["HOME"], ".easyaccess/history")
 config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
 
@@ -96,151 +74,77 @@ config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
 ea_path_old = os.path.join(os.environ["HOME"], ".easyacess/")
 if os.path.exists(ea_path_old) and os.path.isdir(ea_path_old):
     if not os.path.exists(history_file):
-        shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/history"), history_file)
+        shutil.copy2(os.path.join(
+            os.environ["HOME"], ".easyacess/history"), history_file)
     if not os.path.exists(config_file):
-        shutil.copy2(os.path.join(os.environ["HOME"], ".easyacess/config.ini"), config_file)
-    #shutil.move(ea_path_old, os.path.join(os.environ["HOME"], ".easyacess_old/"))
+        shutil.copy2(os.path.join(
+            os.environ["HOME"], ".easyacess/config.ini"), config_file)
 
-# create files if they don't exist
+# create history and config files if they don't exist
 if not os.path.exists(history_file):
     os.system('echo $null >> ' + history_file)
 if not os.path.exists(config_file):
     os.system('echo $null >> ' + config_file)
 
+# DES SERVICES FILE
 desfile = os.getenv("DES_SERVICES")
-if not desfile: desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
+if not desfile:
+    desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
 if os.path.exists(desfile):
     amode = stat.S_IMODE(os.stat(desfile).st_mode)
     if amode != 2 ** 8 + 2 ** 7:
-        print('Changing permissions to des_service file to read/write only by user')
-        os.chmod(desfile, 2 ** 8 + 2 ** 7)
-
-
-def print_exception(pload=None,mode=1):
-    (type, value, traceback) = sys.exc_info()
-    if pload and (pload.pid is not None):
-        os.kill(pload.pid, signal.SIGKILL)
-    print()
-    print(colored(type, "red",mode))
-    print(colored(value, "red",mode))
-    print()
-
-
-def loading():
-    char_s = u"\u2606"
-    if sys.stdout.encoding != 'UTF-8':
-        char_s = "o"
-    print()
-    cc = 0
-    spinner = itertools.cycle(list(range(13)) + list(range(1, 14, 1))[::-1])
-    line2 = "  Ctrl-C to abort; "
-    try:
-        while True:
-            line = list('    |              |')
-            time.sleep(0.1)
-            idx = int(next(spinner))
-            line[5 + idx] = char_s
-            sys.stdout.write("".join(line))
-            sys.stdout.write(line2)
-            sys.stdout.flush()
-            sys.stdout.write('\b' * len(line) + '\b' * len(line2))
-    except:
-        pass
-
-
-options_prefetch = ['show', 'set', 'default']
-options_add_comment = ['table', 'column']
-options_edit = ['show', 'set_editor']
-options_out = eafile.FILE_EXTS
-options_def = eafile.FILE_DEFS
-# ADW: It would be better to grab these from the config object
-options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout', 'outfile_max_mb', 'max_rows',
-                  'max_columns',
-                  'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue',
-                  'autocommit', 'trim_whitespace', 'desdm_coldefs']
-options_config2 = ['show', 'set']
-options_app = ['check', 'submit', 'explain']
-
-
-def _complete_path(line):
-    line = line.split()
-    if len(line) < 2:
-        filename = ''
-        path = './'
-    else:
-        path = line[1]
-        if '/' in path:
-            i = path.rfind('/')
-            filename = path[i + 1:]
-            path = path[:i]
-        else:
-            filename = path
-            path = './'
-    ls = dircache.listdir(path)
-    ls = ls[:]
-    dircache.annotate(path, ls)
-    if filename == '':
-        return ls
-    else:
-        return [f for f in ls if f.startswith(filename)]
-
-
-def read_buf(fbuf):
-    """
-    Read SQL files, sql statement should end with ';' if parsing to a file to write.
-    """
-    try:
-        with open(fbuf) as f:
-            content = f.read()
-    except:
-        print('\n' + 'Fail to load the file "{:}"'.format(fbuf))
-        return ""
-    list = [item for item in content.split('\n')]
-    newquery = ''
-    for line in list:
-        if line[0:2] == '--': continue
-        newquery += ' ' + line.split('--')[0]
-    # newquery = newquery.split(';')[0]
-    return newquery
+        print('Changing permissions to des_service file to read/write by user')
+        os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only
 
 
 class easy_or(cmd.Cmd, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
 
     def set_messages(self):
-        intro_keys = {'db':colored(self.dbname,"green",self.ct), 'user':colored(self.desconfig.get('db-' + self.dbname, 'user'),"green", self.ct),
-         'ea_version':colored("easyaccess "+__version__,"cyan",self.ct)}
+        db_user = self.desconfig.get('db-' + self.dbname, 'user')
+        intro_keys = {
+            'db': colored(self.dbname, "green", self.ct),
+            'user': colored(db_user, "green", self.ct),
+            'ea_version': colored("easyaccess " + __version__, "cyan", self.ct)
+            }
         self.intro = colored(
+
             """
 {ea_version}. The DESDM Database shell.
 Connected as {user} to {db}.
-** Type 'help' or '?' to list commands. **\n""".format(**intro_keys),"cyan",self.ct)
-        self.savePrompt = colored('_________', 'magenta',self.ct) + '\nDESDB ~> '
+** Type 'help' or '?' to list commands. **
+            """.format(**intro_keys), "cyan", self.ct)
+        self.savePrompt = colored(
+            '_________', 'magenta', self.ct) + '\nDESDB ~> '
         self.prompt = self.savePrompt
-        self.doc_header = colored(' *General Commands*', "cyan",self.ct) + ' (type help <command>):'
-        self.docdb_header = colored('\n *DB Commands*', "cyan",self.ct) + '      (type help <command>):'
+        self.doc_header = colored(
+            ' *General Commands*', "cyan", self.ct) + ' (type help <command>):'
+        self.docdb_header = colored(
+            '\n *DB Commands*', "cyan", self.ct) + '      (type help <command>):'
 
-
-
-    def __init__(self, conf, desconf, db, interactive=True, quiet=False, refresh=True):
+    def __init__(self, conf, desconf, db, interactive=True,
+                 quiet=False, refresh=True):
         cmd.Cmd.__init__(self)
         self.config = conf
         self.ct = int(self.config.getboolean('display', 'color_terminal'))
-
         self.writeconfig = False
         self.quiet = quiet
         self.refresh = refresh
         self.desconfig = desconf
         # ADW: It would be better to set these automatically...
-        self.editor = os.getenv('EDITOR', self.config.get('easyaccess', 'editor'))
+        self.editor = os.getenv(
+            'EDITOR', self.config.get('easyaccess', 'editor'))
         self.timeout = self.config.getint('easyaccess', 'timeout')
         self.prefetch = self.config.getint('easyaccess', 'prefetch')
         self.loading_bar = self.config.getboolean('display', 'loading_bar')
         self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
-        self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
+        self.outfile_max_mb = self.config.getint(
+            'easyaccess', 'outfile_max_mb')
         self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
-        self.desdm_coldefs = self.config.getboolean('easyaccess', 'desdm_coldefs')
-        self.trim_whitespace = self.config.getboolean('easyaccess', 'trim_whitespace')
+        self.desdm_coldefs = self.config.getboolean(
+            'easyaccess', 'desdm_coldefs')
+        self.trim_whitespace = self.config.getboolean(
+            'easyaccess', 'trim_whitespace')
         self.dbname = db
         self.buff = None
         self.interactive = interactive
@@ -249,32 +153,39 @@ Connected as {user} to {db}.
         # connect to db
         self.user = self.desconfig.get('db-' + self.dbname, 'user')
         self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
+        self.service_name = self.desconfig.get('db-' + self.dbname, 'name')
         self.port = self.desconfig.get('db-' + self.dbname, 'port')
         self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
-        kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
+        kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
         self.dsn = cx_Oracle.makedsn(**kwargs)
-        if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
+        if not self.quiet:
+            print('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
         for tries in range(3):
             try:
-                self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
-                if self.autocommit: self.con.autocommit = True
+                self.con = cx_Oracle.connect(
+                    self.user, self.password, dsn=self.dsn)
+                if self.autocommit:
+                    self.con.autocommit = True
                 connected = True
                 break
             except Exception as e:
                 lasterr = str(e).strip()
-                print(colored("Error when trying to connect to database: %s" % lasterr, "red",self.ct))
+                print(colored("Error when trying to connect to database: %s" %
+                              lasterr, "red", self.ct))
                 print("\n   Retrying...\n")
                 time.sleep(5)
         if not connected:
-            print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
+            print(
+                '\n ** Could not successfully connect to DB. '
+                'Try again later. Aborting. ** \n')
             os._exit(0)
         self.cur = self.con.cursor()
         self.cur.arraysize = int(self.prefetch)
         msg = self.last_pass_changed()
-        if msg and not self.quiet: print(msg)
+        if msg and not self.quiet:
+            print(msg)
         self.set_messages()
-
 
     def handler(self, signum, frame):
         """
@@ -282,17 +193,18 @@ Connected as {user} to {db}.
         """
         print('Ctrl+Z pressed')
         print('Job = %d Stopped' % pid)
-        print(colored(' * Type bg to send this job to the background *', 'cyan',self.ct))
-        print(colored(' * Type fg to bring this job to the foreground *', 'cyan',self.ct))
+        print(colored(
+            '* Type bg to send this job to the background *', 'cyan', self.ct))
+        print(colored(
+            '* Type fg to take this job to the foreground *', 'cyan', self.ct))
         print()
         os.kill(pid, signal.SIGSTOP)
         try:
             if self.loading_bar:
-                if self.pload.pid != None:
+                if self.pload.pid is not None:
                     os.kill(self.pload.pid, signal.SIGKILL)
         except AttributeError:
             pass
-
 
     # ## OVERRIDE CMD METHODS
 
@@ -377,7 +289,8 @@ Connected as {user} to {db}.
                     doc = getattr(self, 'do_' + arg).__doc__
                     if doc:
                         doc = str(doc)
-                        if doc.find('DB:') > -1: doc = doc.replace('DB:', '')
+                        if doc.find('DB:') > -1:
+                            doc = doc.replace('DB:', '')
                         self.stdout.write("%s\n" % str(doc))
                         return
                 except AttributeError:
@@ -423,16 +336,21 @@ Connected as {user} to {db}.
             self.print_topics(self.misc_header, list(help.keys()), 15, 80)
             self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
-            print(colored(' *Default Input*', 'cyan',self.ct))
+            print(colored(' *Default Input*', 'cyan', self.ct))
             print('===================================================')
             print("* To run SQL queries just add ; at the end of query")
-            print("* To write to a file  : select ... from ... where ... ; > filename")
-            print(colored("* Supported file formats (.csv, .tab., .fits, .h5) ", "green",self.ct))
-            print("* To check SQL syntax : select ... from ... where ... ; < check")
-            print("* To see the Oracle execution plan  : select ... from ... where ... ; < explain")
+            print("* To write to a file  : select ... from ... "
+                  "where ... ; > filename")
+            print(colored(
+                "* Supported file formats (.csv, .tab., .fits, .h5) ",
+                "green", self.ct))
+            print("* To check SQL syntax : select ... from ... "
+                  "where ... ; < check")
+            print(
+                "* To see the Oracle execution plan  : select ... "
+                "from ... where ... ; < explain")
             print()
             print("* To access an online tutorial type: online_tutorial ")
-
 
     def print_topics(self, header, cmds, cmdlen, maxcol):
         if header is not None:
@@ -442,7 +360,6 @@ Connected as {user} to {db}.
                     self.stdout.write("%s\n" % str(self.ruler * len(header)))
                 self.columnize(cmds, maxcol - 1)
                 self.stdout.write("\n")
-
 
     def preloop(self):
         """
@@ -460,18 +377,19 @@ Connected as {user} to {db}.
                 print()
             except:
                 print(colored(
-                    "\n Couldn't load metadata into cache (try later), no autocompletion for tables, columns or users this time\n",
-                    "red",self.ct))
+                    "\n Couldn't load metadata into cache (try later), no"
+                    " autocompletion for tables, columns or users this time\n",
+                    "red", self.ct))
 
         # history
         ht = open(history_file, 'r')
         Allq = ht.readlines()
         ht.close()
         self._hist = []
-        for lines in Allq: self._hist.append(lines.strip())
+        for lines in Allq:
+            self._hist.append(lines.strip())
         self._locals = {}  # # Initialize execution namespace for user
         self._globals = {}
-
 
     def precmd(self, line):
         """ This method is called after the line has been input but before
@@ -481,8 +399,10 @@ Connected as {user} to {db}.
         try:
             self.con.ping()
         except:
-            self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
-            if self.autocommit: self.con.autocommit = True
+            self.con = cx_Oracle.connect(
+                self.user, self.password, dsn=self.dsn)
+            if self.autocommit:
+                self.con.autocommit = True
             self.cur = self.con.cursor()
             self.cur.arraysize = int(self.prefetch)
 
@@ -499,16 +419,18 @@ Connected as {user} to {db}.
 
         # self.prompt = self.savePrompt
 
-        if not line: return ""  # empty line no need to go further
+        if not line:
+            return ""  # empty line no need to go further
         if line[0] == "@":
             if len(line) > 1:
                 fbuf = line[1:]
-                fbuf = fbuf.replace(';','')
+                fbuf = fbuf.replace(';', '')
                 if fbuf.find('>') > -1:
                     try:
                         fbuf = "".join(fbuf.split())
                         line = read_buf(fbuf.split('>')[0])
-                        if line == "": return ""
+                        if line == "":
+                            return ""
                         if line.find(';') > -1:
                             line = line.split(';')[0]
                         outputfile = fbuf.split('>')[1]
@@ -518,7 +440,8 @@ Connected as {user} to {db}.
 
                 else:
                     line = read_buf(fbuf.split()[0])
-                    if line == "": return ""
+                    if line == "":
+                        return ""
 
                 self.buff = line
                 print()
@@ -531,7 +454,6 @@ Connected as {user} to {db}.
                 self.do_clear(None)
                 return ""
 
-
         # support model_query Get
         # self.prompt = self.savePrompt
 
@@ -541,7 +463,8 @@ Connected as {user} to {db}.
     def emptyline(self):
         pass
 
-    # This function overrides the cmd function to remove some characters from the delimiter
+    # This function overrides the cmd function to remove some characters from
+    # the delimiter
     def complete(self, text, state):
         """Return the next possible completion for 'text'.
 
@@ -551,7 +474,9 @@ Connected as {user} to {db}.
         if state == 0:
             import readline
 
-            readline.set_completer_delims(' \t\n`~!@#$%^&*()=[{]}\\|;:\'",<>/?')  # #overrides default delimiters
+            # #overrides default delimiters
+            readline.set_completer_delims(
+                ' \t\n`~!@#$%^&*()=[{]}\\|;:\'",<>/?')
             origline = readline.get_line_buffer()
             line = origline.lstrip()
             stripped = len(origline) - len(line)
@@ -573,7 +498,6 @@ Connected as {user} to {db}.
             return self.completion_matches[state]
         except IndexError:
             return None
-
 
     def default(self, line):
         """
@@ -599,20 +523,23 @@ Connected as {user} to {db}.
                 print_exception(mode=self.ct)
                 return
             extra_func = [funs, args, names]
-            if funs is None : extra_func = None
+            if funs is None:
+                extra_func = None
             if line[fend:].find('<') > -1:
                 app = line[fend:].split('<')[1].strip().split()[0].lower()
                 if app.find('check') > -1:
                     print('\nChecking statement...')
                     try:
                         self.cur.parse(query)
-                        print(colored('Ok!\n', 'green',self.ct))
+                        print(colored('Ok!\n', 'green', self.ct))
                         return
                     except:
                         print_exception(mode=self.ct)
                         return
                 elif app.find('submit') > -1:
-                    print(colored('\nTo be done: Submit jobs to the DB cluster', 'cyan',self.ct))
+                    print(colored(
+                        '\nTo be done: Submit jobs to the DB cluster',
+                        'cyan', self.ct))
                     return
                 elif app.find('explain') > -1:
                     exquery = 'explain plan for ' + query
@@ -629,13 +556,14 @@ Connected as {user} to {db}.
             if line[fend:].find('>') > -1:
                 try:
                     fileout = line[fend:].split('>')[1].strip().split()[0]
-                    print('\nFetching data and saving it to %s ...' % fileout + '\n')
+                    print('\nFetching data and saving it to %s ...' %
+                          fileout + '\n')
                     eafile.check_filetype(fileout)
                     self.query_and_save(query, fileout, extra_func=extra_func)
                 except KeyboardInterrupt or EOFError:
-                    print(colored('\n\nAborted \n', "red",self.ct))
+                    print(colored('\n\nAborted \n', "red", self.ct))
                 except IndexError:
-                    print(colored('\nMust indicate output file\n', "red",self.ct))
+                    print(colored('\nMust indicate output file\n', "red", self.ct))
                     print('Format:\n')
                     print('DESDB ~> select ... from ... where ... ; > example.csv \n')
                 except:
@@ -648,7 +576,7 @@ Connected as {user} to {db}.
                         self.con.cancel()
                     except:
                         pass
-                    print(colored('\n\nAborted \n', "red",self.ct))
+                    print(colored('\n\nAborted \n', "red", self.ct))
 
         else:
             print()
@@ -661,7 +589,7 @@ Connected as {user} to {db}.
         if qstop > -1:
             if line[qstop:].find('>') > -1:
                 line = line[qstop + 1:]
-                return _complete_path(line)
+                return complete_path(line)
             if line[qstop:].find('<') > -1:
                 if text:
                     return [option for option in options_app if option.startswith(text.lower())]
@@ -670,7 +598,7 @@ Connected as {user} to {db}.
 
         if line[0] == '@':
             line = '@ ' + line[1:]
-            return _complete_path(line)
+            return complete_path(line)
         if line.upper().find('SELECT') > -1:
             # return self._complete_colnames(text)
             if line.upper().find('FROM') == -1:
@@ -682,7 +610,6 @@ Connected as {user} to {db}.
         else:
             return self._complete_tables(text)
 
-
     # ## QUERY METHODS
 
     def last_pass_changed(self):
@@ -690,7 +617,8 @@ Connected as {user} to {db}.
         Return creation time and last time password was modified
         """
         query = """
-        select sysdate-ctime creation, sysdate-ptime passwd from sys.user$ where name = '%s' """ % self.user.upper()
+        select sysdate-ctime creation,
+        sysdate-ptime passwd from sys.user$ where name = '%s' """ % self.user.upper()
         try:
             self.cur.execute(query)
             TT = self.cur.fetchall()
@@ -699,18 +627,20 @@ Connected as {user} to {db}.
         except:
             return None
         if ptime > 200:
-            msg = colored("*Important* ", "red") + 'Last time password change was ' + colored("%d" % ptime,
-                                                                                              "red",self.ct) + " days ago"
-            if ptime == ctime: msg += colored(" (Never in your case!)", "red",self.ct)
-            msg += '\n Please change it using the ' + colored("set_password",
-                                                                   "cyan",self.ct) + ' command to get rid of this message\n'
+            msg = colored("*Important* ", "red") + 'Last time password change was '
+            msg += colored("%d" % ptime, "red", self.ct) + " days ago"
+            if ptime == ctime:
+                msg += colored(" (Never in your case!)", "red", self.ct)
+            msg += '\n Please change it using the '
+            msg += colored("set_password", "cyan", self.ct)
+            msg += ' command to get rid of this message\n'
             return msg
 
-
-    def query_and_print(self, query, print_time=True, err_arg='No rows selected', suc_arg='Done!', extra="",
+    def query_and_print(self, query, print_time=True,
+                        err_arg='No rows selected', suc_arg='Done!', extra="",
                         clear=False, extra_func=None, return_df=False):
-        #to be safe
-        query = query.replace(';','')
+        # to be safe
+        query = query.replace(';', '')
         if extra_func is not None:
             p_functions = extra_func[0]
             p_args = extra_func[1]
@@ -719,8 +649,10 @@ Connected as {user} to {db}.
         tt = threading.Timer(self.timeout, self.con.cancel)
         tt.start()
         t1 = time.time()
-        if self.loading_bar: self.pload = Process(target=loading)
-        if self.loading_bar: self.pload.start()
+        if self.loading_bar:
+            self.pload = Process(target=loading)
+        if self.loading_bar:
+            self.pload.start()
         try:
             self.cur.execute(query)
             if self.cur.description is not None:
@@ -731,24 +663,31 @@ Connected as {user} to {db}.
                 updated = False
                 data = pd.DataFrame(self.cur.fetchmany())
                 while True:
-                    if data.empty: break
+                    if data.empty:
+                        break
                     if extra_func is not None and not updated:
                         data.columns = header
                         for kf in range(len(p_functions)):
-                            data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
+                            data = fun_utils.updateDF(
+                                data, p_functions, p_args, p_names, kf)
                         updated = True
                     rowline = ' Rows : %d, Rows/sec: %d ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
-                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow',self.ct))
-                    if self.loading_bar: sys.stdout.flush()
-                    if self.loading_bar: sys.stdout.write('\b' * len(rowline))
-                    if self.loading_bar: sys.stdout.flush()
+                    if self.loading_bar:
+                        sys.stdout.write(colored(rowline, 'yellow', self.ct))
+                    if self.loading_bar:
+                        sys.stdout.flush()
+                    if self.loading_bar:
+                        sys.stdout.write('\b' * len(rowline))
+                    if self.loading_bar:
+                        sys.stdout.flush()
                     temp = pd.DataFrame(self.cur.fetchmany())
                     if not temp.empty:
                         if extra_func is not None:
                             temp.columns = header
                             for kf in range(len(p_functions)):
-                                temp = fun_utils.updateDF(temp, p_functions, p_args, p_names, kf)
+                                temp = fun_utils.updateDF(
+                                    temp, p_functions, p_args, p_names, kf)
                         data = data.append(temp, ignore_index=True)
                     else:
                         break
@@ -756,41 +695,51 @@ Connected as {user} to {db}.
                 tt.cancel()
                 if self.loading_bar:
                     # self.pload.terminate()
-                    if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
-                if clear: self.do_clear(None)
+                    if self.pload.pid is not None:
+                        os.kill(self.pload.pid, signal.SIGKILL)
+                if clear:
+                    self.do_clear(None)
                 print()
-                if print_time: print(colored('\n%d rows in %.2f seconds' % (len(data), (t2 - t1)), "green",self.ct))
-                if print_time: print()
+                if print_time:
+                    print(colored('\n%d rows in %.2f seconds' %
+                                  (len(data), (t2 - t1)), "green", self.ct))
+                if print_time:
+                    print()
                 if len(data) == 0:
                     fline = '   '
-                    for col in header: fline += '%s  ' % col
+                    for col in header:
+                        fline += '%s  ' % col
                     if extra != "":
-                        print(colored(extra + '\n', "cyan",self.ct))
+                        print(colored(extra + '\n', "cyan", self.ct))
                     print(fline)
-                    print(colored(err_arg, "red",self.ct))
+                    print(colored(err_arg, "red", self.ct))
                 else:
                     if extra_func is None:
                         data.columns = header
                     data.index += 1
                     if extra != "":
-                        print(colored(extra + '\n', "cyan",self.ct))
-                    ## # ADW: Oracle distinguishes between NaN and Null while pandas
-                    ## # does not making this replacement confusing...
-                    ## try:
-                    ##     data.fillna('Null', inplace=True)
-                    ## except:
-                    ##     pass
-                    if return_df: return data
+                        print(colored(extra + '\n', "cyan", self.ct))
+                    # ADW: Oracle distinguishes between NaN and Null while
+                    # pandas does not making this replacement confusing...
+                    # try:
+                    #     data.fillna('Null', inplace=True)
+                    # except:
+                    # pass
+                    if return_df:
+                        return data
                     print(data)
             else:
                 t2 = time.time()
                 tt.cancel()
                 if self.loading_bar:
                     # self.pload.terminate()
-                    if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
-                if clear: self.do_clear(None)
-                print(colored(suc_arg, "green",self.ct))
-                if self.autocommit: self.con.commit()
+                    if self.pload.pid is not None:
+                        os.kill(self.pload.pid, signal.SIGKILL)
+                if clear:
+                    self.do_clear(None)
+                print(colored(suc_arg, "green", self.ct))
+                if self.autocommit:
+                    self.con.commit()
             print()
         except:
             (type, value, traceback) = sys.exc_info()
@@ -798,39 +747,41 @@ Connected as {user} to {db}.
             t2 = time.time()
             if self.loading_bar:
                 # self.pload.terminate()
-                if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
+                if self.pload.pid is not None:
+                    os.kill(self.pload.pid, signal.SIGKILL)
             print()
-            print(colored(type, "red",self.ct))
-            print(colored(value, "red",self.ct))
+            print(colored(type, "red", self.ct))
+            print(colored(value, "red", self.ct))
             print()
             if t2 - t1 > self.timeout:
-                print(colored('Query is taking too long on the interpreter',"red",self.ct))
-                msg = colored('Try to output the results to a file\nor increase timeout (now is {} s) using:'.format(self.timeout),'green',self.ct)
+                print(colored('Query is taking too long on the interpreter', "red", self.ct))
+                mt = 'Try to output the results to a file\nor increase timeout (now is {} s) using:'
+                msg = colored(mt.format(self.timeout), 'green', self.ct)
                 print(msg)
                 print("\'config timeout set XXXXX\'")
 
-
     def query_and_save(self, query, fileout, print_time=True, extra_func=None):
         """
-        Executes a query and save the results to a file, Supported
-        formats are: '.csv', '.tab', '.h5', and '.fits'
+        Execute a query and save the results to a file.
+        Supported formats are: '.csv', '.tab', '.h5', and '.fits'
         """
         # to be safe
-        query = query.replace(';','')
+        query = query.replace(';', '')
         eafile.check_filetype(fileout)
         if extra_func is not None:
             p_functions = extra_func[0]
             p_args = extra_func[1]
             p_names = extra_func[2]
-        fileout_original = fileout
         self.cur.arraysize = int(self.prefetch)
         t1 = time.time()
-        if self.loading_bar: self.pload = Process(target=loading)
-        if self.loading_bar: self.pload.start()
-        #if True:
+        if self.loading_bar:
+            self.pload = Process(target=loading)
+        if self.loading_bar:
+            self.pload.start()
+        # if True:
         try:
             self.cur.execute(query)
-            if self.cur.description != None:
+            if self.cur.description is not None:
                 header = [columns[0] for columns in self.cur.description]
                 htypes = [columns[1] for columns in self.cur.description]
                 info = [rec[0:6] for rec in self.cur.description]
@@ -843,34 +794,43 @@ Connected as {user} to {db}.
                     data = pd.DataFrame(self.cur.fetchmany())
                     rowline = ' Rows : %d, Rows/sec: %d ' % (
                         self.cur.rowcount, self.cur.rowcount * 1. / (time.time() - t1))
-                    if self.loading_bar: sys.stdout.write(colored(rowline, 'yellow',self.ct))
-                    if self.loading_bar: sys.stdout.flush()
-                    if self.loading_bar: sys.stdout.write('\b' * len(rowline))
-                    if self.loading_bar: sys.stdout.flush()
+                    if self.loading_bar:
+                        sys.stdout.write(colored(rowline, 'yellow', self.ct))
+                    if self.loading_bar:
+                        sys.stdout.flush()
+                    if self.loading_bar:
+                        sys.stdout.write('\b' * len(rowline))
+                    if self.loading_bar:
+                        sys.stdout.flush()
                     com_it += 1
                     # 1-indexed for backwards compatibility
-                    if first: fileindex = 1
+                    if first:
+                        fileindex = 1
                     info2 = info
                     if not data.empty:
                         data.columns = header
                         data.fillna(self.nullvalue, inplace=True)
                         for i, col in enumerate(data):
                             nt = eatypes.oracle2numpy(info[i])
-                            if nt != "": data[col] = data[col].astype(nt)
+                            if nt != "":
+                                data[col] = data[col].astype(nt)
                         if extra_func is not None:
                             for kf in range(len(p_functions)):
-                                data = fun_utils.updateDF(data, p_functions, p_args, p_names, kf)
-                            ## UPDATE INFO before write_file
+                                data = fun_utils.updateDF(
+                                    data, p_functions, p_args, p_names, kf)
+                            # UPDATE INFO before write_file
                                 info2 = []
                                 for cc in data.columns:
                                     if cc in names_info:
-                                        info2.append(info[names_info.index(cc)])
+                                        info2.append(
+                                            info[names_info.index(cc)])
                                     else:
-                                        info2.append(tuple([cc,'updated',0,0,0,0]))
+                                        info2.append(
+                                            tuple([cc, 'updated', 0, 0, 0, 0]))
 
-                        fileindex = eafile.write_file(fileout,data,info2,fileindex,
+                        fileindex = eafile.write_file(fileout, data, info2, fileindex,
                                                       mode_write,
-                                                      max_mb=self.outfile_max_mb,query=query)
+                                                      max_mb=self.outfile_max_mb, query=query)
 
                         if first:
                             mode_write = 'a'
@@ -881,12 +841,15 @@ Connected as {user} to {db}.
                 t2 = time.time()
                 if self.loading_bar:
                     # self.pload.terminate()
-                    if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
+                    if self.pload.pid is not None:
+                        os.kill(self.pload.pid, signal.SIGKILL)
                 elapsed = '%.1f seconds' % (t2 - t1)
                 print()
-                if print_time: print(colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
-                    self.cur.rowcount, fileout, (t2 - t1), com_it - 1), "green",self.ct))
-                if print_time: print()
+                if print_time:
+                    print(colored('\n Written %d rows to %s in %.2f seconds and %d trips' % (
+                        self.cur.rowcount, fileout, (t2 - t1), com_it - 1), "green", self.ct))
+                if print_time:
+                    print()
             else:
                 pass
             print()
@@ -894,12 +857,12 @@ Connected as {user} to {db}.
             (type, value, traceback) = sys.exc_info()
             if self.loading_bar:
                 # self.pload.terminate()
-                if self.pload.pid != None: os.kill(self.pload.pid, signal.SIGKILL)
+                if self.pload.pid is not None:
+                    os.kill(self.pload.pid, signal.SIGKILL)
             print()
-            print(colored(type, "red",self.ct))
-            print(colored(value, "red",self.ct))
+            print(colored(type, "red", self.ct))
+            print(colored(value, "red", self.ct))
             print()
-
 
     def query_results(self, query):
         self.cur.execute(query)
@@ -912,12 +875,14 @@ Connected as {user} to {db}.
             query = """
             select distinct table_name from fgottenmetadata
             union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-            des_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('DES_ADMIN')"""
+            des_users t2 where upper(t1.owner)=upper(t2.username) and
+             t1.owner not in ('DES_ADMIN')"""
         if self.dbname in ('destest'):
             query = """
             select distinct table_name from fgottenmetadata
             union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-            dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
+            dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in
+             ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         table_list = tnames.values.flatten().tolist()
@@ -925,7 +890,7 @@ Connected as {user} to {db}.
 
     def get_tables_names(self):
 
-        if self.dbname in ('dessci', 'desoper', 'destest'):
+        if self.dbname in ('dessci', 'desoper', 'destest', 'newsci'):
             query = """
             select table_name from DES_ADMIN.CACHE_TABLES
             union select table_name from user_tables
@@ -936,33 +901,36 @@ Connected as {user} to {db}.
         return table_list
 
     def get_tables_names_user(self, user):
-        if user == "": return self.do_help('tables_names_user')
+        if user == "":
+            return self.do_help('tables_names_user')
         user = user.replace(";", "")
-        query = "select distinct table_name from all_tables where owner=\'%s\' order by table_name" % user.upper()
+        query = """
+            select distinct table_name from all_tables
+             where owner=\'%s\' order by table_name""" % user.upper()
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         self.do_clear(None)
         if len(tnames) > 0:
-            print(colored('\nPublic tables from %s' % user.upper(), "cyan",self.ct))
+            print(colored('\nPublic tables from %s' %
+                          user.upper(), "cyan", self.ct))
             print(tnames)
-            # Add tname to cache (no longer needed)
-            # table_list=tnames.values.flatten().tolist()
-            # for table in table_list:
-            # tn=user.upper()+'.'+table.upper()
-            # try : self.cache_table_names.index(tn)
-            # except: self.cache_table_names.append(tn)
-            #self.cache_table_names.sort()
         else:
             if self.dbname in ('dessci', 'desoper'):
-                query = """select count(username) as cc  from des_users where upper(username) = upper('%s')""" % user
+                query = """
+                    select count(username) as cc  from des_users
+                     where upper(username) = upper('%s')""" % user
             if self.dbname in ('destest'):
-                query = """select count(username) as cc from dba_users where upper(username) = upper('%s')""" % user
+                query = """
+                    select count(username) as cc from dba_users
+                     where upper(username) = upper('%s')""" % user
             temp = self.cur.execute(query)
             tnames = temp.fetchall()
             if tnames[0][0] == 0:
-                print(colored('User %s does not exist in DB' % user.upper(), 'red',self.ct))
+                print(colored('User %s does not exist in DB' %
+                              user.upper(), 'red', self.ct))
             else:
-                print(colored('User %s has no tables' % user.upper(), 'cyan',self.ct))
+                print(colored('User %s has no tables' %
+                              user.upper(), 'cyan', self.ct))
 
     def get_userlist(self):
         if self.dbname in ('dessci', 'desoper'):
@@ -1003,13 +971,14 @@ Connected as {user} to {db}.
         return col_list
 
     def get_columnlist_table(self, tablename):
-        query = """SELECT distinct column_name from fgottenmetadata where table_name = %s order by column_name""" % (
+        query = """
+            SELECT distinct column_name from fgottenmetadata where
+             table_name = %s order by column_name""" % (
             tablename)
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
         return col_list
-
 
     # # DO METHODS
     def do_prefetch(self, line):
@@ -1048,7 +1017,6 @@ Connected as {user} to {db}.
         else:
             return options_prefetch
 
-
     def do_history(self, arg):
         """
         Print the history buffer to the screen, oldest to most recent.
@@ -1059,10 +1027,15 @@ Connected as {user} to {db}.
         if readline_present:
             nall = readline.get_current_history_length()
             firstprint = 0
-            if arg.strip(): firstprint = max(nall - int(arg), 0)
+            if arg.strip():
+                firstprint = max(nall - int(arg), 0)
             for index in range(firstprint, nall):
                 print(index, readline.get_history_item(index))
-
+            # if arg.strip():
+            #    self.do_clear(None)
+            #    line = readline.get_history_item(int(arg))
+            #    line = self.precmd(line)
+            #    self.onecmd(line)
 
     def do_shell(self, line):
         """
@@ -1073,12 +1046,10 @@ Connected as {user} to {db}.
         """
         os.system(line)
 
-
     def complete_shell(self, text, line, start_idx, end_idx):
         if line:
             line = ' '.join(line.split()[1:])
-            return _complete_path(line)
-
+            return complete_path(line)
 
     def do_edit(self, line):
         """
@@ -1104,13 +1075,13 @@ Connected as {user} to {db}.
             os.system(self.editor + ' easy.buf')
             if os.path.exists('easy.buf'):
                 newquery = read_buf('easy.buf')
-                if newquery == "": return
+                if newquery == "":
+                    return
                 print()
                 print(newquery)
                 print()
                 if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
                     self.default(newquery)
-
 
     def complete_edit(self, text, line, start_index, end_index):
         if text:
@@ -1121,13 +1092,15 @@ Connected as {user} to {db}.
     def do_loadsql(self, line):
         """
         DB:Loads a sql file with a query and ask whether it should be run
-        There is a shortcut using @, ex : @test.sql  (or @test.sql > myfile.csv to override output file)
+        There is a shortcut using @, ex : @test.sql  (or @test.sql > myfile.csv
+        to override output file)
 
         Usage: loadsql <filename with sql statement>   (use autocompletion)
 
-        Optional: loadsql <filename with sql statement> > <output_file> to write to a file, not to the screen
+        Optional: loadsql <filename with sql statement> > <output_file> to
+        write to a file, not to the screen
         """
-        line = line.replace(';','')
+        line = line.replace(';', '')
         if line.find('>') > -1:
             try:
                 line = "".join(line.split())
@@ -1139,11 +1112,11 @@ Connected as {user} to {db}.
             except:
                 outputfile = ''
 
-
         else:
             newq = read_buf(line)
 
-        if newq == "": return
+        if newq == "":
+            return
         if self.interactive:
             print()
             print(newq)
@@ -1153,9 +1126,8 @@ Connected as {user} to {db}.
         else:
             self.default(newq)
 
-
     def complete_loadsql(self, text, line, start_idx, end_idx):
-        return _complete_path(line)
+        return complete_path(line)
 
     def do_exit(self, line):
         """
@@ -1170,14 +1142,16 @@ Connected as {user} to {db}.
         except:
             pass
         try:
-            if self.autocommit: self.con.commit()
+            if self.autocommit:
+                self.con.commit()
             self.con.close()
         except:
             pass
         if readline_present:
             readline.write_history_file(history_file)
         if self.writeconfig:
-            self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')
+            self.config.set('display', 'loading_bar',
+                            'yes' if load_bar else 'no')
             config_mod.write_config(config_file, self.config)
         os._exit(0)
 
@@ -1188,8 +1162,13 @@ Connected as {user} to {db}.
         # TODO: platform dependent
         # tmp = sp.call('clear', shell=True)
         sys.stdout.flush()
-        #tmp = os.system(['clear', 'cls'][os.name == 'nt'])
-        pass
+        try:
+            tmp = os.system('clear')
+        except:
+            try:
+                tmp = os.system('cls')
+            except:
+                pass
 
     def do_config(self, line):
         """
@@ -1207,23 +1186,29 @@ Connected as {user} to {db}.
             editor            : Editor for editing sql queries, see --> help edit
             prefetch          : Number of rows prefetched by Oracle, see --> help prefetch
             histcache         : Length of the history of commands
-            timeout           : Timeout for a query to be printed on the screen. Doesn't apply to output files
+            timeout           : Timeout for a query to be printed on the screen.
+                                Doesn't apply to output files
             nullvalue         : value to replace Null entries when writing a file (default = -9999)
             outfile_max_mb    : Max size of each fits file in MB
             autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
-            trim_whitespace   : Trim whitespace from strings when uploading data to the DB (default yes)
+            trim_whitespace   : Trim whitespace from strings when uploading data to the DB
+                                (default yes)
             desdm_coldefs     : Use DESDM DB compatible data types when uploading data (default yes)
 
-            max_rows          : Max number of rows to display on the screen. Doesn't apply to output files
+            max_rows          : Max number of rows to display on the screen.
+                                Doesn't apply to output files
             width             : Width of the output format on the screen
-            max_columns       : Max number of columns to display on the screen. Doesn't apply to output files
-            max_colwidth      : Max number of characters per column at display. Doesn't apply to output files
+            max_columns       : Max number of columns to display on the screen.
+                                Doesn't apply to output files
+            max_colwidth      : Max number of characters per column at display.
+                                Doesn't apply to output files
             color_terminal    : yes/no toggles the color for terminal std output
             loading_bar       : yes/no toggles the loading bar. Useful for background jobs
 
         """
         global load_bar
-        if line == '': return self.do_help('config')
+        if line == '':
+            return self.do_help('config')
         oneline = "".join(line.split())
         if oneline.find('show') > -1:
             key = oneline.split('show')[0]
@@ -1239,7 +1224,8 @@ Connected as {user} to {db}.
                     return
                 else:
                     if self.config.has_option(section, key):
-                        print('\nCurrent value for %s = %s ' % (key, self.config.get(section, key)))
+                        print('\nCurrent value for %s = %s ' %
+                              (key, self.config.get(section, key)))
                         break
             print()
         elif oneline.find('filepath') > -1:
@@ -1249,35 +1235,60 @@ Connected as {user} to {db}.
                 return self.do_help('config')
             key = oneline.split('set')[0]
             val = oneline.split('set')[1]
-            if val == '': return self.do_help('config')
-            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
-                        'nullvalue', 'loading_bar', 'autocommit', 'max_col_width']
+            if val == '':
+                return self.do_help('config')
+            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width',
+                        'max_columns', 'outfile_max_mb', 'nullvalue', 'loading_bar',
+                        'autocommit', 'max_col_width']
             # if key in int_keys: val=int(val)
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
                     self.config.set(section, key, str(val))
-                    if key == 'loading_bar': load_bar = True if val == 'yes' else False
+                    if key == 'loading_bar':
+                        load_bar = True if val == 'yes' else False
                     if key == 'color_terminal':
                         self.ct = True if val == 'yes' else False
                         self.set_messages()
                     self.writeconfig = True
                     break
-            self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')
+            self.config.set('display', 'loading_bar',
+                            'yes' if load_bar else 'no')
             config_mod.write_config(config_file, self.config)
-            if key == 'max_columns': pd.set_option('display.max_columns', self.config.getint('display', 'max_columns'))
-            if key == 'max_rows': pd.set_option('display.max_rows', self.config.getint('display', 'max_rows'))
-            if key == 'width': pd.set_option('display.width', self.config.getint('display', 'width'))
-            if key == 'max_colwidth': pd.set_option('display.max_colwidth',
-                                                    self.config.getint('display', 'max_colwidth'))
-            if key == 'editor': self.editor = self.config.get('easyaccess', 'editor')
-            if key == 'timeout': self.timeout = self.config.getint('easyaccess', 'timeout')
-            if key == 'prefetch': self.prefetch = self.config.get('easyaccess', 'prefetch')
-            if key == 'loading_bar': self.loading_bar = self.config.getboolean('display', 'loading_bar')
-            if key == 'nullvalue': self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
-            if key == 'outfile_max_mb': self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
-            if key == 'autocommit': self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
-            if key == 'trim_whitespace': self.autocommit = self.config.getboolean('easyaccess', 'trim_whitespace')
-            if key == 'desdm_coldefs': self.autocommit = self.config.getboolean('easyaccess', 'desdm_coldefs')
+            if key == 'max_columns':
+                pd.set_option('display.max_columns',
+                              self.config.getint('display', 'max_columns'))
+            if key == 'max_rows':
+                pd.set_option('display.max_rows',
+                              self.config.getint('display', 'max_rows'))
+            if key == 'width':
+                pd.set_option('display.width',
+                              self.config.getint('display', 'width'))
+            if key == 'max_colwidth':
+                pd.set_option('display.max_colwidth',
+                              self.config.getint('display', 'max_colwidth'))
+            if key == 'editor':
+                self.editor = self.config.get('easyaccess', 'editor')
+            if key == 'timeout':
+                self.timeout = self.config.getint('easyaccess', 'timeout')
+            if key == 'prefetch':
+                self.prefetch = self.config.get('easyaccess', 'prefetch')
+            if key == 'loading_bar':
+                self.loading_bar = self.config.getboolean(
+                    'display', 'loading_bar')
+            if key == 'nullvalue':
+                self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
+            if key == 'outfile_max_mb':
+                self.outfile_max_mb = self.config.getint(
+                    'easyaccess', 'outfile_max_mb')
+            if key == 'autocommit':
+                self.autocommit = self.config.getboolean(
+                    'easyaccess', 'autocommit')
+            if key == 'trim_whitespace':
+                self.autocommit = self.config.getboolean(
+                    'easyaccess', 'trim_whitespace')
+            if key == 'desdm_coldefs':
+                self.autocommit = self.config.getboolean(
+                    'easyaccess', 'desdm_coldefs')
 
             return
         else:
@@ -1297,10 +1308,9 @@ Connected as {user} to {db}.
             else:
                 return options_config
 
-
     # DO METHODS FOR DB
 
-    def do_execproc(self,line):
+    def do_execproc(self, line):
         """
         DB:Execute procedures in the DB, arguments can be floating numbers or strings
 
@@ -1310,14 +1320,15 @@ Connected as {user} to {db}.
         To see list of positional arguments and their data types use:
             execproc PROCEDURE() describe
         """
-        if line == '': return self.do_help('execproc')
-        line = line.replace(';','')
+        if line == '':
+            return self.do_help('execproc')
+        line = line.replace(';', '')
         line = "".join(line.split())
         proc_name = line[0:line.index('(')]
-        argument_list = line[line.index('(')+1:line.index(')')].split(',')
+        argument_list = line[line.index('(') + 1:line.index(')')].split(',')
         arguments = []
         for arg in argument_list:
-            if  arg.startswith(("\"","\'")):
+            if arg.startswith(("\"", "\'")):
                 arg = arg[1:-1]
             else:
                 try:
@@ -1326,16 +1337,18 @@ Connected as {user} to {db}.
                     pass
             arguments.append(arg)
         if line[line.index(')'):].find('describe') > -1:
-            comm="""\n Description of procedure '%s' """ % proc_name
-            query="""select argument_name, data_type,position,in_out from all_arguments where object_name = '%s' order by position""" % proc_name.upper()
-            self.query_and_print(query, print_time=False, clear=True, extra=comm, err_arg="Procedure does not exist")
+            comm = """\n Description of procedure '%s' """ % proc_name
+            query = """
+                select argument_name, data_type,position,in_out from all_arguments where
+                 object_name = '%s' order by position""" % proc_name.upper()
+            self.query_and_print(query, print_time=False, clear=True,
+                                 extra=comm, err_arg="Procedure does not exist")
             return
         try:
-            outproc=self.cur.callproc(proc_name, arguments)
-            print(colored('Done!', "green",self.ct))
+            outproc = self.cur.callproc(proc_name, arguments)
+            print(colored('Done!', "green", self.ct))
         except:
             print_exception(mode=self.ct)
-
 
     def do_set_password(self, arg):
         """
@@ -1346,32 +1359,34 @@ Connected as {user} to {db}.
         print()
         pw1 = getpass.getpass(prompt='Enter new password:')
         if re.search('\W', pw1):
-            print(colored("\nPassword contains whitespace, not set\n", "red",self.ct))
+            print(colored("\nPassword contains whitespace, not set\n", "red", self.ct))
             return
         if not pw1:
-            print(colored("\nPassword cannot be blank\n", "red",self.ct))
+            print(colored("\nPassword cannot be blank\n", "red", self.ct))
             return
         pw2 = getpass.getpass(prompt='Re-Enter new password:')
         print()
         if pw1 != pw2:
-            print(colored("Passwords don't match, not set\n", "red",self.ct))
+            print(colored("Passwords don't match, not set\n", "red", self.ct))
             return
 
         query = """alter user %s identified by "%s"  """ % (self.user, pw1)
         confirm = 'Password changed in %s' % self.dbname.upper()
         self.query_and_print(query, print_time=False, suc_arg=confirm)
-
+        self.desconfig.set('db-'+self.dbname, 'passwd', pw1)
+        config_mod.write_desconfig(desfile, self.desconfig)
+        if self.dbname not in ('dessci', 'desoper'):
+            return
         dbases = ['DESSCI', 'DESOPER']
         for db in dbases:
-            if db == self.dbname.upper(): continue
-            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': db}
+            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
             dsn = cx_Oracle.makedsn(**kwargs)
             temp_con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
             temp_cur = temp_con.cursor()
             try:
                 temp_cur.execute(query)
                 confirm = 'Password changed in %s\n' % db.upper()
-                print(colored(confirm, "green",self.ct))
+                print(colored(confirm, "green", self.ct))
                 temp_con.commit()
                 temp_cur.close()
                 temp_con.close()
@@ -1380,10 +1395,8 @@ Connected as {user} to {db}.
                 config_mod.write_desconfig(desfile, self.desconfig)
             except:
                 confirm = 'Password could not be changed in %s\n' % db.upper()
-                print(colored(confirm, "red",self.ct))
+                print(colored(confirm, "red", self.ct))
                 print(sys.exc_info())
-
-
 
     def do_refresh_metadata_cache(self, arg):
         """
@@ -1392,24 +1405,26 @@ Connected as {user} to {db}.
         """
         verb = True
         try:
-            if verb: print('Loading metadata into cache...')
+            if verb:
+                print('Loading metadata into cache...')
             self.cache_table_names = self.get_tables_names()
             self.cache_usernames = self.get_userlist()
             self.cache_column_names = self.get_columnlist()
         except:
-            if verb: print(colored("There was an error when refreshing the metadata", "red",self.ct))
+            if verb:
+                print(
+                    colored("There was an error when refreshing the metadata", "red", self.ct))
         try:
             self.cur.execute('create table FGOTTENMETADATA (ID int)')
         except:
             pass
 
-
-
     def do_show_db(self, arg):
         """
         DB:Shows database connection information
         """
-        lines = "user: %s\ndb  : %s\nhost: %s\n" % (self.user.upper(), self.dbname.upper(), self.dbhost.upper())
+        lines = "user: %s\ndb  : %s\nhost: %s\n" % (
+            self.user.upper(), self.dbname.upper(), self.dbhost.upper())
         lines = lines + "\nPersonal links:"
         query = """
         SELECT owner, db_link, username, host, created
@@ -1425,39 +1440,48 @@ Connected as {user} to {db}.
             change_db DB     # Changes to DB, it does not refresh metadata, e.g.: change_db desoper
 
         """
-        if line == '': return self.do_help('change_db')
+        if line == '':
+            return self.do_help('change_db')
         line = " ".join(line.split())
         key_db = line.split()[0]
-        if key_db in ('dessci', 'desoper', 'destest'):
+        if key_db in ('dessci', 'desoper', 'destest', 'newsci'):
             if key_db == self.dbname:
-                print(colored("Already connected to : %s" % key_db, "green",self.ct))
+                print(colored("Already connected to : %s" % key_db, "green", self.ct))
                 return
             self.dbname = key_db
             # connect to db
             try:
                 self.user = self.desconfig.get('db-' + self.dbname, 'user')
                 self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
+                self.dbhost = self.desconfig.get('db-' + self.dbname, 'server')
+                self.service_name = self.desconfig.get('db-' + self.dbname, 'name')
             except:
-                print(colored("DB {} does not exist in your desservices file".format(key_db), "red",self.ct))
+                print(colored("DB {} does not exist in your desservices file".format(
+                    key_db), "red", self.ct))
                 return
-            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.dbname}
+            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
             self.dsn = cx_Oracle.makedsn(**kwargs)
-            if not self.quiet: print('Connecting to DB ** %s ** ...' % self.dbname)
+            if not self.quiet:
+                print('Connecting to DB ** %s ** ...' % self.dbname)
             self.con.close()
             connected = False
             for tries in range(3):
                 try:
-                    self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
-                    if self.autocommit: self.con.autocommit = True
+                    self.con = cx_Oracle.connect(
+                        self.user, self.password, dsn=self.dsn)
+                    if self.autocommit:
+                        self.con.autocommit = True
                     connected = True
                     break
                 except Exception as e:
                     lasterr = str(e).strip()
-                    print(colored("Error when trying to connect to database: %s" % lasterr, "red",self.ct))
+                    print(colored(
+                        "Error when trying to connect to database: %s" % lasterr, "red", self.ct))
                     print("\n   Retrying...\n")
                     time.sleep(5)
             if not connected:
-                print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
+                print(
+                    '\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
                 os._exit(0)
             self.cur = self.con.cursor()
             self.cur.arraysize = int(self.prefetch)
@@ -1466,11 +1490,12 @@ Connected as {user} to {db}.
             self.set_messages()
             return
         else:
-            print(colored("DB {} does not exist or you don't have access to it".format(key_db), "red",self.ct))
+            print(colored("DB {} does not exist or you don't have access to it".format(
+                key_db), "red", self.ct))
             return
 
     def complete_change_db(self, text, line, start_index, end_index):
-        options_db = ['desoper','dessci','destest']
+        options_db = ['desoper', 'dessci', 'destest', 'newsci']
         if text:
             return [option for option in options_db if option.startswith(text.lower())]
         else:
@@ -1487,11 +1512,14 @@ Connected as {user} to {db}.
 
         if self.dbname in ('dessci', 'desoper'):
             sql_getUserDetails = """
-            select d.username, d.email, d.firstname as first, d.lastname as last, trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
+            select d.username, d.email, d.firstname as first, d.lastname as last,
+             trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
             trunc(sysdate-t.ctime,0)||' days ago' created
-            from des_users d, sys.user$ t  where d.username = '""" + self.user + """' and t.name=upper(d.username)"""
+            from des_users d, sys.user$ t  where
+             d.username = '""" + self.user + """' and t.name=upper(d.username)"""
         if self.dbname in ('destest'):
-            print(colored('\nThis function is not implemented in destest\n', 'red',self.ct))
+            print(
+                colored('\nThis function is not implemented in destest\n', 'red', self.ct))
             sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
         self.query_and_print(sql_getUserDetails, print_time=False, clear=True)
 
@@ -1520,8 +1548,10 @@ Connected as {user} to {db}.
         WHERE s.segment_name = t.table_name
         """
 
-        df = self.query_and_print(query, print_time=False, extra=extra, clear=True, return_df=return_df)
-        if return_df: return df
+        df = self.query_and_print(
+            query, print_time=False, extra=extra, clear=True, return_df=return_df)
+        if return_df:
+            return df
 
     def do_find_user(self, line):
         """
@@ -1533,7 +1563,8 @@ Connected as {user} to {db}.
             - find_user P%      # Finds all users with first, lastname or username starting with P
 
         """
-        if line == '': return self.do_help('find_user')
+        if line == '':
+            return self.do_help('find_user')
         line = " ".join(line.split())
         keys = line.split()
         if self.dbname in ('dessci', 'desoper'):
@@ -1541,8 +1572,9 @@ Connected as {user} to {db}.
         if self.dbname in ('destest'):
             query = 'select * from dba_users where '
         if len(keys) >= 1:
-            query += 'upper(firstname) like upper(\'' + keys[0] + '\') or upper(lastname) like upper(\'' + keys[
-                0] + '\') or upper(username) like upper (\'' + keys[0] + '\')'
+            query += 'upper(firstname) like upper(\'' + keys[0] + '\') or '
+            query += 'upper(lastname) like upper(\'' + keys[0] + '\') or '
+            query += 'upper(username) like upper (\'' + keys[0] + '\')'
         self.query_and_print(query, print_time=False, clear=True)
 
     def complete_find_user(self, text, line, start_index, end_index):
@@ -1552,14 +1584,14 @@ Connected as {user} to {db}.
         else:
             return options_users
 
-
     def do_user_tables(self, arg):
         """
         DB:List tables from given user
 
         Usage: user_tables <username>
         """
-        if arg == "": return self.do_help('user_tables')
+        if arg == "":
+            return self.do_help('user_tables')
         return self.get_tables_names_user(arg)
 
     def complete_user_tables(self, text, line, start_index, end_index):
@@ -1578,8 +1610,10 @@ Connected as {user} to {db}.
         schema = self.user.upper()  # default --- Mine
         link = ""  # default no link
 
-        if "." in table: (schema, table) = table.split(".")
-        if "@" in table: (table, link) = table.split("@")
+        if "." in table:
+            (schema, table) = table.split(".")
+        if "@" in table:
+            (table, link) = table.split("@")
 
         # Loop until we find a fundamental definition OR determine there is
         # no reachable fundamental definition, follow links and resolve
@@ -1596,7 +1630,7 @@ Connected as {user} to {db}.
             ans = self.query_results(q)
             if ans[0][0] > 0:
                 # found real definition return the tuple
-                return (schema,table,link)
+                return (schema, table, link)
 
             # check if we are indirect by synonym of user
             q = """
@@ -1624,11 +1658,10 @@ Connected as {user} to {db}.
             # no such table accessible by user
             break
 
-        msg = "No table found for: %s"%tablename
+        msg = "No table found for: %s" % tablename
         raise Exception(msg)
 
-
-    def do_describe_table(self, arg, clear=True, extra=None, return_df = False):
+    def do_describe_table(self, arg, clear=True, extra=None, return_df=False):
         """
         DB:This tool is useful for noting the lack of documentation
         for columns. If you don't know the full table name you can
@@ -1660,7 +1693,7 @@ Connected as {user} to {db}.
             pass
 
         try:
-            schema,table,link = self.get_tablename_tuple(tablename)
+            schema, table, link = self.get_tablename_tuple(tablename)
             # schema, table and link are now valid.
             link = "@" + link if link else ""
             qcom = """
@@ -1668,7 +1701,7 @@ Connected as {user} to {db}.
             where atc.table_name = '%s'""" % (link, table)
             comment_table = self.query_results(qcom)[0][0]
         except:
-            print(colored("Table not found.", "red",self.ct))
+            print(colored("Table not found.", "red", self.ct))
             return
 
         # String formatting parameters
@@ -1676,7 +1709,8 @@ Connected as {user} to {db}.
                       pattern=pattern, comment=comment_table)
 
         if pattern:
-            comm = """Description of %(table)s with pattern %(pattern)s commented as: '%(comment)s'""" % params
+            comm = """Description of %(table)s with """
+            comm += """pattern %(pattern)s commented as: '%(comment)s'""" % params
             q = """
             select atc.column_name, atc.data_type,
             case atc.data_type
@@ -1709,10 +1743,10 @@ Connected as {user} to {db}.
 
         if extra is None:
             extra = comm
+        err_msg = 'Table does not exist or it is not accessible by user or pattern do not match'
         df = self.query_and_print(q, print_time=False,
-                             err_arg='Table does not exist or it is not accessible by user or pattern do not match',
-                             extra=extra, clear=clear, return_df = return_df)
-        if return_df :
+                                  err_arg=err_msg, extra=extra, clear=clear, return_df=return_df)
+        if return_df:
             return df
         return
 
@@ -1726,17 +1760,19 @@ Connected as {user} to {db}.
         Usage : find_tables PATTERN
         """
         if extra is None:
-            extra = 'To select from a table use owner.table_name except for DESADMIN where only table_name is enough'
-        if arg == '': return self.do_help('find_tables')
+            extra = 'To select from a table use owner.table_name' \
+                    ' except for DESADMIN where only table_name is enough'
+        if arg == '':
+            return self.do_help('find_tables')
         arg = arg.replace(';', '')
-        query = "SELECT owner,table_name from all_tables  WHERE upper(table_name) LIKE '%s' " % (arg.upper())
+        query = "SELECT owner,table_name from all_tables  WHERE upper(table_name) LIKE '%s' " % (
+            arg.upper())
         df = self.query_and_print(query, extra=extra, return_df=return_df)
         if return_df:
             return df
 
     def complete_find_tables(self, text, line, start_index, end_index):
         return self._complete_tables(text)
-
 
     def do_find_tables_with_column(self, arg):
         """
@@ -1745,8 +1781,8 @@ Connected as {user} to {db}.
         Usage: find_tables_with_column  <column-name-substring>
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG
         """
-        # query  = "SELECT TABLE_NAME, COLUMN_NAME FROM fgottenmetadata WHERE COLUMN_NAME LIKE '%%%s%%' " % (arg.upper())
-        if arg == '': return self.do_help('find_tables_with_column')
+        if arg == '':
+            return self.do_help('find_tables_with_column')
         query = """
            SELECT table_name, column_name
            FROM fgottenmetadata
@@ -1781,16 +1817,16 @@ Connected as {user} to {db}.
         tablename = tablename.upper()
 
         try:
-            schema,table,link = self.get_tablename_tuple(tablename)
+            schema, table, link = self.get_tablename_tuple(tablename)
             link = "@" + link if link else ""
         except:
-            print(colored("Table not found.", "red",self.ct))
+            print(colored("Table not found.", "red", self.ct))
             return
 
         # Parse tablename for simple name or owner.tablename.
         # If owner present, then add owner where clause.
 
-        params = dict(schema=schema,table=table,link=link)
+        params = dict(schema=schema, table=table, link=link)
         query = """
         SELECT UNIQUE tab.table_name,icol.column_name,
         idx.index_type,idx.index_name
@@ -1805,8 +1841,6 @@ Connected as {user} to {db}.
 
     def complete_show_index(self, text, line, begidx, lastidx):
         return self._complete_tables(text)
-
-
 
     def check_table_exists(self, table):
         # check table first
@@ -1852,9 +1886,10 @@ Connected as {user} to {db}.
         # Start the table columns
         qtable = '( '
 
-        for column,dtype in zip(columns,dtypes):
+        for column, dtype in zip(columns, dtypes):
             if self.desdm_coldefs:
-                qtable += '%s %s,' % (column, eatypes.numpy2desdm([column,dtype]))
+                qtable += '%s %s,' % (column,
+                                      eatypes.numpy2desdm([column, dtype]))
             else:
                 qtable += '%s %s,' % (column, eatypes.numpy2oracle(dtype))
 
@@ -1874,8 +1909,9 @@ Connected as {user} to {db}.
             self.cur.execute(qdrop)
         except cx_Oracle.DatabaseError:
             print(colored(
-                "\n Couldn't drop '%s' (doesn't exist)."%(table.upper()),'red',self.ct))
-        if self.autocommit: self.con.commit()
+                "\n Couldn't drop '%s' (doesn't exist)." % (table.upper()), 'red', self.ct))
+        if self.autocommit:
+            self.con.commit()
 
     def create_table(self, table, columns, dtypes):
         """
@@ -1892,11 +1928,12 @@ Connected as {user} to {db}.
         None
         """
         qtable = 'create table %s ' % table
-        qtable += self.new_table_columns(columns,dtypes)
+        qtable += self.new_table_columns(columns, dtypes)
         self.cur.execute(qtable)
-        if self.autocommit: self.con.commit()
+        if self.autocommit:
+            self.con.commit()
 
-    def insert_data(self, table, columns, values, dtypes=None, niter = 0):
+    def insert_data(self, table, columns, values, dtypes=None, niter=0):
         """Insert data into a DB table.
 
         Trim trailing whitespace from string columns. Because of the
@@ -1914,37 +1951,39 @@ Connected as {user} to {db}.
         None
 
         """
-        if dtypes is None: len(columns)*[None]
+        if dtypes is None:
+            len(columns) * [None]
 
         # Remove trailing whitespace from string values
         cvals = []
-        for column,dtype in zip(columns,dtypes):
+        for column, dtype in zip(columns, dtypes):
             if dtype.kind == 'S' and self.trim_whitespace:
-                cvals.append('TRIM(TRAILING FROM :%s)'%column)
+                cvals.append('TRIM(TRAILING FROM :%s)' % column)
             else:
-                cvals.append(':%s'%column)
+                cvals.append(':%s' % column)
 
         cols = ','.join(columns)
         vals = ','.join(cvals)
 
-        qinsert = 'insert into %s (%s) values (%s)' % (table.upper(), cols, vals)
+        qinsert = 'insert into %s (%s) values (%s)' % (
+            table.upper(), cols, vals)
         self.msg = ''
         try:
             t1 = time.time()
             self.cur.executemany(qinsert, values)
             t2 = time.time()
-            if self.autocommit: self.con.commit()
+            if self.autocommit:
+                self.con.commit()
         except cx_Oracle.DatabaseError as e:
             if self.desdm_coldefs:
-                self.msg  = str(e)
+                self.msg = str(e)
                 self.msg += "\n If you are sure, you can disable DESDM column typing: \n"
                 self.msg += " DESDB ~> config desdm_coldefs set no"
             raise cx_Oracle.DatabaseError(self.msg)
 
         print(colored(
             '\n [Iter: %d] Inserted %d rows and %d columns into table %s in %.2f seconds' % (
-                niter+1, len(values), len(columns), table.upper(), t2 - t1), "green",self.ct))
-
+                niter + 1, len(values), len(columns), table.upper(), t2 - t1), "green", self.ct))
 
     def do_load_table(self, line, name=None, chunksize=None, memsize=None):
         """
@@ -1956,30 +1995,36 @@ Connected as {user} to {db}.
              1.23,0.13,23
              0.13,0.01,22
 
-        This command will create a table named EXAMPLE with 3 columns RA,DEC and MAG and values taken from file
+        This command will create a table named EXAMPLE with 3 columns RA,DEC and MAG and
+        values taken from file
 
         Optional Arguments:
 
             --tablename NAME            given name for the table, default is taken from filename
-            --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
-                                        that do not fit in memory
-            --memsize MEMCHUNK          The size in Mb to be read in chunks. If both specified, the lower
-                                        number of rows is selected (the lower memory limitations)
+            --chunksize CHUNK           Number of rows to be inserted at a time.
+                                        Useful for large files that do not fit in memory
+            --memsize MEMCHUNK          The size in Mb to be read in chunks. If both specified,
+                                        the lower number of rows is selected
+                                        (the lower memory limitations)
 
-        Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
-        as data (using ',' or space)
+        Note: - For csv or tab files, first line must have the column names (without # or any
+        other comment) and same format as data (using ',' or space)
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
-        line = line.replace(';','')
+        line = line.replace(';', '')
         load_parser = KeyParser(prog='', usage='', add_help=False)
-        load_parser.add_argument('filename', help='name for the file', action='store', default=None)
-        load_parser.add_argument('--tablename', help='name for the table', action='store', default=None)
-        load_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
-                                                     'issues', action='store', type=int, default=None)
+        load_parser.add_argument(
+            'filename', help='name for the file', action='store', default=None)
+        load_parser.add_argument(
+            '--tablename', help='name for the table', action='store', default=None)
+        load_parser.add_argument('--chunksize',
+                                 help='number of rows to read in blocks to avoid memory issues',
+                                 action='store', type=int, default=None)
         load_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ',
                                  action='store', type=int, default=None)
-        load_parser.add_argument('-h', '--help', help='print help', action='store_true')
+        load_parser.add_argument(
+            '-h', '--help', help='print help', action='store_true')
         try:
             load_args = load_parser.parse_args(line.split())
         except SystemExit:
@@ -1990,15 +2035,17 @@ Connected as {user} to {db}.
             return
         filename = eafile.get_filename(load_args.filename)
         table = load_args.tablename
-        invalid_chars = ['-','$','~','@','*']
-        for obj in [table,name]:
+        invalid_chars = ['-', '$', '~', '@', '*']
+        for obj in [table, name]:
             if obj is None:
                 if any((char in invalid_chars) for char in filename):
-                    print(colored('\nInvalid table name, change filename or use --tablename\n','red',self.ct))
+                    print()
+                    print(colored(
+                        'Invalid table name, change filename or use --tablename\n', 'red', self.ct))
                     return
             else:
                 if any((char in invalid_chars) for char in obj):
-                    print(colored('\nInvalid table name\n','red',self.ct))
+                    print(colored('\nInvalid table name\n', 'red', self.ct))
                     return
 
         chunk = load_args.chunksize
@@ -2013,12 +2060,13 @@ Connected as {user} to {db}.
                 chunk = min(chunk, memchunk_rows)
             else:
                 chunk = memchunk_rows
-        if filename is None: return
+        if filename is None:
+            return
         base, ext = os.path.splitext(os.path.basename(filename))
 
         if ext == '.h5' and chunk is not None:
             print(colored("\nHDF5 file upload with chunksize is not supported yet. Try without "
-                          "--chunksize\n","red",self.ct))
+                          "--chunksize\n", "red", self.ct))
             return
 
         if table is None:
@@ -2028,8 +2076,10 @@ Connected as {user} to {db}.
 
         # check table first
         if self.check_table_exists(table):
-            print(colored('\n Table already exists. Table can be removed with:','red',self.ct))
-            print(colored(' DESDB ~> DROP TABLE %s;\n' % table.upper(),'red',self.ct))
+            print(
+                colored('\n Table already exists. Table can be removed with:', 'red', self.ct))
+            print(colored(' DESDB ~> DROP TABLE %s;\n' %
+                          table.upper(), 'red', self.ct))
             return
 
         try:
@@ -2051,7 +2101,8 @@ Connected as {user} to {db}.
                     else:
                         df = data
                     df.file_type = 'pandas'
-                    if len(df) == 0: break
+                    if len(df) == 0:
+                        break
                     if iteration == 0:
                         dtypes = eafile.get_dtypes(df)
                     columns = df.columns.values.tolist()
@@ -2068,16 +2119,19 @@ Connected as {user} to {db}.
                         return
                 try:
                     if not done:
-                        self.insert_data(table, columns, values, dtypes, iteration)
+                        self.insert_data(
+                            table, columns, values, dtypes, iteration)
                         iteration += 1
-                        if not iterator: done =True
+                        if not iterator:
+                            done = True
                 except:
                     print_exception(mode=self.ct)
                     self.drop_table(table)
                     return
 
         if data.file_type == 'fits':
-            if chunk is None: chunk = data[1].get_nrows()
+            if chunk is None:
+                chunk = data[1].get_nrows()
             start = 0
             while not done:
                 try:
@@ -2085,9 +2139,10 @@ Connected as {user} to {db}.
                     if iteration == 0:
                         dtypes = eafile.get_dtypes(df)
                         columns = df[1].get_colnames()
-                    values = df[1][start:start+chunk].tolist()
+                    values = df[1][start:start + chunk].tolist()
                     start += chunk
-                    if len(values) == 0 : break
+                    if len(values) == 0:
+                        break
                     total_rows += len(values)
                 except:
                     break
@@ -2101,33 +2156,35 @@ Connected as {user} to {db}.
 
                 try:
                     if not done:
-                        self.insert_data(table, columns, values, dtypes, iteration)
+                        self.insert_data(
+                            table, columns, values, dtypes, iteration)
                         iteration += 1
                 except:
                     print_exception(mode=self.ct)
                     self.drop_table(table)
                     return
 
-
-
-        print(colored('\n ** Table %s loaded successfully with %d rows.\n' % (table.upper(), total_rows),
-                      "green",self.ct))
-        print(colored(' You may want to refresh the metadata so your new table appears during\n autocompletion',"cyan",self.ct))
-        print(colored(' DESDB ~> refresh_metadata_cache;',"cyan",self.ct))
+        print(colored(
+            '\n ** Table %s loaded successfully '
+            'with %d rows.\n' % (table.upper(), total_rows), "green", self.ct))
+        print(colored(
+            ' You may want to refresh the metadata so your new '
+            'table appears during\n autocompletion', "cyan", self.ct))
+        print(colored(' DESDB ~> refresh_metadata_cache;', "cyan", self.ct))
 
         print()
-        print(colored(' To make this table public run:', "blue",self.ct))
-        print(colored(' DESDB ~> grant select on %s to DES_READER;' % table.upper(), "blue",self.ct), '\n')
+        print(colored(' To make this table public run:', "blue", self.ct))
+        print(colored(' DESDB ~> grant select on %s to DES_READER;' %
+                      table.upper(), "blue", self.ct), '\n')
         return
 
-
     def complete_load_table(self, text, line, start_idx, end_idx):
-        return _complete_path(line)
-
+        return complete_path(line)
 
     def do_append_table(self, line, name=None, chunksize=None, memsize=None):
         """
-        DB:Appends a table from a file (csv or fits) taking name from filename and columns from header.
+        DB:Appends a table from a file (csv or fits) taking its name from filename
+        and the columns from header.
 
         Usage: append_table <filename> [--tablename NAME] [--chunksize CHUNK] [--memsize MEMCHUNK]
         Ex: example.csv has the following content
@@ -2140,26 +2197,31 @@ Connected as {user} to {db}.
 
          Optional Arguments:
 
-              --tablename NAME            given name for the table, default is taken from filename
-              --chunksize CHUNK           Number of rows to be inserted at a time. Useful for large files
-                                         that do not fit in memory
-              --memsize MEMCHUNK         The size in Mb to be read in chunks. If both specified, the lower
-                                        number of rows is selected (the lower memory limitations)
+              --tablename NAME           given name for the table, default is taken from filename
+              --chunksize CHUNK          Number of rows to be inserted at a time. Useful for large
+                                         files that do not fit in memory
+              --memsize MEMCHUNK         The size in Mb to be read in chunks. If both specified,
+                                         the lower number of rows is selected
+                                         (the lower memory limitations)
 
-        Note: - For csv or tab files, first line must have the column names (without # or any other comment) and same format
-        as data (using ',' or space)
+        Note: - For csv or tab files, first line must have the column names
+        (without # or any other comment) and same format as data (using ',' or space)
               - For fits file header must have columns names and data types
               - For filenames use <table_name>.csv or <table_name>.fits do not use extra points
         """
-        line = line.replace(';','')
+        line = line.replace(';', '')
         append_parser = KeyParser(prog='', usage='', add_help=False)
-        append_parser.add_argument('filename', help='name for the file', action='store', default=None)
-        append_parser.add_argument('--tablename', help='name for the table to append to', action='store', default=None)
-        append_parser.add_argument('--chunksize', help='number of rows to read in blocks to avoid memory '
-                                                       'issues', action='store', default=None, type=int)
-        append_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ', action='store',
-                                   type=int, default=None)
-        append_parser.add_argument('-h', '--help', help='print help', action='store_true')
+        append_parser.add_argument(
+            'filename', help='name for the file', action='store', default=None)
+        append_parser.add_argument(
+            '--tablename', help='name for the table to append to', action='store', default=None)
+        append_parser.add_argument('--chunksize',
+                                   help='number of rows to read in blocks to avoid memory '
+                                        'issues', action='store', default=None, type=int)
+        append_parser.add_argument('--memsize', help='size of the chunks to be read in Mb ',
+                                   action='store', type=int, default=None)
+        append_parser.add_argument(
+            '-h', '--help', help='print help', action='store_true')
         try:
             append_args = append_parser.parse_args(line.split())
         except SystemExit:
@@ -2170,15 +2232,16 @@ Connected as {user} to {db}.
             return
         filename = eafile.get_filename(append_args.filename)
         table = append_args.tablename
-        invalid_chars = ['-','$','~','@','*']
-        for obj in [table,name]:
+        invalid_chars = ['-', '$', '~', '@', '*']
+        for obj in [table, name]:
             if obj is None:
                 if any((char in invalid_chars) for char in filename):
-                    print(colored('\nInvalid table name, change filename or use --tablename\n','red',self.ct))
+                    print(colored('\nInvalid table name, change filename '
+                                  'or use --tablename\n', 'red', self.ct))
                     return
             else:
                 if any((char in invalid_chars) for char in obj):
-                    print(colored('\nInvalid table name\n','red',self.ct))
+                    print(colored('\nInvalid table name\n', 'red', self.ct))
                     return
 
         chunk = append_args.chunksize
@@ -2194,14 +2257,14 @@ Connected as {user} to {db}.
             else:
                 chunk = memchunk_rows
 
-        if filename is None: return
+        if filename is None:
+            return
         base, ext = os.path.splitext(os.path.basename(filename))
 
         if ext == '.h5' and chunk is not None:
             print(colored("\nHDF5 file upload with chunksize is not supported yet. Try without "
-                          "--chunksize\n","red",self.ct))
+                          "--chunksize\n", "red", self.ct))
             return
-
 
         if table is None:
             table = base
@@ -2210,15 +2273,15 @@ Connected as {user} to {db}.
 
         # check table first
         if not self.check_table_exists(table):
-            print('\n Table does not exist. Table can be created with:' \
-                  '\n DESDB ~> CREATE TABLE %s (COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
+            print('\n Table does not exist. Table can be created with:'
+                  '\n DESDB ~> CREATE TABLE %s '
+                  '(COL1 TYPE1(SIZE), ..., COLN TYPEN(SIZE));\n' % table.upper())
             return
         try:
             data, iterator = eafile.read_file(filename)
         except:
             print_exception(mode=self.ct)
             return
-
 
         iteration = 0
         done = False
@@ -2231,7 +2294,8 @@ Connected as {user} to {db}.
                     else:
                         df = data
                     df.file_type = 'pandas'
-                    if len(df) == 0: break
+                    if len(df) == 0:
+                        break
                     if iteration == 0:
                         dtypes = eafile.get_dtypes(df)
                     columns = df.columns.values.tolist()
@@ -2241,15 +2305,18 @@ Connected as {user} to {db}.
                     break
                 try:
                     if not done:
-                        self.insert_data(table, columns, values, dtypes, iteration)
+                        self.insert_data(
+                            table, columns, values, dtypes, iteration)
                         iteration += 1
-                        if not iterator: done = True
+                        if not iterator:
+                            done = True
                 except:
                     print_exception(mode=self.ct)
                     return
 
         if data.file_type == 'fits':
-            if chunk is None: chunk = data[1].get_nrows()
+            if chunk is None:
+                chunk = data[1].get_nrows()
             start = 0
             while not done:
                 try:
@@ -2257,27 +2324,27 @@ Connected as {user} to {db}.
                     if iteration == 0:
                         dtypes = eafile.get_dtypes(df)
                         columns = df[1].get_colnames()
-                    values = df[1][start:start+chunk].tolist()
+                    values = df[1][start:start + chunk].tolist()
                     start += chunk
-                    if len(values) == 0 : break
+                    if len(values) == 0:
+                        break
                     total_rows += len(values)
                 except:
                     break
                 try:
                     if not done:
-                        self.insert_data(table, columns, values, dtypes, iteration)
+                        self.insert_data(
+                            table, columns, values, dtypes, iteration)
                         iteration += 1
                 except:
                     print_exception(mode=self.ct)
                     return
 
-        print(colored('\n ** Table %s appended successfully with %d rows.' % (table.upper(), total_rows),
-                      "green",self.ct))
-
+        print(colored('\n ** Table %s appended '
+                      'successfully with %d rows.' % (table.upper(), total_rows), "green", self.ct))
 
     def complete_append_table(self, text, line, start_idx, end_idx):
-        return _complete_path(line)
-
+        return complete_path(line)
 
     def do_add_comment(self, line):
         """
@@ -2300,35 +2367,41 @@ Connected as {user} to {db}.
         oneline = "".join(keys)
         if oneline.find('table') > -1:
             if len(keys) == 1:
-                print(colored('\nMissing table name\n', "red",self.ct))
+                print(colored('\nMissing table name\n', "red", self.ct))
                 return
             table = keys[1]
             if len(keys) == 2:
-                print(colored('\nMissing comment for table %s\n' % table, "red",self.ct))
+                print(colored('\nMissing comment for table %s\n' %
+                              table, "red", self.ct))
                 return
             comm = " ".join(keys[2:])
-            if comm[0] == "'": comm = comm[1:-1]
+            if comm[0] == "'":
+                comm = comm[1:-1]
             qcom = """comment on table %s is '%s'""" % (table, comm)
             message = "Comment added to table: %s" % table
             self.query_and_print(qcom, print_time=False, suc_arg=message)
         elif oneline.find('column') > -1:
             if len(keys) == 1:
-                print(colored('\nMissing column name (TABLE.COLUMN)\n', "red",self.ct))
+                print(colored('\nMissing column name (TABLE.COLUMN)\n', "red", self.ct))
                 return
             col = keys[1]
             if len(keys) == 2:
-                print(colored('\nMissing comment for column %s\n' % col, "red",self.ct))
+                print(colored('\nMissing comment for column %s\n' %
+                              col, "red", self.ct))
                 return
             if len(keys) > 2 and col.find('.') == -1:
-                print(colored('\nMissing column name for table %s\n', "red",self.ct) % col)
+                print(colored('\nMissing column name for table %s\n',
+                              "red", self.ct) % col)
                 return
             comm = " ".join(keys[2:])
-            if comm[0] == "'": comm = comm[1:-1]
+            if comm[0] == "'":
+                comm = comm[1:-1]
             qcom = """comment on column  %s is '%s'""" % (col, comm)
-            message = "Comment added to column: %s in table %s" % (col.split('.')[1], col.split('.')[0])
+            message = "Comment added to column: %s in table %s" % (
+                col.split('.')[1], col.split('.')[0])
             self.query_and_print(qcom, print_time=False, suc_arg=message)
         else:
-            print(colored('\nMissing arguments\n', "red",self.ct))
+            print(colored('\nMissing arguments\n', "red", self.ct))
             self.do_help('add_comment')
 
     def complete_add_comment(self, text, line, begidx, lastidx):
@@ -2340,7 +2413,8 @@ Connected as {user} to {db}.
                 if oneline.find('.') > -1:
                     colname = text.split('.')[-1]
                     tablename = text.split('.')[0]
-                    return [tablename + '.' + cn for cn in self._complete_colnames(colname) if cn.startswith(colname)]
+                    return [tablename + '.' + cn for cn in
+                            self._complete_colnames(colname) if cn.startswith(colname)]
                 else:
                     return self._complete_tables(text)
             else:
@@ -2348,15 +2422,16 @@ Connected as {user} to {db}.
         else:
             return options_add_comment
 
-
     def do_version(self, line):
         """
         Print current  and latest pip version of easyacccess
         """
-        last_version=last_pip_version()
+        last_version = last_pip_version()
         print()
-        print(colored("Current version  : easyaccess {}".format(__version__),"green",self.ct))
-        print(colored("Last pip version : easyaccess {}".format(last_version),"green",self.ct))
+        print(colored("Current version  : easyaccess {}".format(
+            __version__), "green", self.ct))
+        print(colored("Last pip version : easyaccess {}".format(
+            last_version), "green", self.ct))
         print()
         return
 
@@ -2364,7 +2439,7 @@ Connected as {user} to {db}.
 
     def do_EOF(self, line):
         # Exit program on ^D (Ctrl+D)
-        print() # For some reason this is missing...
+        print()  # For some reason this is missing...
         self.do_exit(line)
 
     def do_quit(self, line):
@@ -2376,31 +2451,35 @@ Connected as {user} to {db}.
     def do_SELECT(self, line):
         self.default('SELECT ' + line)
 
-    def do_clean_history(self, line):
-        if readline_present: readline.clear_history()
+    def do_clear_history(self, line):
+        if readline_present:
+            readline.clear_history()
 
     def do_online_tutorial(self, line):
-        tut = webbrowser.open_new_tab('http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
+        tut = webbrowser.open_new_tab(
+            'http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
+        del tut
 
 
-
-
-
-############### PYTOHN API ###############################
+# ############## PYTOHN API ###############################
 
 class IterData(object):
     """
     Iterator class for cx_oracle
     """
+
     def __init__(self, cursor, extra_func=None):
         self.rows_count = 0
         self.cursor = cursor
         self.extra_func = extra_func
-        self.data = pd.DataFrame(self.cursor.fetchmany(), columns=[rec[0] for rec in self.cursor.description])
+        self.data = pd.DataFrame(self.cursor.fetchmany(), columns=[
+                                 rec[0] for rec in self.cursor.description])
         if self.extra_func is not None and not self.data.empty:
             funs, args, names = self.extra_func
             for kf in range(len(funs)):
-                self.data = fun_utils.updateDF(self.data, funs, args, names, kf)
+                self.data = fun_utils.updateDF(
+                    self.data, funs, args, names, kf)
+
     def __iter__(self):
         return self
 
@@ -2408,41 +2487,40 @@ class IterData(object):
         if not self.data.empty:
             data = self.data
             self.rows_count += len(data)
-            self.data = pd.DataFrame(self.cursor.fetchmany(), columns=[rec[0] for rec in self.cursor.description])
+            self.data = pd.DataFrame(self.cursor.fetchmany(), columns=[
+                                     rec[0] for rec in self.cursor.description])
             if self.extra_func is not None and not self.data.empty:
                 funs, args, names = self.extra_func
                 for kf in range(len(funs)):
-                    self.data = fun_utils.updateDF(self.data, funs, args, names, kf)
+                    self.data = fun_utils.updateDF(
+                        self.data, funs, args, names, kf)
             return data
         else:
             self.cursor.close()
             raise StopIteration('No more data in the DB')
 
 
-
 def to_pandas(cur):
     """
     Returns a pandas DataFrame from a executed query
     """
-    if cur.description != None:
-        data = pd.DataFrame(cur.fetchall(), columns=[rec[0] for rec in cur.description])
+    if cur.description is not None:
+        data = pd.DataFrame(cur.fetchall(), columns=[
+                            rec[0] for rec in cur.description])
     else:
         data = ""
     return data
 
 
-color_term = True
-
-
 class connect(easy_or):
     def __init__(self, section='', user=None, passwd=None, quiet=False, refresh=False):
         """
-        Creates a connection to the DB as easyaccess commands, section is obtained from
-        config file, can be bypass here, e.g., section = desoper
+        Creates a connection to the DB as easyaccess commands, section is
+         obtained from config file, can be bypass here, e.g., section = desoper
 
         Parameters:
         -----------
-        section :  DB connection : dessci, desoper, destest
+        section :  DB connection : dessci, desoper, destest, newsci
         user    :  Manualy use username
         passwd  :  password for username (if not enter is prompted)
         quiet   :  Don't print much
@@ -2456,8 +2534,10 @@ class connect(easy_or):
         self.conf = conf
         pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
         pd.set_option('display.width', conf.getint('display', 'width'))
-        pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
-        pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
+        pd.set_option('display.max_columns',
+                      conf.getint('display', 'max_columns'))
+        pd.set_option('display.max_colwidth',
+                      conf.getint('display', 'max_colwidth'))
         if section == '':
             db = conf.get('easyaccess', 'database')
         else:
@@ -2481,15 +2561,17 @@ class connect(easy_or):
         cursor.arraysize = int(self.prefetch)
         return cursor
 
-    def ping(self, quiet = None):
+    def ping(self, quiet=None):
         if quiet is None:
             quiet = self.quiet
         try:
             self.con.ping()
-            if not quiet: print('Still connected to DB')
+            if not quiet:
+                print('Still connected to DB')
             return True
         except:
-            if not quiet: print('Connection with DB lost')
+            if not quiet:
+                print('Connection with DB lost')
             return False
 
     def close(self):
@@ -2521,12 +2603,10 @@ class connect(easy_or):
             self.do_help_function('all')
             return True
         if import_line != '':
-            self.do_import(' '+import_line)
+            self.do_import(' ' + import_line)
             return True
 
-
-
-    def query_to_pandas(self, query, prefetch='', iterator = False):
+    def query_to_pandas(self, query, prefetch='', iterator=False):
         """
         Executes a query and return the results in pandas DataFrame. If result is too big
         it is better to save results to a file
@@ -2545,25 +2625,28 @@ class connect(easy_or):
         """
         cursor = self.con.cursor()
         cursor.arraysize = int(self.prefetch)
-        if prefetch != '': cursor.arraysize = int(prefetch)
-        query = query.replace(';' , '')
+        if prefetch != '':
+            cursor.arraysize = int(prefetch)
+        query = query.replace(';', '')
         query, funs, args, names = fun_utils.parseQ(query, myglobals=globals())
         extra_func = [funs, args, names]
-        if funs is None : extra_func = None
+        if funs is None:
+            extra_func = None
         temp = cursor.execute(query)
-        if temp.description != None:
+        if temp.description is not None:
             if iterator:
                 data = IterData(temp, extra_func)
             else:
-                data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
+                data = pd.DataFrame(temp.fetchall(), columns=[
+                                    rec[0] for rec in temp.description])
                 if extra_func is not None:
                     for kf in range(len(funs)):
                         data = fun_utils.updateDF(data, funs, args, names, kf)
         else:
             data = ""
-        if not iterator: cursor.close()
+        if not iterator:
+            cursor.close()
         return data
-
 
     def describe_table(self, tablename):
         """
@@ -2571,10 +2654,10 @@ class connect(easy_or):
         """
         return self.do_describe_table(tablename, False, return_df=True)
 
-
     def loadsql(self, filename):
         """
-        Reads sql statement from a file, returns query to be parsed in query_and_save, query_to_pandas, etc.
+        Reads sql statement from a file, returns query to be parsed in
+        query_and_save, query_to_pandas, etc.
         """
         query = read_buf(filename)
         if query.find(';') > -1:
@@ -2607,7 +2690,8 @@ class connect(easy_or):
         table_file : Filename to be uploaded as table (.csv, .fits, .tab)
         name       : Name of the table to be created
         chunksize  : Number of rows to upload at a time to avoid memory issues
-        memsize    : Size of chunk to be read. In Mb. If both specified, the lower number of rows is selected
+        memsize    : Size of chunk to be read. In Mb.
+                     If both specified, the lower number of rows is selected
 
         Returns:
         --------
@@ -2615,12 +2699,12 @@ class connect(easy_or):
 
         """
         try:
-            self.do_load_table(table_file, name=name, chunksize=chunksize, memsize=memsize)
+            self.do_load_table(table_file, name=name,
+                               chunksize=chunksize, memsize=memsize)
             return True
         except:
             # exception
             return False
-
 
     def append_table(self, table_file, name=None, chunksize=None, memsize=None):
         """
@@ -2632,14 +2716,16 @@ class connect(easy_or):
         table_file : Filename to be uploaded as table (.csv, .fits, .tab)
         name       : Name of the table to be created
         chunksize  : Number of rows to upload at a time to avoid memory issues
-        memsize    : Size of chunk to be read. In Mb. If both specified, the lower number of rows is selected
+        memsize    : Size of chunk to be read. In Mb.
+                     If both specified, the lower number of rows is selected
 
         Returns:
         --------
         True if success otherwise False
         """
         try:
-            self.do_append_table(table_file, name=name, chunksize=chunksize, memsize=memsize)
+            self.do_append_table(table_file, name=name,
+                                 chunksize=chunksize, memsize=memsize)
             return True
         except:
             return False
@@ -2657,10 +2743,10 @@ class connect(easy_or):
         A pandas DataFram with the owners and table names. To select from a table use
         owner.table_name, is owner is DES_ADMIN just use table_name
         """
-        pattern = pattern.replace('%','')
+        pattern = pattern.replace('%', '')
         pattern = ''.join(pattern.split())
-        pattern = "%"+pattern+"%"
-        return self.do_find_tables(pattern , extra='', return_df=True)
+        pattern = "%" + pattern + "%"
+        return self.do_find_tables(pattern, extra='', return_df=True)
 
     def pandas_to_db(self, df, tablename=None, append=False):
         """ Writes a pandas DataFrame directly to the DB
@@ -2680,8 +2766,10 @@ class connect(easy_or):
             print("Please indicate a tablename to be ingested in the DB")
             return False
         if self.check_table_exists(tablename) and not append:
-            print(colored('\n Table already exists. Table can be removed with:','red',self.ct))
-            print(colored(' DESDB ~> DROP TABLE %s;\n' % tablename.upper(),'red',self.ct))
+            print(
+                colored('\n Table already exists. Table can be removed with:', 'red', self.ct))
+            print(colored(' DESDB ~> DROP TABLE %s;\n' %
+                          tablename.upper(), 'red', self.ct))
             return False
         df.file_type = 'pandas'
         if len(df) == 0:
@@ -2699,32 +2787,20 @@ class connect(easy_or):
 
 
 # #################################################
-# ADW: Add this to a separate 'parser' module?
-class MyParser(argparse.ArgumentParser):
-    def error(self, message):
-        print('\n*****************')
-        sys.stderr.write('error: %s \n' % message)
-        print('*****************\n')
-        self.print_help()
-        sys.exit(2)
-
 
 def initial_message(quiet=False, clear=True):
     if not quiet:
-        if clear: os.system(['clear', 'cls'][os.name == 'nt'])
+        if clear:
+            os.system(['clear', 'cls'][os.name == 'nt'])
         # No messages for now
 
 
-if __name__ == '__main__':
-
+def cli():
+    """
+    Main function to run the command line interpreter either interactively or just simple commands
+    """
+    global load_bar, colored
     conf = config_mod.get_config(config_file)
-
-    # ADW: What about all the readline imports in the code?
-    try:
-        import readline
-        readline_present = True
-    except:
-        readline_present = False
 
     if readline_present:
         try:
@@ -2733,95 +2809,7 @@ if __name__ == '__main__':
         except:
             print(colored('readline might have problems accessing history', 'red'))
 
-    # ADW: Add this to a separate 'parser' module?
-    parser = MyParser(
-        description='Easy access to the DES database. There is a configuration file located in %s for more customizable options' % config_file)
-    parser.add_argument("-v", "--version", action = "store_true",
-                        help="print version number and exit")
-    parser.add_argument("-c", "--command", dest='command',
-                        help="Executes command and exit")
-    parser.add_argument("-l", "--loadsql", dest='loadsql',
-                        help="Loads a sql command, execute it and exit")
-    parser.add_argument("-lt", "--load_table", dest='loadtable',
-                        help="Loads data from a csv, tab, or fits formatted file \
-                        into a DB table using the filename as the table name or a custom \
-                        name with --tablename MYTABLE")
-    parser.add_argument("-at", "--append_table", dest='appendtable',
-                        help="Appends data from a csv, tab, or fits formatted file \
-                        into a DB table using the filename as the table name or a custom \
-                        name with --tablename MYABLE")
-    parser.add_argument("--tablename", dest='tablename',
-                        help="Custom table name to be used with --load_table\
-                        or --append_table")
-    parser.add_argument("--chunksize", dest='chunksize', type=int, default = None,
-                        help="Number of rows to be inserted at a time. Useful for large files \
-                                        that do not fit in memory. Use with --load_table or --append_table")
-    parser.add_argument("--memsize", dest='memsize', type=int, default = None,
-                        help=" Size of chunk to be read at a time in Mb. Use with --load_table or "
-                             "--append_table")
-    parser.add_argument("-s", "--db",dest='db', #choices=[...]?
-                        help="Override database name [dessci,desoper,destest]")
-    parser.add_argument("-q", "--quiet", action="store_true", dest='quiet',
-                        help="Silence initialization, no loading bar")
-    parser.add_argument("-u", "--user", dest='user')
-    parser.add_argument("-p", "--password", dest='password')
-    parser.add_argument("-nr", "--no_refresh", dest='norefresh', action="store_true",
-                        help="Do not refresh metadata at starting up to speed initialization. Metadata can "
-                             "always be refreshed from inside using the refresh_metadata command")
-    parser.add_argument("--config", help="--config show, will print content of "
-                                                        "config file\n"
-                                                        "--config reset will reset config to default "
-                                                        "values\n"
-                                                        "--config set param1=val1 param2=val2 will "
-                                                        "modify parameters for the session only", nargs='+')
-    args = parser.parse_args()
-
-    if args.version:
-        print("\nCurrent : easyaccess {:} \n".format(__version__))
-        sys.exit()
-
-    if args.config:
-        int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width', 'max_columns', 'outfile_max_mb',
-                        'nullvalue', 'loading_bar', 'autocommit', 'max_col_width']
-        if args.config[0] == 'show':
-            print('\n Showing content of the config file (%s) :\n' % config_file)
-            file_temp = open(config_file, 'r')
-            for line in file_temp.readlines():
-                print(line.strip())
-            file_temp.close()
-            sys.exit()
-        elif args.config[0] == 'reset':
-            print('\n ** Reset  config file (%s) to its default!! **:\n' % config_file)
-            check = input(' Proceed? (y/[n]) : ')
-            if check.lower() == 'y':
-                os.remove(config_file)
-                conf = config_mod.get_config(config_file)
-                sys.exit()
-        elif args.config[0] == 'set':
-            if len(args.config) == 1:
-                parser.print_help()
-                sys.exit()
-            entries = ','.join(args.config[1:])
-            entries = entries.replace(',,',',')
-            entries = entries.split(',')
-            for e in entries:
-                if e =='': continue
-                updated = False
-                try:
-                    key, value = e.split('=')
-                    for section in (conf.sections()):
-                        if conf.has_option(section, key):
-                            conf.set(section, key, str(value))
-                            updated = True
-                    if not updated: raise
-                except:
-                    print("Check the key exists or that you included the '=' for the parameter\nFor more "
-                          "info "
-                          "use --help.")
-                    sys.exit()
-        else:
-            parser.print_help()
-            sys.exit()
+    args = eaparser.get_args(config_file)  # Reads command line arguments
 
     # PANDAS DISPLAY SET UP
     pd.set_option('display.max_rows', conf.getint('display', 'max_rows'))
@@ -2830,24 +2818,19 @@ if __name__ == '__main__':
     pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
 
     load_bar = conf.getboolean('display', 'loading_bar')
-    if load_bar:
-        from multiprocessing import Process
 
-    color_term = True
     if not conf.getboolean('display', 'color_terminal'):
         colored = without_color
-        color_term = False
-
 
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
 
     if args.db is not None:
         db = args.db
-        if db[:3] == 'db-': db = db[3:]
+        if db[:3] == 'db-':
+            db = db[3:]
     else:
         db = conf.get('easyaccess', 'database')
-
 
     if args.user is not None:
         print('Bypassing .desservices file with user : %s' % args.user)
@@ -2855,26 +2838,26 @@ if __name__ == '__main__':
             print('Must include password')
             os._exit(0)
         else:
-            desconf = config_mod.get_desconfig(desfile, db, verbose=False, user=args.user, pw1=args.password)
+            desconf = config_mod.get_desconfig(
+                desfile, db, verbose=False, user=args.user, pw1=args.password)
             desconf.set('db-' + db, 'user', args.user)
             desconf.set('db-' + db, 'passwd', args.password)
     else:
         desconf = config_mod.get_desconfig(desfile, db)
 
+        initial_message(args.quiet, clear=False)
     if args.command is not None:
-        initial_message(args.quiet, clear=False)
-        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False,
+                            quiet=args.quiet, refresh=not args.norefresh)
         cmdinterp.onecmd(args.command)
-        os._exit(0)
     elif args.loadsql is not None:
-        initial_message(args.quiet, clear=False)
-        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False,
+                            quiet=args.quiet, refresh=not args.norefresh)
         linein = "loadsql " + args.loadsql
         cmdinterp.onecmd(linein)
-        os._exit(0)
     elif args.loadtable is not None:
-        initial_message(args.quiet, clear=False)
-        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False,
+                            quiet=args.quiet, refresh=not args.norefresh)
         linein = "load_table " + args.loadtable
         if args.tablename is not None:
             linein += ' --tablename ' + args.tablename
@@ -2883,10 +2866,9 @@ if __name__ == '__main__':
         if args.memsize is not None:
             linein += ' --memsize ' + str(args.memsize)
         cmdinterp.onecmd(linein)
-        os._exit(0)
     elif args.appendtable is not None:
-        initial_message(args.quiet, clear=False)
-        cmdinterp = easy_or(conf, desconf, db, interactive=False, quiet=args.quiet, refresh= not args.norefresh)
+        cmdinterp = easy_or(conf, desconf, db, interactive=False,
+                            quiet=args.quiet, refresh=not args.norefresh)
         linein = "append_table " + args.appendtable
         if args.tablename is not None:
             linein += ' --tablename ' + args.tablename
@@ -2895,7 +2877,13 @@ if __name__ == '__main__':
         if args.memsize is not None:
             linein += ' --memsize ' + str(args.memsize)
         cmdinterp.onecmd(linein)
-        os._exit(0)
     else:
         initial_message(args.quiet, clear=True)
-        easy_or(conf, desconf, db, quiet=args.quiet, refresh= not args.norefresh).cmdloop()
+        easy_or(conf, desconf, db, quiet=args.quiet,
+                refresh=not args.norefresh).cmdloop()
+    os._exit(0)
+
+
+if __name__ == '__main__':
+    "Main function"
+    cli()

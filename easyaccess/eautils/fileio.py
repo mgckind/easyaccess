@@ -4,8 +4,8 @@ Module for file input/output with pandas, fitsio, ...
 
 Some useful documentation:
 fitsio: https://github.com/esheldon/fitsio
-numpy: 
-pandas: 
+numpy:
+pandas:
 
 """
 import os
@@ -23,7 +23,7 @@ except ImportError:
 
 try:
     from termcolor import colored
-except:
+except ImportError:
     def colored(line, color): return line
 
 PANDAS_DEFS = ('comma separated text', 'space separated tex', 'HDF5 format')
@@ -76,21 +76,23 @@ def get_chunksize(filename, memory=500):
     check_filetype(ext, FILE_EXTS)
 
     if ext in PANDAS_EXTS:
-        if ext == '.csv': sepa = ','
-        elif ext == '.tab' : sepa = None
+        if ext == '.csv':
+            sepa = ','
+        elif ext == '.tab':
+            sepa = None
         elif ext == '.h5':
             return IOError('\nReading HDF5 files by chunks is not supported yet\n')
         temp = pd.read_csv(filename, sep=sepa, nrows=100)
-        bytes_per_row = temp.memory_usage(index=True).sum()/100.
+        bytes_per_row = temp.memory_usage(index=True).sum() / 100.
         del temp
     elif ext in FITS_EXTS:
         temp = fitsio.FITS(filename)
         temp_data = temp[1][0:100]
-        bytes_per_row = temp_data.nbytes/100.
+        bytes_per_row = temp_data.nbytes / 100.
         temp.close()
         del temp_data
 
-    return int(memory*1024**2/bytes_per_row)
+    return int(memory * 1024**2 / bytes_per_row)
 
 
 def cutquery(query, length):
@@ -107,16 +109,18 @@ def unrecognized_filetype(filename, types=None):
     Parameters:
     -----------
     filename : File name (or extension)
-    
+
     Returns:
     --------
     msg : Unrecognized file message
     """
-    if types is None: types = FILE_EXTS
+    if types is None:
+        types = FILE_EXTS
     # Try to split the filename
     base, ext = os.path.splitext(filename)
     # Also allow just the file extension
-    if ext == '': ext = base
+    if ext == '':
+        ext = base
 
     msg = "Unrecognized file type: '%s'\n" % ext
     msg += "Supported filetypes:\n"
@@ -131,16 +135,18 @@ def check_filetype(filename, types=None):
     Parameters:
     -----------
     filename : Name (or extension) of file
-    
+
     Returns:
     --------
     True : (Or raises IOError)
     """
-    if types is None: types = FILE_EXTS
+    if types is None:
+        types = FILE_EXTS
     # Try to split the filename
     base, ext = os.path.splitext(filename)
     # Also allow just the file extension
-    if ext == '': ext = base
+    if ext == '':
+        ext = base
 
     if ext not in types:
         msg = unrecognized_filetype(ext, types)
@@ -165,7 +171,7 @@ def write_file(filename, data, desc, fileindex=1, mode='w', max_mb=1000, query='
     fileindex: The index of the file to write.
     mode :     The write-mode: 'w'=write new file, 'a'=append to existing file
     max_mb :   Maximum file size.
-    
+
     Returns:
     fileindex: The (possibly incremented) fileindex.
     """
@@ -233,10 +239,10 @@ def write_pandas(filename, df, fileindex, mode='w', header=True, query=''):
 
     if ext == '.csv':
         df.to_csv(filename, index=False, float_format='%.8f', sep=',',
-                  mode=mode, header=header)
+                  mode=mode, header=header, encoding='utf-8')
     if ext == '.tab':
         df.to_csv(filename, index=False, float_format='%.8f', sep=' ',
-                  mode=mode, header=header)
+                  mode=mode, header=header, encoding='utf-8')
     if ext == '.h5':
         df.to_hdf(filename, 'data', mode=mode, index=False,
                   header=header)  # , complevel=9,complib='bzip2'
@@ -273,7 +279,7 @@ def write_fitsio(filename, df, desc, fileindex, mode='w', query=''):
             dtypes.append((name, 'f8', len(df[name].values[0])))
             print(d, dtypes[-1])
         elif otype == 'updated':
-            dtypes.append((name, df[name].dtype.kind+str(df[name].dtype.itemsize)))
+            dtypes.append((name, df[name].dtype.kind + str(df[name].dtype.itemsize)))
         else:
             dtypes.append((name, eatypes.oracle2fitsio(d)))
 
@@ -291,7 +297,8 @@ def write_fitsio(filename, df, desc, fileindex, mode='w', query=''):
     # write or append...
     if mode == 'w':
         # assume that this is smaller than the max size!
-        if os.path.exists(filename): os.remove(filename)
+        if os.path.exists(filename):
+            os.remove(filename)
         fits = fitsio.FITS(filename, mode='rw')
         created = datetime.datetime.now().strftime('%Y-%b-%d %H:%M:%S')
         fits.write(arr)
@@ -311,17 +318,17 @@ def write_fitsio(filename, df, desc, fileindex, mode='w', query=''):
 
 def read_file(filename):
     """
-    Read an input file with pandas or fitsio. 
+    Read an input file with pandas or fitsio.
 
     Unfortunately, the conversion between pandas and numpy is too slow
-    to put data into a consistent framework.  
+    to put data into a consistent framework.
 
     Accepted file extensions are defined by 'FILE_EXTS'.
 
     Parameters:
     ----------
     filename : Input filename
-    
+
     Returns:
     --------
     data    : pandas.DataFrame or fitsio.FITS object
@@ -361,7 +368,7 @@ def read_pandas(filename):
     Parameters:
     ----------
     filename : Input filename
-    
+
     Returns:
     --------
     df : pandas.DataFrame object
@@ -372,9 +379,11 @@ def read_pandas(filename):
 
     try:
         if ext in ('.csv', '.tab'):
-            if ext == '.csv': sepa = ','
-            if ext == '.tab': sepa = None
-            df = pd.read_csv(filename, sep=sepa, iterator = True)
+            if ext == '.csv':
+                sepa = ','
+            if ext == '.tab':
+                sepa = None
+            df = pd.read_csv(filename, sep=sepa, iterator=True)
             iterator = True
         elif ext in ('.h5'):
             df = pd.read_hdf(filename, key='data')  # iterator for hdf in padnas 0.18
@@ -385,13 +394,13 @@ def read_pandas(filename):
 
     # Monkey patch to grab columns and values
     # List comprehension is faster but less readable
-    #dtypes = [df[c].dtype if df[c].dtype.kind != 'O'
+    # dtypes = [df[c].dtype if df[c].dtype.kind != 'O'
     #          else np.dtype('S' + str(max(df[c].str.len())))
     #          for i, c in enumerate(df)]
 
-    #df.ea_get_columns = df.columns.values.tolist
-    #df.ea_get_values = df.values.tolist
-    #df.ea_get_dtypes = lambda: dtypes
+    # df.ea_get_columns = df.columns.values.tolist
+    # df.ea_get_values = df.values.tolist
+    # df.ea_get_dtypes = lambda: dtypes
     df.file_type = 'pandas'
 
     return df, iterator
@@ -404,7 +413,7 @@ def read_fitsio(filename):
     Parameters:
     ----------
     filename : Input filename
-    
+
     Returns:
     --------
     fits : fitsio.FITS object
@@ -416,21 +425,21 @@ def read_fitsio(filename):
         msg = 'Problem reading %s\n' % filename
         raise IOError(msg)
     # Monkey patch to grab columns and values
-    #dtype = fits[1].get_rec_dtype(vstorage='fixed')[0]
-    #dtypes = [dtype[i] for i, d in enumerate(dtype.descr)]
+    # dtype = fits[1].get_rec_dtype(vstorage='fixed')[0]
+    # dtypes = [dtype[i] for i, d in enumerate(dtype.descr)]
 
-    #fits.ea_get_columns = fits[1].get_colnames
-    #fits.ea_get_values = fits[1].read().tolist
-    #fits.ea_get_dtypes = lambda: dtypes
+    # fits.ea_get_columns = fits[1].get_colnames
+    # fits.ea_get_values = fits[1].read().tolist
+    # fits.ea_get_dtypes = lambda: dtypes
     fits.file_type = 'fits'
 
     # ## # Hack to just get a subset of columns
-    ### x1,x2 = 25,37
-    ###  
-    ### fits.ea_get_columns = lambda: fits[1].get_colnames()[x1:x2]
-    ### print fits.ea_get_columns()
-    ### fits.ea_get_values = lambda: fits[1].read(columns=fits.ea_get_columns()).tolist()
-    ### fits.ea_get_dtypes = lambda: dtypes[x1:x2]
+    # ## x1,x2 = 25,37
+    # ##
+    # ## fits.ea_get_columns = lambda: fits[1].get_colnames()[x1:x2]
+    # print fits.ea_get_columns()
+    # ## fits.ea_get_values = lambda: fits[1].read(columns=fits.ea_get_columns()).tolist()
+    # ## fits.ea_get_dtypes = lambda: dtypes[x1:x2]
 
     return fits, True
 
