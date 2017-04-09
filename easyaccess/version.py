@@ -5,6 +5,7 @@ import warnings
 from datetime import datetime
 warnings.filterwarnings("ignore")
 
+
 def last_pip_version():
     import requests
     logging.getLogger("requests").setLevel(logging.WARNING)
@@ -16,8 +17,9 @@ def last_pip_version():
     uploads = []
     for k in data['releases'].keys():
         up_time = data['releases'][k][0]['upload_time']
-        uploads.append([k,datetime.strptime(up_time,'%Y-%m-%dT%H:%M:%S')])
-    return sorted(uploads,key=lambda x: x[1])[-1][0]
+        uploads.append([k, datetime.strptime(up_time, '%Y-%m-%dT%H:%M:%S')])
+    return sorted(uploads, key=lambda x: x[1])[-1][0]
+
 
 version_tag = (1, 4, 0, 'dev-rc1')
 __version__ = '.'.join(map(str, version_tag[:3]))
