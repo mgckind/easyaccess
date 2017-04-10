@@ -745,9 +745,11 @@ Connected as {user} to {db}.
                     if 'COMMENTS' in data.columns:
                         try:
                             width = data['COMMENTS'].str.len().max()
+                            if pd.isnull(width):
+                                width = 4
                             format_f = lambda s: '{: <{width}}'.format(s, width=width)
                             temp_col = format_f('COMMENTS')
-                            data = data.rename(columns={'COMMENTS': temp_col},inplace=True)
+                            data.rename(columns={'COMMENTS': temp_col}, inplace=True)
                             print(data.to_string(formatters={temp_col: format_f}))
                         except:
                             pass
