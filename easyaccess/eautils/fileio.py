@@ -13,13 +13,8 @@ import datetime
 import numpy as np
 import pandas as pd
 import fitsio
-
-try:
-    import easyaccess.eautils.dtypes as eatypes
-    import easyaccess.version as version
-except ImportError:
-    import eautils.dtypes as eatypes
-    import version
+import easyaccess.eautils.dtypes as eatypes
+import easyaccess.version as version
 
 try:
     from termcolor import colored

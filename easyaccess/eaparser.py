@@ -1,7 +1,7 @@
 from __future__ import print_function
 import argparse
-import config_ea as config_mod
-from version import __version__
+from . import config_ea as config_mod
+from .version import __version__
 import sys
 import os
 

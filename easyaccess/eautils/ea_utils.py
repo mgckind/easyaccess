@@ -1,12 +1,12 @@
 from __future__ import print_function
 import argparse
 import itertools
-import dircache
 import sys
 import os
 import time
 import signal
-import fileio as eafile
+import easyaccess.eautils.fileio as eafile
+import easyaccess.eautils.dircache as dircache
 
 
 def print_exception(pload=None, mode=1):

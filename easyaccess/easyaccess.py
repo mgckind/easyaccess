@@ -1162,6 +1162,8 @@ Connected as {user} to {db}.
         # TODO: platform dependent
         # tmp = sp.call('clear', shell=True)
         sys.stdout.flush()
+        if line is None:
+            return
         try:
             tmp = os.system('clear')
         except:
