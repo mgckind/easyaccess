@@ -4,7 +4,7 @@
 Enhanced command line SQL interpreter client for astronomical databases.
 
 Python Command Line Interpreter to access Oracle DES DB
-using cx_Oracle 
+using cx_Oracle
 
 For a short tutorial (To be completed) check [here](http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html)
 (Using des credentials)
@@ -21,7 +21,8 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - [pandas](http://pandas.pydata.org/) >= 0.14
 - [termcolor](https://pypi.python.org/pypi/termcolor)
 - [PyTables](http://pytables.github.io/) (optional, for hdf5 output)
-- [future](http://python-future.org/) (for python 2/3 compatibility) 
+- [future](http://python-future.org/) (for python 2/3 compatibility)
+- [requests](http://docs.python-requests.org/en/master/)
 - **Note that you need to install python-future for python2/3 compatibility**
 
 ## Some *nice* features
@@ -39,10 +40,10 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - Many more
 
 ## Conda installation
-Now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box! 
+Now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box!
 
     conda install easyaccess -c mgckind
-    
+
 ## Interactive interpreter
 
 Assuming that ```easyaccess``` is in your path, you can enter the interactive interpreter by calling ```easyaccess``` without any command line arguments:
@@ -83,15 +84,15 @@ The query format is the same as the interpreter, SQL statement must end with ";"
 The configuration file is located at ```$HOME/.easyaccess/config.ini``` but everything can be configured from inside easyaccess type:
 
         DESDB ~> help config
-        
+
 to see the meanings of all the options, and:
 
         DESDB ~> config all show
-        
+
 to see the current values, to modify one value, e.g., the prefetch value
 
         DESDB ~> config prefetch set 50000
-        
+
 and to see any particular option (e.g., timeout):
 
         DESDB ~> config timeout show
@@ -101,4 +102,3 @@ and to see any particular option (e.g., timeout):
 Much of the functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the ```--help``` option
 
         easyaccess --help
-

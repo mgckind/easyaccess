@@ -3,3 +3,6 @@ MANIFEST
 build/
 .idea/
 TODO
+easyaccess.egg-info/
+HELP
+.cache/
