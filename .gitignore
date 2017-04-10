@@ -6,3 +6,4 @@ TODO
 easyaccess.egg-info/
 HELP
 .cache/
+dist/
