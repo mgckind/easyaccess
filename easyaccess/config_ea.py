@@ -5,13 +5,19 @@ try:
     from builtins import input, range
     import configparser
 except ImportError:
-    from __builtin__ import input, range
+    from __builtin__ import raw_input, range
     import ConfigParser as configparser
-
 import getpass
 import sys
 import cx_Oracle
 import os
+
+# raw_input only exists in python 2. This will take care of it
+try:
+    input = raw_input
+except NameError:
+    pass
+
 
 configcomment = """#
 # Easyaccess default parameters
