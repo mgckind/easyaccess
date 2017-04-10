@@ -869,25 +869,6 @@ Connected as {user} to {db}.
         data = self.cur.fetchall()
         return data
 
-    def get_tables_names_old(self):
-
-        if self.dbname in ('dessci', 'desoper'):
-            query = """
-            select distinct table_name from fgottenmetadata
-            union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-            des_users t2 where upper(t1.owner)=upper(t2.username) and
-             t1.owner not in ('DES_ADMIN')"""
-        if self.dbname in ('destest'):
-            query = """
-            select distinct table_name from fgottenmetadata
-            union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-            dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in
-             ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
-        temp = self.cur.execute(query)
-        tnames = pd.DataFrame(temp.fetchall())
-        table_list = tnames.values.flatten().tolist()
-        return table_list
-
     def get_tables_names(self):
 
         if self.dbname in ('dessci', 'desoper', 'destest', 'newsci'):
@@ -956,25 +937,8 @@ Connected as {user} to {db}.
         else:
             return options_colnames
 
-    def get_columnlist_old(self):
-        query = """SELECT distinct column_name from fgottenmetadata  order by column_name"""
-        temp = self.cur.execute(query)
-        cnames = pd.DataFrame(temp.fetchall())
-        col_list = cnames.values.flatten().tolist()
-        return col_list
-
     def get_columnlist(self):
         query = """SELECT column_name from DES_ADMIN.CACHE_COLUMNS"""
-        temp = self.cur.execute(query)
-        cnames = pd.DataFrame(temp.fetchall())
-        col_list = cnames.values.flatten().tolist()
-        return col_list
-
-    def get_columnlist_table(self, tablename):
-        query = """
-            SELECT distinct column_name from fgottenmetadata where
-             table_name = %s order by column_name""" % (
-            tablename)
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
