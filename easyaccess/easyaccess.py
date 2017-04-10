@@ -1547,7 +1547,7 @@ Connected as {user} to {db}.
         query = """
         SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES
         FROM user_segments s, user_tables t
-        WHERE s.segment_name = t.table_name
+        WHERE s.segment_name = t.table_name order by t.table_name
         """
 
         df = self.query_and_print(
