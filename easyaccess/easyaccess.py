@@ -1667,8 +1667,19 @@ Connected as {user} to {db}.
             where atc.table_name = '%s'""" % (link, table)
             comment_table = self.query_results(qcom)[0][0]
         except:
+            comment_table = ''
             print(colored("Table not found.", "red", self.ct))
             return
+
+        try:
+            qnum = """
+            select to_char(num_rows) from all_tables where
+            table_name='%s' and  owner = '%s' """ % (table, schema)
+            numrows_table = self.query_results(qnum)[0][0]
+            if numrows_table is None:
+                numrows_table = 'Not available'
+        except:
+            numrows_table = "Not available"
 
         # String formatting parameters
         params = dict(schema=schema, table=table, link=link,
@@ -1677,6 +1688,7 @@ Connected as {user} to {db}.
         if pattern:
             comm = """Description of %(table)s with """
             comm += """pattern %(pattern)s commented as: '%(comment)s'""" % params
+            comm += "\nEstimated number of rows:" + colored(" %s" % numrows_table, "green", self.ct)
             q = """
             select atc.column_name, atc.data_type,
             case atc.data_type
@@ -1693,6 +1705,7 @@ Connected as {user} to {db}.
             """ % params
         else:
             comm = """Description of %(table)s commented as: '%(comment)s'""" % params
+            comm += "\nEstimated number of rows:" + colored(" %s" % numrows_table, "green", self.ct)
             q = """
             select atc.column_name, atc.data_type,
             case atc.data_type
