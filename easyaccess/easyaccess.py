@@ -869,25 +869,6 @@ Connected as {user} to {db}.
         data = self.cur.fetchall()
         return data
 
-    def get_tables_names_old(self):
-
-        if self.dbname in ('dessci', 'desoper'):
-            query = """
-            select distinct table_name from fgottenmetadata
-            union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-            des_users t2 where upper(t1.owner)=upper(t2.username) and
-             t1.owner not in ('DES_ADMIN')"""
-        if self.dbname in ('destest'):
-            query = """
-            select distinct table_name from fgottenmetadata
-            union select distinct t1.owner || '.' || t1.table_name from all_tab_cols t1,
-            dba_users t2 where upper(t1.owner)=upper(t2.username) and t1.owner not in
-             ('XDB','SYSTEM','SYS', 'DES_ADMIN', 'EXFSYS' ,'MDSYS','WMSYS','ORDSYS')"""
-        temp = self.cur.execute(query)
-        tnames = pd.DataFrame(temp.fetchall())
-        table_list = tnames.values.flatten().tolist()
-        return table_list
-
     def get_tables_names(self):
 
         if self.dbname in ('dessci', 'desoper', 'destest', 'newsci'):
@@ -935,7 +916,7 @@ Connected as {user} to {db}.
     def get_userlist(self):
         if self.dbname in ('dessci', 'desoper'):
             query = 'select distinct username from des_users order by username'
-        if self.dbname in ('destest'):
+        if self.dbname in ('destest', 'newsci'):
             query = 'select distinct username from dba_users order by username'
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
@@ -956,25 +937,8 @@ Connected as {user} to {db}.
         else:
             return options_colnames
 
-    def get_columnlist_old(self):
-        query = """SELECT distinct column_name from fgottenmetadata  order by column_name"""
-        temp = self.cur.execute(query)
-        cnames = pd.DataFrame(temp.fetchall())
-        col_list = cnames.values.flatten().tolist()
-        return col_list
-
     def get_columnlist(self):
         query = """SELECT column_name from DES_ADMIN.CACHE_COLUMNS"""
-        temp = self.cur.execute(query)
-        cnames = pd.DataFrame(temp.fetchall())
-        col_list = cnames.values.flatten().tolist()
-        return col_list
-
-    def get_columnlist_table(self, tablename):
-        query = """
-            SELECT distinct column_name from fgottenmetadata where
-             table_name = %s order by column_name""" % (
-            tablename)
         temp = self.cur.execute(query)
         cnames = pd.DataFrame(temp.fetchall())
         col_list = cnames.values.flatten().tolist()
@@ -1547,7 +1511,7 @@ Connected as {user} to {db}.
         query = """
         SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES
         FROM user_segments s, user_tables t
-        WHERE s.segment_name = t.table_name
+        WHERE s.segment_name = t.table_name order by t.table_name
         """
 
         df = self.query_and_print(
@@ -1786,16 +1750,11 @@ Connected as {user} to {db}.
         if arg == '':
             return self.do_help('find_tables_with_column')
         query = """
-           SELECT table_name, column_name
-           FROM fgottenmetadata
-           WHERE column_name LIKE '%s'
-           UNION
-           SELECT LOWER(owner) || '.' || table_name, column_name
-           FROM all_tab_cols
-           WHERE column_name LIKE '%s'
-           AND owner NOT LIKE '%%SYS'
-           AND owner not in ('XDB','SYSTEM')
-           """ % (arg.upper(), arg.upper())
+           SELECT t.owner || '.' || t.table_name as table_name, t.column_name
+           FROM all_tab_cols t, DES_ADMIN.CACHE_TABLES d
+           WHERE t.column_name LIKE '%s'
+           AND t.table_name = d.table_name
+           """ % (arg.upper())
 
         self.query_and_print(query)
         return
