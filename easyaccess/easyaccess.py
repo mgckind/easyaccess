@@ -916,7 +916,7 @@ Connected as {user} to {db}.
     def get_userlist(self):
         if self.dbname in ('dessci', 'desoper'):
             query = 'select distinct username from des_users order by username'
-        if self.dbname in ('destest'):
+        if self.dbname in ('destest', 'newsci'):
             query = 'select distinct username from dba_users order by username'
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
@@ -1750,16 +1750,11 @@ Connected as {user} to {db}.
         if arg == '':
             return self.do_help('find_tables_with_column')
         query = """
-           SELECT table_name, column_name
-           FROM fgottenmetadata
-           WHERE column_name LIKE '%s'
-           UNION
-           SELECT LOWER(owner) || '.' || table_name, column_name
-           FROM all_tab_cols
-           WHERE column_name LIKE '%s'
-           AND owner NOT LIKE '%%SYS'
-           AND owner not in ('XDB','SYSTEM')
-           """ % (arg.upper(), arg.upper())
+           SELECT t.owner || '.' || t.table_name as table_name, t.column_name
+           FROM all_tab_cols t, DES_ADMIN.CACHE_TABLES d
+           WHERE t.column_name LIKE '%s'
+           AND t.table_name = d.table_name
+           """ % (arg.upper())
 
         self.query_and_print(query)
         return
