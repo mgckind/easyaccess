@@ -742,7 +742,17 @@ Connected as {user} to {db}.
                     # pass
                     if return_df:
                         return data
-                    print(data)
+                    if 'COMMENTS' in data.columns:
+                        try:
+                            width = data['COMMENTS'].str.len().max()
+                            format_f = lambda s: '{: <{width}}'.format(s, width=width)
+                            temp_col = format_f('COMMENTS')
+                            data = data.rename(columns={'COMMENTS': temp_col},inplace=True)
+                            print(data.to_string(formatters={temp_col: format_f}))
+                        except:
+                            pass
+                    else:
+                        print(data)
             else:
                 t2 = time.time()
                 tt.cancel()
