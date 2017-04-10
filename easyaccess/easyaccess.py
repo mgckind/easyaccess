@@ -54,8 +54,13 @@ except ImportError:
 try:
     import readline
     readline_present = True
+    try:
+        import gnureadline as readline
+    except ImportError:
+        pass
 except ImportError:
     readline_present = False
+
 
 sys.path.insert(0, os.getcwd())
 # For python functions to work
@@ -219,7 +224,10 @@ Connected as {user} to {db}.
         if self.use_rawinput and self.completekey:
             try:
                 import readline
-
+                try:
+                    import gnureadline as readline
+                except:
+                    pass
                 self.old_completer = readline.get_completer()
                 readline.set_completer(self.complete)
                 # readline.parse_and_bind(self.completekey+": complete")
@@ -271,7 +279,10 @@ Connected as {user} to {db}.
             if self.use_rawinput and self.completekey:
                 try:
                     import readline
-
+                    try:
+                        import gnureadline as readline
+                    except:
+                        pass
                     readline.set_completer(self.old_completer)
                 except ImportError:
                     pass
@@ -473,6 +484,10 @@ Connected as {user} to {db}.
         """
         if state == 0:
             import readline
+            try:
+                import gnureadline as readline
+            except:
+                pass
 
             # #overrides default delimiters
             readline.set_completer_delims(
