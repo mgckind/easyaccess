@@ -1,25 +1,39 @@
 package:
   name: easyaccess
-  version: "1.3.1"
+  version: "1.4.0"
 
 source:
-  fn: easyaccess-1.3.1.tar.gz
-  md5: 52eab3638697249f7cfda79fdd665bab
-  url: https://pypi.python.org/packages/c3/47/39a31eb7e3c1cc5b34a7cbd42ad6f881a810fd9e0598319404222a137599/easyaccess-1.3.1.tar.gz
-  
+  #fn: easyaccess-1.3.1.tar.gz
+  #md5: 52eab3638697249f7cfda79fdd665bab
+  #url: https://pypi.python.org/packages/c3/47/39a31eb7e3c1cc5b34a7cbd42ad6f881a810fd9e0598319404222a137599/easyaccess-1.3.1.tar.gz
+  git_rev: 1.4.0-a1
+  git_url: https://github.com/mgckind/easyaccess.git
 
 build:
   number: 0
+  preserve_egg_dir: True
+  no_link:
+    - bin/*
+  script: python setup.py install
+ #noarch_python: True
 
 
 requirements:
   build:
     - python
     - setuptools
+    - future
+    - requests
+    - termcolor
+    - fitsio >=0.9.8
+    - pandas >=0.14
+    - oracle-instantclient
+    - cx_oracle
 
   run:
     - python
     - future
+    - requests
     - termcolor
     - fitsio >=0.9.8
     - pandas >=0.14
@@ -30,10 +44,12 @@ test:
   # Python imports
   imports:
     - easyaccess
+    - cx_Oracle
 
 about:
   home: https://github.com/mgckind/easyaccess
   license: University of Illinois/NCSA Open Source License
+  license_file: LICENSE.txt
   summary: 'Python command line interpreter to access DES Oracle database'
 
 # See

@@ -1,4 +1,4 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.3.1"> <img src="https://img.shields.io/badge/release-v1.3.1-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.3.1"><img src="https://img.shields.io/badge/pypi-v1.3.1-orange.svg" alt="pypi version"/></a>
+# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.0"> <img src="https://img.shields.io/badge/release-v1.4.0-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.3.1"><img src="https://img.shields.io/badge/pypi-v1.3.1-orange.svg" alt="pypi version"/></a>
 ![help_screen](data/help_screenshot.png)
 
 Enhanced command line SQL interpreter client for astronomical databases.
@@ -10,13 +10,14 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 (Using des credentials)
 
 
-**Current version = 1.3.1**
+**Current version = 1.4.0-rc1**
 
 ## Requirements
 
 - Oracle Client > 11g.2 (External library, no python)
   Check [here](https://opensource.ncsa.illinois.edu/confluence/display/DESDM/Instructions+for+installing+Oracle+client+and+easyaccess+without+EUPS) for instructions on how to install these libraries
 - [cx_Oracle](https://bitbucket.org/anthony_tuininga/cx_oracle)
+  Note that cx_Oracle needs libaio on some Linux systems (e.g., #98)
 - [fitsio](https://github.com/esheldon/fitsio) >= 0.9.6
 - [pandas](http://pandas.pydata.org/) >= 0.14
 - [termcolor](https://pypi.python.org/pypi/termcolor)

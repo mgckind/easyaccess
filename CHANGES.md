@@ -3,7 +3,19 @@
 
 ## v1.4.0
 #### 2017-XXX-XX
-- Refactor and general clean up, now bin/ folder has the startup script
+- Refactor and huge clean up, now bin/ folder has the startup script (see PR #113 and #111)
+- Fix metadata and cache lookup for autocompletion (see #92, #94, #93)
+- Add estimate number of rows on describe_table when available (see #75)
+- Toggle color mode without exiting interpreter (see PR #110)
+- 80 character loading bar (see PR #103)
+- Added more information to help command (see PR #100 and #109)
+- Justify comments to the left in describe_table
+- Added `change_db` option switch between dabatases without logging out (see PR #90 , #86)
+- Fixes authentication and des service files
+- Added api to access descut services directly (see PR #87)
+- Fix readline issues related with some OS X (see #88 and #112) 
+
+
 ## v1.3.1
 #### 2016-MAY-24
 - Adds optional purge to drop_table (see PR #74)

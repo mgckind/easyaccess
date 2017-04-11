@@ -38,8 +38,6 @@ setup(
     author='Matias Carrasco Kind',
     author_email='mcarras2@illinois.edu',
     scripts=['bin/easyaccess'],
-    # py_modules=['easyaccess', 'easyaccess.eautils', 'easyaccess.version', 'easyaccess.config_ea',
-    #            'easyaccess.eaparser'],
     packages=pkgs,
     license='LICENSE.txt',
     description='Easy access to the DES DB. Enhanced command line SQL interpreter client for DES',
