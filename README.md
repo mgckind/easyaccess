@@ -25,7 +25,9 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - [future](http://python-future.org/) (for python 2/3 compatibility)
 - [requests](http://docs.python-requests.org/en/master/)
 - [gnureadline](https://github.com/ludwigschwardt/python-gnureadline) (optional, for better console behavior in OS X)
+- importlib (This is only needed if running python 2.6)
 - **Note that you need to install python-future for python2/3 compatibility**
+
 
 ## Some *nice* features
 - Nice output format (using pandas)
