@@ -10,7 +10,7 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 (Using des credentials)
 
 
-**Current version = 1.4.0-rc1**
+**Current version = 1.4.0-rc4**
 
 ## Requirements
 
@@ -46,7 +46,7 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 ## Conda installation
 Now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box!
 
-    conda install easyaccess -c mgckind
+    conda install easyaccess==1.4.0rc4 -c mgckind
 
 ## Interactive interpreter
 
