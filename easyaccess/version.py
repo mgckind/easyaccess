@@ -16,8 +16,11 @@ def last_pip_version():
     data = requests.get(url, verify=False).json()
     uploads = []
     for k in data['releases'].keys():
-        up_time = data['releases'][k][0]['upload_time']
-        uploads.append([k, datetime.strptime(up_time, '%Y-%m-%dT%H:%M:%S')])
+        try:
+            up_time = data['releases'][k][0]['upload_time']
+            uploads.append([k, datetime.strptime(up_time, '%Y-%m-%dT%H:%M:%S')])
+        except:
+            pass
     return sorted(uploads, key=lambda x: x[1])[-1][0]
 
 
