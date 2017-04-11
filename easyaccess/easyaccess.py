@@ -44,7 +44,7 @@ def without_color(line, color, mode=0):
 try:
     from termcolor import colored as with_color
 
-    def colored(line, color, mode=1):
+    def colored(line, color, mode=0):
         if mode == 1:
             return with_color(line, color)
         else:
@@ -2820,8 +2820,8 @@ def cli():
 
     load_bar = conf.getboolean('display', 'loading_bar')
 
-    if not conf.getboolean('display', 'color_terminal'):
-        colored = without_color
+    #if not conf.getboolean('display', 'color_terminal'):
+    #    colored = without_color
 
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
