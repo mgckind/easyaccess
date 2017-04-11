@@ -1168,8 +1168,7 @@ Connected as {user} to {db}.
         Change parameters from config file (config.ini). Smart autocompletion enabled
 
         Usage:
-            - config <parameter> show : Shows current value for parameter in config file
-                e.j.
+            - config <parameter> show : Shows current value of parameter
             - config <parameter> set <value> : Sets parameter to given value
             - config all show: Shows all parameters and their values
             - config filepath: Prints the path to the config file
