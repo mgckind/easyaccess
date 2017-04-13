@@ -17,8 +17,9 @@ For a short tutorial (To be completed) check [here](http://deslogin.cosmology.il
 - Oracle Client > 11g.2 (External library, no python)
   Check [here](https://opensource.ncsa.illinois.edu/confluence/display/DESDM/Instructions+for+installing+Oracle+client+and+easyaccess+without+EUPS) for instructions on how to install these libraries
 - [cx_Oracle](https://bitbucket.org/anthony_tuininga/cx_oracle)
-  
+
   Note that cx_Oracle needs libaio on some Linux systems (e.g., #98)
+  
   Note that cx_Oracle needs libbz2 on some Linux systems
 - [fitsio](https://github.com/esheldon/fitsio) >= 0.9.6
 - [pandas](http://pandas.pydata.org/) >= 0.14
