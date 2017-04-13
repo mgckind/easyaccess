@@ -305,7 +305,7 @@ Connected as {user} to {db}.
                 return
             func()
         else:
-            self.do_clear(None)
+            self.do_clear(True)
             dl.print_deslogo(self.ct)
             self.stdout.write(str(self.intro) + "\n")
             names = self.get_names()
@@ -337,13 +337,13 @@ Connected as {user} to {db}.
                     else:
                         cmds_undoc.append(cmd)
             self.stdout.write("%s\n" % str(self.doc_leader))
-            self.print_topics(self.doc_header, cmds_doc, 15, 80)
-            self.print_topics(self.docdb_header, cmds_db, 15, 80)
-            self.print_topics(self.misc_header, list(help.keys()), 15, 80)
-            self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
+            self.print_topics(self.doc_header, cmds_doc, 80)
+            self.print_topics(self.docdb_header, cmds_db, 80)
+            self.print_topics(self.misc_header, list(help.keys()), 80)
+            self.print_topics(self.undoc_header, cmds_undoc, 80)
 
             print(colored(' *Default Input*', 'cyan', self.ct))
-            print('===================================================')
+            print(self.ruler * 80)
             print("* To run SQL queries just add ; at the end of query")
             print("* To write to a file  : select ... from ... "
                   "where ... ; > filename")
@@ -358,12 +358,12 @@ Connected as {user} to {db}.
             print()
             print("* To access an online tutorial type: online_tutorial ")
 
-    def print_topics(self, header, cmds, cmdlen, maxcol):
+    def print_topics(self, header, cmds, maxcol):
         if header is not None:
             if cmds:
                 self.stdout.write("%s\n" % str(header))
                 if self.ruler:
-                    self.stdout.write("%s\n" % str(self.ruler * len(header)))
+                    self.stdout.write("%s\n" % str(self.ruler * maxcol))
                 self.columnize(cmds, maxcol - 1)
                 self.stdout.write("\n")
 
