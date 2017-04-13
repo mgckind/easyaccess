@@ -61,6 +61,9 @@ try:
 except ImportError:
     readline_present = False
 
+positive = ['yes', 'y', 'true', 't', 'on']
+negative = ['no', 'n', 'false', 'f', 'off']
+input_options = ', '.join([i[0]+'/'+i[1] for i in zip(positive, negative)])
 
 sys.path.insert(0, os.getcwd())
 # For python functions to work
@@ -137,19 +140,15 @@ Connected as {user} to {db}.
         self.refresh = refresh
         self.desconfig = desconf
         # ADW: It would be better to set these automatically...
-        self.editor = os.getenv(
-            'EDITOR', self.config.get('easyaccess', 'editor'))
+        self.editor = os.getenv('EDITOR', self.config.get('easyaccess', 'editor'))
         self.timeout = self.config.getint('easyaccess', 'timeout')
         self.prefetch = self.config.getint('easyaccess', 'prefetch')
         self.loading_bar = self.config.getboolean('display', 'loading_bar')
         self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
-        self.outfile_max_mb = self.config.getint(
-            'easyaccess', 'outfile_max_mb')
+        self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
         self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
-        self.desdm_coldefs = self.config.getboolean(
-            'easyaccess', 'desdm_coldefs')
-        self.trim_whitespace = self.config.getboolean(
-            'easyaccess', 'trim_whitespace')
+        self.desdm_coldefs = self.config.getboolean('easyaccess', 'desdm_coldefs')
+        self.trim_whitespace = self.config.getboolean('easyaccess', 'trim_whitespace')
         self.dbname = db
         self.buff = None
         self.interactive = interactive
@@ -181,9 +180,7 @@ Connected as {user} to {db}.
                 print("\n   Retrying...\n")
                 time.sleep(5)
         if not connected:
-            print(
-                '\n ** Could not successfully connect to DB. '
-                'Try again later. Aborting. ** \n')
+            print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
             os._exit(0)
         self.cur = self.con.cursor()
         self.cur.arraysize = int(self.prefetch)
@@ -198,10 +195,8 @@ Connected as {user} to {db}.
         """
         print('Ctrl+Z pressed')
         print('Job = %d Stopped' % pid)
-        print(colored(
-            '* Type bg to send this job to the background *', 'cyan', self.ct))
-        print(colored(
-            '* Type fg to take this job to the foreground *', 'cyan', self.ct))
+        print(colored('* Type bg to send this job to the background *', 'cyan', self.ct))
+        print(colored('* Type fg to take this job to the foreground *', 'cyan', self.ct))
         print()
         os.kill(pid, signal.SIGSTOP)
         try:
@@ -292,7 +287,7 @@ Connected as {user} to {db}.
         List available commands with "help" or detailed help with "help cmd".
         """
         if arg:
-            # XXX check arg syntax
+            # TODO check arg syntax
             try:
                 func = getattr(self, 'help_' + arg)
             except AttributeError:
@@ -1141,8 +1136,7 @@ Connected as {user} to {db}.
         if readline_present:
             readline.write_history_file(history_file)
         if self.writeconfig:
-            self.config.set('display', 'loading_bar',
-                            'yes' if load_bar else 'no')
+            self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')
             config_mod.write_config(config_file, self.config)
         os._exit(0)
 
@@ -1229,35 +1223,36 @@ Connected as {user} to {db}.
             val = oneline.split('set')[1]
             if val == '':
                 return self.do_help('config')
-            int_keys = ['prefetch', 'histcache', 'timeout', 'max_rows', 'width',
-                        'max_columns', 'outfile_max_mb', 'nullvalue', 'loading_bar',
-                        'autocommit', 'max_col_width']
-            # if key in int_keys: val=int(val)
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
+                    if key in ['loading_bar', 'color_terminal', 'autocommit', 'trim_whitespace',
+                               'desdm_coldefs']:
+                        val = val.lower()
+                        temp = True if val in positive else False if val in negative else 'error'
+                        if temp == 'error':
+                            print(colored('\nInvalid value, options '
+                                          'are: {}\n'.format(input_options), "red", self.ct))
+                            return
+                        else:
+                            val = 'yes' if temp else 'no'
+                            if key == 'loading_bar':
+                                load_bar = temp
+                            if key == 'color_terminal':
+                                self.ct = temp
+                                self.set_messages()
                     self.config.set(section, key, str(val))
-                    if key == 'loading_bar':
-                        load_bar = True if val == 'yes' else False
-                    if key == 'color_terminal':
-                        self.ct = True if val == 'yes' else False
-                        self.set_messages()
                     self.writeconfig = True
                     break
-            self.config.set('display', 'loading_bar',
-                            'yes' if load_bar else 'no')
+            self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')
             config_mod.write_config(config_file, self.config)
             if key == 'max_columns':
-                pd.set_option('display.max_columns',
-                              self.config.getint('display', 'max_columns'))
+                pd.set_option('display.max_columns', self.config.getint('display', 'max_columns'))
             if key == 'max_rows':
-                pd.set_option('display.max_rows',
-                              self.config.getint('display', 'max_rows'))
+                pd.set_option('display.max_rows', self.config.getint('display', 'max_rows'))
             if key == 'width':
-                pd.set_option('display.width',
-                              self.config.getint('display', 'width'))
+                pd.set_option('display.width', self.config.getint('display', 'width'))
             if key == 'max_colwidth':
-                pd.set_option('display.max_colwidth',
-                              self.config.getint('display', 'max_colwidth'))
+                pd.set_option('display.max_colwidth', self.config.getint('display', 'max_colwidth'))
             if key == 'editor':
                 self.editor = self.config.get('easyaccess', 'editor')
             if key == 'timeout':
@@ -1265,22 +1260,17 @@ Connected as {user} to {db}.
             if key == 'prefetch':
                 self.prefetch = self.config.get('easyaccess', 'prefetch')
             if key == 'loading_bar':
-                self.loading_bar = self.config.getboolean(
-                    'display', 'loading_bar')
+                self.loading_bar = self.config.getboolean('display', 'loading_bar')
             if key == 'nullvalue':
                 self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
             if key == 'outfile_max_mb':
-                self.outfile_max_mb = self.config.getint(
-                    'easyaccess', 'outfile_max_mb')
+                self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
             if key == 'autocommit':
-                self.autocommit = self.config.getboolean(
-                    'easyaccess', 'autocommit')
+                self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
             if key == 'trim_whitespace':
-                self.autocommit = self.config.getboolean(
-                    'easyaccess', 'trim_whitespace')
+                self.trim_whitespace = self.config.getboolean('easyaccess', 'trim_whitespace')
             if key == 'desdm_coldefs':
-                self.autocommit = self.config.getboolean(
-                    'easyaccess', 'desdm_coldefs')
+                self.desdm_coldefs = self.config.getboolean('easyaccess', 'desdm_coldefs')
 
             return
         else:
@@ -1888,8 +1878,7 @@ Connected as {user} to {db}.
 
         for column, dtype in zip(columns, dtypes):
             if self.desdm_coldefs:
-                qtable += '%s %s,' % (column,
-                                      eatypes.numpy2desdm([column, dtype]))
+                qtable += '%s %s,' % (column, eatypes.numpy2desdm([column, dtype]))
             else:
                 qtable += '%s %s,' % (column, eatypes.numpy2oracle(dtype))
 
@@ -2637,8 +2626,7 @@ class connect(easy_or):
             if iterator:
                 data = IterData(temp, extra_func)
             else:
-                data = pd.DataFrame(temp.fetchall(), columns=[
-                                    rec[0] for rec in temp.description])
+                data = pd.DataFrame(temp.fetchall(), columns=[rec[0] for rec in temp.description])
                 if extra_func is not None:
                     for kf in range(len(funs)):
                         data = fun_utils.updateDF(data, funs, args, names, kf)
@@ -2699,8 +2687,7 @@ class connect(easy_or):
 
         """
         try:
-            self.do_load_table(table_file, name=name,
-                               chunksize=chunksize, memsize=memsize)
+            self.do_load_table(table_file, name=name, chunksize=chunksize, memsize=memsize)
             return True
         except:
             # exception
@@ -2724,8 +2711,7 @@ class connect(easy_or):
         True if success otherwise False
         """
         try:
-            self.do_append_table(table_file, name=name,
-                                 chunksize=chunksize, memsize=memsize)
+            self.do_append_table(table_file, name=name, chunksize=chunksize, memsize=memsize)
             return True
         except:
             return False
@@ -2816,12 +2802,7 @@ def cli():
     pd.set_option('display.width', conf.getint('display', 'width'))
     pd.set_option('display.max_columns', conf.getint('display', 'max_columns'))
     pd.set_option('display.max_colwidth', conf.getint('display', 'max_colwidth'))
-
     load_bar = conf.getboolean('display', 'loading_bar')
-
-    #if not conf.getboolean('display', 'color_terminal'):
-    #    colored = without_color
-
     if args.quiet:
         conf.set('display', 'loading_bar', 'no')
 
