@@ -9,6 +9,7 @@
 - Toggle color mode without exiting interpreter (see PR #110)
 - 80 character loading bar (see PR #103)
 - Added more information to help command (see PR #100 and #109)
+- Fix config option and boolean values (see Pr #115)
 - Justify comments to the left in describe_table
 - Added `change_db` option switch between dabatases without logging out (see PR #90 , #86)
 - Fixes authentication and des service files
