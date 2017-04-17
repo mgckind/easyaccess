@@ -2,7 +2,7 @@
 
 
 ## v1.4.0
-#### 2017-XXX-XX
+#### 2017-APR-16
 - Refactor and huge clean up, now bin/ folder has the startup script (see PR #113 and #111)
 - Fix metadata and cache lookup for autocompletion (see #92, #94, #93)
 - Add estimate number of rows on describe_table when available (see #75)
@@ -10,7 +10,7 @@
 - 80 character loading bar (see PR #103)
 - Added more information to help command (see PR #100 and #109)
 - Fix config option and boolean values (see Pr #115)
-- Justify comments to the left in describe_table
+- Justify comments to the left in describe_table i(#105)
 - Added `change_db` option switch between dabatases without logging out (see PR #90 , #86)
 - Fixes authentication and des service files
 - Added api to access descut services directly (see PR #87)
