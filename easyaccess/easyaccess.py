@@ -540,7 +540,7 @@ Connected as {user} to {db}.
                 if app.find('check') > -1:
                     print('\nChecking statement...')
                     try:
-                        self.cur.parse(query)
+                        self.cur.parse(query.encode())
                         print(colored('Ok!\n', 'green', self.ct))
                         return
                     except:
