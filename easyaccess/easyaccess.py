@@ -2446,7 +2446,7 @@ Connected as {user} to {db}.
 
     def do_online_tutorial(self, line):
         tut = webbrowser.open_new_tab(
-            'http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html')
+            'http://matias-ck.com/easyaccess/')
         del tut
 
 
