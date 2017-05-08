@@ -8,6 +8,20 @@ import signal
 import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.dircache as dircache
 
+def without_color(line, color, mode=0):
+    return line
+try:
+    from termcolor import colored as with_color
+
+    def colored(line, color, mode=0):
+        if mode == 1:
+            return with_color(line, color)
+        else:
+            return line
+except ImportError:
+    colored = without_color
+
+
 
 def print_exception(pload=None, mode=1):
     (type, value, traceback) = sys.exc_info()
