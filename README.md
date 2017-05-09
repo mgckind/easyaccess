@@ -6,7 +6,7 @@ Enhanced command line SQL interpreter client for astronomical databases.
 Python Command Line Interpreter to access Oracle DES DB
 using cx_Oracle
 
-For a short tutorial (To be completed) check [here](http://deslogin.cosmology.illinois.edu/~mcarras2/data/DESDM.html)
+For a short tutorial check [here](http://matias-ck.com/easyaccess)
 (Using des credentials)
 
 
