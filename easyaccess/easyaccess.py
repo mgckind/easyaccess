@@ -131,7 +131,7 @@ Connected as {user} to {db}.
             '\n *DB Commands*', "cyan", self.ct) + '      (type help <command>):'
 
     def __init__(self, conf, desconf, db, interactive=True,
-                 quiet=False, refresh=True):
+                 quiet=False, refresh=True, pymod=False):
         cmd.Cmd.__init__(self)
         self.config = conf
         self.ct = int(self.config.getboolean('display', 'color_terminal'))
@@ -190,15 +190,24 @@ Connected as {user} to {db}.
             pw1 = getpass.getpass(prompt='Enter new password:')
             if re.search('\W', pw1):
                 print(colored("\nPassword contains whitespace, not set\n", "red", self.ct))
-                os._exit(0)
+                if pymod:
+                    raise Exception('Not connected to the DB')
+                else:
+                    os._exit(0)
             if not pw1:
                 print(colored("\nPassword cannot be blank\n", "red", self.ct))
-                os._exit(0)
+                if pymod:
+                    raise Exception('Not connected to the DB')
+                else:
+                    os._exit(0)
             pw2 = getpass.getpass(prompt='Re-Enter new password:')
             print()
             if pw1 != pw2:
                 print(colored("Passwords don't match, not set\n", "red", self.ct))
-                os._exit(0)
+                if pymod:
+                    raise Exception('Not connected to the DB')
+                else:
+                    os._exit(0)
             try:
                 self.con = cx_Oracle.connect(self.user, self.password,
                                              dsn=self.dsn, newpassword=pw1)
@@ -212,7 +221,10 @@ Connected as {user} to {db}.
                               lasterr, "red", self.ct))
         if not connected:
             print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
-            os._exit(0)
+            if pymod:
+                raise Exception('Not connected to the DB')
+            else:
+                os._exit(0)
         self.cur = self.con.cursor()
         self.cur.arraysize = int(self.prefetch)
         msg = self.last_pass_changed()
@@ -2569,7 +2581,7 @@ class connect(easy_or):
                 passwd = getpass.getpass(prompt='Enter password : ')
             desconf.set('db-' + db, 'user', user)
             desconf.set('db-' + db, 'passwd', passwd)
-        easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet)
+        easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet, pymod=True)
         try:
             self.cur.execute('create table FGOTTENMETADATA (ID int)')
         except:
