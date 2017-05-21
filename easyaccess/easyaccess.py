@@ -162,23 +162,54 @@ Connected as {user} to {db}.
         self.password = self.desconfig.get('db-' + self.dbname, 'passwd')
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
         self.dsn = cx_Oracle.makedsn(**kwargs)
+        ora_code = 0
         if not self.quiet:
             print('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
         for tries in range(3):
             try:
-                self.con = cx_Oracle.connect(
-                    self.user, self.password, dsn=self.dsn)
+                self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
                 if self.autocommit:
                     self.con.autocommit = True
                 connected = True
                 break
             except Exception as e:
+                trace = sys.exc_info()
+                ora_code = trace[1].args[0].code
+                if ora_code == 28001:
+                    break
                 lasterr = str(e).strip()
                 print(colored("Error when trying to connect to database: %s" %
                               lasterr, "red", self.ct))
                 print("\n   Retrying...\n")
                 time.sleep(5)
+        if ora_code == 28001:
+            print(colored("ORA-28001: the password has expired "
+                  "or cannot be the default one", "red", self.ct))
+            print(colored("Need to create a new password\n", "red", self.ct))
+            pw1 = getpass.getpass(prompt='Enter new password:')
+            if re.search('\W', pw1):
+                print(colored("\nPassword contains whitespace, not set\n", "red", self.ct))
+                os._exit(0)
+            if not pw1:
+                print(colored("\nPassword cannot be blank\n", "red", self.ct))
+                os._exit(0)
+            pw2 = getpass.getpass(prompt='Re-Enter new password:')
+            print()
+            if pw1 != pw2:
+                print(colored("Passwords don't match, not set\n", "red", self.ct))
+                os._exit(0)
+            try:
+                self.con = cx_Oracle.connect(self.user, self.password,
+                                             dsn=self.dsn, newpassword=pw1)
+                if self.autocommit:
+                    self.con.autocommit = True
+                self.password = pw1
+                connected = True
+            except Exception as e:
+                lasterr = str(e).strip()
+                print(colored("Error when trying to connect to database: %s" %
+                              lasterr, "red", self.ct))
         if not connected:
             print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
             os._exit(0)
