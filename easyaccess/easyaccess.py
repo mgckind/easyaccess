@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# TODO: save new password in .desservice
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -215,6 +216,8 @@ Connected as {user} to {db}.
                     self.con.autocommit = True
                 self.password = pw1
                 connected = True
+                self.desconfig.set('db-'+self.dbname, 'passwd', pw1)
+                config_mod.write_desconfig(desfile, self.desconfig)
             except Exception as e:
                 lasterr = str(e).strip()
                 print(colored("Error when trying to connect to database: %s" %
