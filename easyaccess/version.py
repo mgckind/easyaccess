@@ -24,7 +24,7 @@ def last_pip_version():
     return sorted(uploads, key=lambda x: x[1])[-1][0]
 
 
-version_tag = (1, 4, 1, 'dev-b1ac48a')
+version_tag = (1, 4, 1, 'dev-e5fc75')
 __version__ = '.'.join(map(str, version_tag[:3]))
 
 if len(version_tag) > 3:

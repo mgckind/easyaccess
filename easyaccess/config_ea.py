@@ -11,6 +11,7 @@ import getpass
 import sys
 import cx_Oracle
 import os
+import re
 
 # raw_input only exists in python 2. This will take care of it
 try:
@@ -211,6 +212,29 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
                     break
                 except:
                     (type, value, traceback) = sys.exc_info()
+                    print()
+                    if value.message.code == 28001:
+                        print("ORA-28001: the password has expired or cannot be the default one")
+                        print("Need to create a new password\n")
+                        password = pw1
+                        pw1 = getpass.getpass(prompt='Enter new password:')
+                        if re.search('\W', pw1):
+                            print("\nPassword contains whitespace, not set\n")
+                            sys.exit(0)
+                        if not pw1:
+                            print("\nPassword cannot be blank\n")
+                            sys.exit(0)
+                        pw2 = getpass.getpass(prompt='Re-Enter new password:')
+                        if pw1 != pw2:
+                            print("Passwords don't match, not set\n")
+                            sys.exit(0)
+                        try:
+                            ctemp = cx_Oracle.connect(user, password, dsn=dsn, newpassword=pw1)
+                            good = True
+                            break
+                        except:
+                            print('\n Check your credentials and/or database access\n')
+                            sys.exit(0)
                     print(value)
                     if value.message.code == 1017:
                         pass
