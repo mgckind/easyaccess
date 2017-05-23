@@ -1,5 +1,12 @@
 # Changes
 
+## v1.4.1
+#### 2017-MAY-23
+- Add option to reset password after expiration (see #125)
+- Add suppport for new databases (see #126)
+- Update tutorial link
+- Fix minor bugs and update commands (see #119 #120)
+- Fix bugs regarding cx_Oracle (see #117)
 
 ## v1.4.0
 #### 2017-APR-16
