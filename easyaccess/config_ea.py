@@ -23,7 +23,7 @@ except NameError:
 configcomment = """#
 # Easyaccess default parameters
 #
-# database        : Default is dessci, change to desoper, destest and others
+# database        : Default is dessci, change to desoper, destest, oldsci and others
 #                   Make sure the db-"database" section is in the .desservices.ini
 # editor          : Default editor to open from inside easyaccess if $EDITOR is not set
 # prefetch        : Prefetch number of rows to get from oracle (not the number of total rows)
@@ -165,10 +165,10 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     if not db[:3] == 'db-':
         db = 'db-' + db
 
-    if db == 'db-dessci':
+    if db == 'db-oldsci':
         db_alter = 'db-desoper'
     elif db == 'db-desoper':
-        db_alter = 'db-dessci'
+        db_alter = 'db-oldsci'
     else:
         db_alter = None
     config = configparser.ConfigParser()
@@ -183,11 +183,11 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         if verbose:
             print()
 
-    databases = ['db-desoper', 'db-dessci', 'db-destest', 'db-newsci']  # most used ones anyways
+    databases = ['db-desoper', 'db-dessci', 'db-destest', 'db-oldsci']  # most used ones anyways
 
     if db not in databases and not config.has_section(db):
         check_db = input(
-            '\nDB entered is not dessci, desoper, destest or newsci '
+            '\nDB entered is not dessci, desoper, destest or oldsci '
             'or in DES_SERVICE file, continue anyway [y]/n\n')
         if check_db in ('n', 'N', 'no', 'No', 'NO'):
             sys.exit(0)
@@ -196,7 +196,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         if verbose:
             print('\nAdding section %s to des_service file\n' % db)
         configwrite = True
-        if db == 'db-newsci':
+        if db == 'db-dessci':
             kwargs = {'host': server_2, 'port': port_n, 'service_name': 'dessci'}
         else:
             kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
@@ -254,7 +254,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     if not config.has_option(db, 'passwd'):
         configwrite = True
         config.set(db, 'passwd', pw1)
-    if db == 'db-newsci':
+    if db == 'db-dessci':
         if not config.has_option(db, 'name'):
             configwrite = True
             config.set(db, 'name', 'dessci')
