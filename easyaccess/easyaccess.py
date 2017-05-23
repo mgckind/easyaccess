@@ -2577,13 +2577,16 @@ class connect(easy_or):
             db = conf.get('easyaccess', 'database')
         else:
             db = section
-        desconf = config_mod.get_desconfig(desfile, db)
         if user is not None:
             print('Bypassing .desservices file with user : %s' % user)
             if passwd is None:
                 passwd = getpass.getpass(prompt='Enter password : ')
+            desconf = config_mod.get_desconfig(desfile, db,
+                                               verbose=False, user=user, pw1=passwd)
             desconf.set('db-' + db, 'user', user)
             desconf.set('db-' + db, 'passwd', passwd)
+        else:
+            desconf = config_mod.get_desconfig(desfile, db)
         easy_or.__init__(self, conf, desconf, db, interactive=False, quiet=quiet, pymod=True)
         try:
             self.cur.execute('create table FGOTTENMETADATA (ID int)')
