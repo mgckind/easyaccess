@@ -213,7 +213,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
                 except:
                     (type, value, traceback) = sys.exc_info()
                     print()
-                    if value.message.code == 28001:
+                    if value.args[0].code == 28001:
                         print("ORA-28001: the password has expired or cannot be the default one")
                         print("Need to create a new password\n")
                         password = pw1
@@ -236,7 +236,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
                             print('\n Check your credentials and/or database access\n')
                             sys.exit(0)
                     print(value)
-                    if value.message.code == 1017:
+                    if value.args[0].code == 1017:
                         pass
                     else:
                         sys.exit(0)
