@@ -198,6 +198,8 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         configwrite = True
         if db == 'db-dessci':
             kwargs = {'host': server_2, 'port': port_n, 'service_name': 'dessci'}
+        elif db == 'db-oldsci':
+            kwargs = {'host': server_n, 'port': port_n, 'service_name': 'dessci'}
         else:
             kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
         dsn = cx_Oracle.makedsn(**kwargs)
@@ -261,6 +263,13 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             if not config.has_option(db, 'server'):
                 configwrite = True
                 config.set(db, 'server', server_2)
+    if db == 'db-oldsci':
+        if not config.has_option(db, 'name'):
+            configwrite = True
+            config.set(db, 'name', 'dessci')
+            if not config.has_option(db, 'server'):
+                configwrite = True
+                config.set(db, 'server', server_n)
     else:
         if not config.has_option(db, 'name'):
             configwrite = True
