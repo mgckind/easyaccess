@@ -1,9 +1,10 @@
 # Changes
 
-## v1.4.1
+## v1.4.2
 #### 2017-MAY-23
+- Fix a minor migration bug from version 1.4.1
 - Add option to reset password after expiration (see #125)
-- Add suppport for new databases (see #126)
+- Add support for new databases (see #126)
 - Update tutorial link
 - Fix minor bugs and update commands (see #119 #120)
 - Fix bugs regarding cx_Oracle (see #117)
@@ -21,7 +22,7 @@
 - Added `change_db` option switch between dabatases without logging out (see PR #90 , #86)
 - Fixes authentication and des service files
 - Added api to access descut services directly (see PR #87)
-- Fix readline issues related with some OS X (see #88 and #112) 
+- Fix readline issues related with some OS X (see #88 and #112)
 
 
 ## v1.3.1
@@ -75,11 +76,11 @@
 #### 2015-APR-28
 - **Change pyfits to fitsio**
 - Added autocommit as configuration option to commit changes or not by default (default = yes)
-- Added timeout (1 min) to initial metadata cache loading 
+- Added timeout (1 min) to initial metadata cache loading
 
 ## v1.0.8
-#### 2015-APR-27 
-- Fixed bug with single character for fits 
+#### 2015-APR-27
+- Fixed bug with single character for fits
 - Fix enconding issues (between ASCII and UTF-8)
 - Loading bar termination issue fixed
 - Added message after loading table for sharing tables
@@ -88,14 +89,14 @@
 - Add python API features for key commands and bugfix (All commnands can still be accessed from python API)
 
 ## v1.0.7
-#### 2015-MAR-31 
+#### 2015-MAR-31
 - Null and NaN values fixed and customizable (config nullvalue set -9999) It will print 'Null' on the screen but nullvalue on the files
 - Added a SQL syntax checker (<SQL query> ; < check)
-- Reformatted help 
+- Reformatted help
 
 ## v1.0.6
-#### 2015-MAR-25 
-- Background with Ctrl-Z, bg and fg 
+#### 2015-MAR-25
+- Background with Ctrl-Z, bg and fg
 - optional loading bar from config.ini file (default = yes)
 - Connections trials added and error information when not connected
 - print version at startup
@@ -104,18 +105,18 @@
 - Fix issue with describe_table in latest DB schemas
 
 ## v1.0.5
-#### 2015-MAR-20 
+#### 2015-MAR-20
 - version 1.0.4 was skipped to be in sync with pip
 - Added optional color in config file (default = yes)
 - Added quiet option for initialization (easyaccess -q)
 - command to open an online tutorial (online_tutorial)
 
 ## v1.0.3
-#### 2015-MAR-18 
+#### 2015-MAR-18
 - Fix an installation bug
 
 ## v1.0.2
-#### 2015-MAR-18 
+#### 2015-MAR-18
 - Added DES Logo
 - Loading bar
 - Check whether des service file is read/write only by user, otherwise it change access mode
@@ -125,12 +126,11 @@
 
 
 ## v1.0.1
-#### 2015-FEB-20 
-- Fix a bug at exit after error 
+#### 2015-FEB-20
+- Fix a bug at exit after error
 - Added a checker of DES_SERVICES files and prompt user/password when file doesn't exist
 - Minor bugs
 
 ## v1.0.0
 #### 2015-FEB-17
 - release
-

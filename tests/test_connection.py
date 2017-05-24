@@ -17,7 +17,7 @@ class TestConnection(unittest.TestCase):
         self.assertTrue(con.ping())
 
     def test_connect_newsci(self):
-        con = ea.connect('newsci', quiet=True)
+        con = ea.connect('oldsci', quiet=True)
         self.assertTrue(con.ping())
 
     # @unittest.skip("Not implemented yet")

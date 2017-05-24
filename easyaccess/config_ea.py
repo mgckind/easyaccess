@@ -295,7 +295,10 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
                 config.set(db, 'passwd', pw1)
             if not config.has_option(db, 'name'):
                 configwrite = True
-                config.set(db, 'name', db[3:])
+                if db_alter == 'db-oldsci':
+                    config.set(db, 'name', 'dessci')
+                else:
+                    config.set(db, 'name', 'desoper')
             if not config.has_option(db, 'server'):
                 configwrite = True
                 config.set(db, 'server', server_n)
