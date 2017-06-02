@@ -1828,7 +1828,7 @@ Connected as {user} to {db}.
            SELECT t.owner || '.' || t.table_name as table_name, t.column_name
            FROM all_tab_cols t, DES_ADMIN.CACHE_TABLES d
            WHERE t.column_name LIKE '%s'
-           AND t.table_name = d.table_name
+           AND t.owner || '.' || t.table_name = d.table_name
            """ % (arg.upper())
 
         self.query_and_print(query)
