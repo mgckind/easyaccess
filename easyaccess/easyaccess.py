@@ -1729,9 +1729,18 @@ Connected as {user} to {db}.
             where atc.table_name = '%s'""" % (link, table)
             comment_table = self.query_results(qcom)[0][0]
         except:
-            comment_table = ''
-            print(colored("Table not found.", "red", self.ct))
-            return
+            try:
+            	schema, table, link = self.get_tablename_tuple(tablename)
+            	# schema, table and link are now valid.
+            	link = "@" + link if link else ""
+            	qcom = """
+            	select comments from all_mview_comments%s atc
+            	where atc.mview_name = '%s'""" % (link, table)
+            	comment_table = self.query_results(qcom)[0][0]
+            except:
+            	comment_table = ''
+            	print(colored("Table not found.", "red", self.ct))
+            	return
 
         try:
             qnum = """
