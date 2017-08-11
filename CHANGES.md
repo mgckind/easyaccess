@@ -1,5 +1,9 @@
 # Changes
 
+## v1.4.3
+#### XXXX-XXX-XX
+- Allow describe_table to work for materialized views (see #135)
+
 ## v1.4.2
 #### 2017-MAY-23
 - Fix a minor migration bug from version 1.4.1
