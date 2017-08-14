@@ -166,8 +166,8 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         db = 'db-' + db
 
     if db == 'db-oldsci':
-        db_alter = 'db-desoper'
-    elif db == 'db-desoper':
+        db_alter = 'db-oldoper'
+    elif db == 'db-oldoper':
         db_alter = 'db-oldsci'
     else:
         db_alter = None
@@ -183,13 +183,13 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         if verbose:
             print()
 
-    databases = ['db-desoper', 'db-dessci', 'db-destest', 'db-oldsci']  # most used ones anyways
+    databases = ['db-desoper', 'db-dessci', 'db-destest', 'db-oldsci', 'db-oldoper']
 
     if db not in databases and not config.has_section(db):
         check_db = input(
             '\nDB entered is not dessci, desoper, destest or oldsci '
             'or in DES_SERVICE file, continue anyway [y]/n\n')
-        if check_db in ('n', 'N', 'no', 'No', 'NO'):
+        if check_db in ('n', 'N', 'no', 'No', 'NO', 'nO'):
             sys.exit(0)
 
     if not config.has_section(db):
@@ -200,6 +200,10 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             kwargs = {'host': server_2, 'port': port_n, 'service_name': 'dessci'}
         elif db == 'db-oldsci':
             kwargs = {'host': server_n, 'port': port_n, 'service_name': 'dessci'}
+        elif db == 'db-oldoper':
+            kwargs = {'host': server_n, 'port': port_n, 'service_name': 'desoper'}
+        elif db == 'db-desoper':
+            kwargs = {'host': server_2, 'port': port_n, 'service_name': 'desoper'}
         else:
             kwargs = {'host': server_n, 'port': port_n, 'service_name': db[3:]}
         dsn = cx_Oracle.makedsn(**kwargs)
@@ -263,10 +267,24 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             if not config.has_option(db, 'server'):
                 configwrite = True
                 config.set(db, 'server', server_2)
-    if db == 'db-oldsci':
+    elif db == 'db-desoper':
+        if not config.has_option(db, 'name'):
+            configwrite = True
+            config.set(db, 'name', 'desoper')
+            if not config.has_option(db, 'server'):
+                configwrite = True
+                config.set(db, 'server', server_2)
+    elif db == 'db-oldsci':
         if not config.has_option(db, 'name'):
             configwrite = True
             config.set(db, 'name', 'dessci')
+            if not config.has_option(db, 'server'):
+                configwrite = True
+                config.set(db, 'server', server_n)
+    elif db == 'db-oldoper':
+        if not config.has_option(db, 'name'):
+            configwrite = True
+            config.set(db, 'name', 'desoper')
             if not config.has_option(db, 'server'):
                 configwrite = True
                 config.set(db, 'server', server_n)
