@@ -167,7 +167,7 @@ Connected as {user} to {db}.
         if not self.quiet:
             print('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
-        for tries in range(3):
+        for tries in range(1):
             try:
                 self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
                 if self.autocommit:
@@ -1476,7 +1476,7 @@ Connected as {user} to {db}.
                 print('Connecting to DB ** %s ** ...' % self.dbname)
             self.con.close()
             connected = False
-            for tries in range(3):
+            for tries in range(1):
                 try:
                     self.con = cx_Oracle.connect(
                         self.user, self.password, dsn=self.dsn)
