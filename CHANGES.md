@@ -2,6 +2,7 @@
 
 ## v1.4.3
 #### XXXX-XXX-XX
+- Add options to connect to new desoper and remove oldsci, password not longer linked
 - Allow describe_table to work for materialized views (see #135)
 
 ## v1.4.2
