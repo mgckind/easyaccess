@@ -1,9 +1,10 @@
 # Changes
 
 ## v1.4.3
-#### XXXX-XXX-XX
-- Add options to connect to new desoper and remove oldsci, password not longer linked
-- Allow describe_table to work for materialized views (see #135)
+#### 2017-AUG-15
+- Reduce the number of tries for connection
+- Add options to connect to new desoper and remove oldsci, passwords not longer linked (PR #136)
+- Allow `describe_table` to work for materialized views (see #135)
 
 ## v1.4.2
 #### 2017-MAY-23
