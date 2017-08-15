@@ -16,10 +16,6 @@ class TestConnection(unittest.TestCase):
         con = ea.connect('destest', quiet=True)
         self.assertTrue(con.ping())
 
-    def test_connect_newsci(self):
-        con = ea.connect('oldsci', quiet=True)
-        self.assertTrue(con.ping())
-
     # @unittest.skip("Not implemented yet")
     # def test_connect_memsql(self):
     #    con = ea.connect('memsql')
