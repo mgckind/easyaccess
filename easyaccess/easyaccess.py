@@ -167,7 +167,7 @@ Connected as {user} to {db}.
         if not self.quiet:
             print('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
-        for tries in range(3):
+        for tries in range(1):
             try:
                 self.con = cx_Oracle.connect(self.user, self.password, dsn=self.dsn)
                 if self.autocommit:
@@ -939,7 +939,7 @@ Connected as {user} to {db}.
 
     def get_tables_names(self):
 
-        if self.dbname in ('dessci', 'desoper', 'destest', 'oldsci'):
+        if self.dbname in ('dessci', 'desoper', 'destest', 'oldoper'):
             query = """
             select table_name from DES_ADMIN.CACHE_TABLES
             union select table_name from user_tables
@@ -964,7 +964,7 @@ Connected as {user} to {db}.
                           user.upper(), "cyan", self.ct))
             print(tnames)
         else:
-            if self.dbname in ('dessci', 'desoper', 'oldsci'):
+            if self.dbname in ('dessci', 'desoper', 'oldoper'):
                 query = """
                     select count(username) as cc  from des_users
                      where upper(username) = upper('%s')""" % user
@@ -982,7 +982,7 @@ Connected as {user} to {db}.
                               user.upper(), 'cyan', self.ct))
 
     def get_userlist(self):
-        if self.dbname in ('dessci', 'desoper', 'oldsci'):
+        if self.dbname in ('dessci', 'desoper', 'oldoper'):
             query = 'select distinct username from des_users order by username'
         if self.dbname in ('destest'):
             query = 'select distinct username from dba_users order by username'
@@ -1380,7 +1380,7 @@ Connected as {user} to {db}.
 
     def do_set_password(self, arg):
         """
-        DB:Set a new password on this DES instance 
+        DB:Set a new password on this DES instance
 
         Usage: set_password
         """
@@ -1400,31 +1400,14 @@ Connected as {user} to {db}.
 
         query = """alter user %s identified by "%s"  """ % (self.user, pw1)
         confirm = 'Password changed in %s' % self.dbname.upper()
-        self.query_and_print(query, print_time=False, suc_arg=confirm)
-        self.desconfig.set('db-'+self.dbname, 'passwd', pw1)
-        config_mod.write_desconfig(desfile, self.desconfig)
-        if self.dbname not in ('oldsci', 'desoper'):
-            return
-        dbases = ['OLDSCI', 'DESOPER']
-        for db in dbases:
-            kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
-            dsn = cx_Oracle.makedsn(**kwargs)
-            temp_con = cx_Oracle.connect(self.user, self.password, dsn=dsn)
-            temp_cur = temp_con.cursor()
-            try:
-                temp_cur.execute(query)
-                confirm = 'Password changed in %s\n' % db.upper()
-                print(colored(confirm, "green", self.ct))
-                temp_con.commit()
-                temp_cur.close()
-                temp_con.close()
-                self.desconfig.set('db-oldsci', 'passwd', pw1)
-                self.desconfig.set('db-desoper', 'passwd', pw1)
-                config_mod.write_desconfig(desfile, self.desconfig)
-            except:
-                confirm = 'Password could not be changed in %s\n' % db.upper()
-                print(colored(confirm, "red", self.ct))
-                print(sys.exc_info())
+        try:
+            self.query_and_print(query, print_time=False, suc_arg=confirm)
+            self.desconfig.set('db-'+self.dbname, 'passwd', pw1)
+            config_mod.write_desconfig(desfile, self.desconfig)
+        except:
+            confirm = 'Password could not be changed in %s\n' % db.upper()
+            print(colored(confirm, "red", self.ct))
+            print(sys.exc_info())
 
     def do_refresh_metadata_cache(self, arg):
         """
@@ -1462,7 +1445,7 @@ Connected as {user} to {db}.
 
     def do_change_db(self, line):
         """
-        DB: Change to another database, namely dessci, desoper, destest or oldsci
+        DB: Change to another database, namely dessci, desoper, destest and oldoper
 
          Usage:
             change_db DB     # Changes to DB, it does not refresh metadata, e.g.: change_db desoper
@@ -1472,7 +1455,7 @@ Connected as {user} to {db}.
             return self.do_help('change_db')
         line = " ".join(line.split())
         key_db = line.split()[0]
-        if key_db in ('dessci', 'desoper', 'destest', 'oldsci'):
+        if key_db in ('dessci', 'desoper', 'destest', 'oldoper'):
             if key_db == self.dbname:
                 print(colored("Already connected to : %s" % key_db, "green", self.ct))
                 return
@@ -1493,7 +1476,7 @@ Connected as {user} to {db}.
                 print('Connecting to DB ** %s ** ...' % self.dbname)
             self.con.close()
             connected = False
-            for tries in range(3):
+            for tries in range(1):
                 try:
                     self.con = cx_Oracle.connect(
                         self.user, self.password, dsn=self.dsn)
@@ -1523,7 +1506,7 @@ Connected as {user} to {db}.
             return
 
     def complete_change_db(self, text, line, start_index, end_index):
-        options_db = ['desoper', 'dessci', 'destest', 'oldsci']
+        options_db = ['desoper', 'dessci', 'destest', 'oldoper']
         if text:
             return [option for option in options_db if option.startswith(text.lower())]
         else:
@@ -1538,7 +1521,7 @@ Connected as {user} to {db}.
         # It might be useful to print user roles as well
         # select GRANTED_ROLE from USER_ROLE_PRIVS
 
-        if self.dbname in ('dessci', 'desoper', 'oldsci'):
+        if self.dbname in ('dessci', 'desoper', 'oldoper'):
             sql_getUserDetails = """
             select d.username, d.email, d.firstname as first, d.lastname as last,
              trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
@@ -1595,7 +1578,7 @@ Connected as {user} to {db}.
             return self.do_help('find_user')
         line = " ".join(line.split())
         keys = line.split()
-        if self.dbname in ('dessci', 'desoper', 'oldsci'):
+        if self.dbname in ('dessci', 'desoper', 'oldoper'):
             query = 'select * from des_users where '
         if self.dbname in ('destest'):
             query = 'select * from dba_users where '
@@ -2564,7 +2547,7 @@ class connect(easy_or):
 
         Parameters:
         -----------
-        section :  DB connection : dessci, desoper, destest, oldsci
+        section :  DB connection : dessci, desoper, destest
         user    :  Manualy use username
         passwd  :  password for username (if not enter is prompted)
         quiet   :  Don't print much
