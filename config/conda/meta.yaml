@@ -40,7 +40,7 @@ requirements:
 test:
   # Python imports
   imports:
-    - easyaccess
+    #- easyaccess
     - cx_Oracle
     - fitsio
 
