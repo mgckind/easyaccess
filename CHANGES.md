@@ -1,5 +1,10 @@
 # Changes
 
+
+## v1.4.4
+#### 2017-XXX-XX
+- Add desdr database
+
 ## v1.4.3
 #### 2017-AUG-15
 - Reduce the number of tries for connection
