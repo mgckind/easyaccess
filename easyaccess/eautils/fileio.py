@@ -27,6 +27,8 @@ PANDAS_EXTS = ('.csv', '.tab', '.h5')
 FITS_DEFS = ('FITS format',)
 FITS_EXTS = ('.fits',)
 
+GZIP_EXTS = ('.fits', '.csv', '.tab')
+
 FILE_DEFS = PANDAS_DEFS + FITS_DEFS
 FILE_EXTS = PANDAS_EXTS + FITS_EXTS
 
@@ -150,7 +152,7 @@ def check_filetype(filename, types=None):
         return True
 
 
-def write_file(filename, data, desc, fileindex=1, mode='w', max_mb=1000, query=''):
+def write_file(filename, data, desc, fileindex=1, mode='w', max_mb=1000, query='', comp=False):
     """
     Write a pandas DataFrame to a file. Append to existing file as
     long as smaller than specified size.  Create a new file (and
@@ -166,15 +168,17 @@ def write_file(filename, data, desc, fileindex=1, mode='w', max_mb=1000, query='
     fileindex: The index of the file to write.
     mode :     The write-mode: 'w'=write new file, 'a'=append to existing file
     max_mb :   Maximum file size.
+    query :    Query used to generate data
+    comp  :    Use compresion (gzip)
 
     Returns:
     fileindex: The (possibly incremented) fileindex.
     """
     base, ext = os.path.splitext(filename)
     check_filetype(filename, FILE_EXTS)
-
     fileout = filename
-
+    if comp and ext in GZIP_EXTS:
+        fileout += '.gz'
     if mode == 'w':
         header = True
     if mode == 'a':
@@ -182,6 +186,8 @@ def write_file(filename, data, desc, fileindex=1, mode='w', max_mb=1000, query='
             thisfile = filename
         else:
             thisfile = base + '_%06d' % fileindex + ext
+        if comp and ext in GZIP_EXTS:
+            thisfile += '.gz'
 
             # check the size of the current file
         size = float(os.path.getsize(thisfile)) / (2. ** 20)
@@ -191,12 +197,17 @@ def write_file(filename, data, desc, fileindex=1, mode='w', max_mb=1000, query='
             if (fileindex == 1):
                 # this is the first one ... it needs to be moved
                 lastfile = base + '_%06d' % fileindex + ext
+                if comp and ext in GZIP_EXTS:
+                    filename += '.gz'
+                    lastfile += '.gz'
                 os.rename(filename, lastfile)
 
             # and make a new filename, after incrementing
             fileindex += 1
 
             thisfile = base + '_%06d' % fileindex + ext
+            if comp and ext in GZIP_EXTS:
+                thisfile += '.gz'
             fileout = thisfile
             mode = 'w'
             header = True
@@ -205,14 +216,14 @@ def write_file(filename, data, desc, fileindex=1, mode='w', max_mb=1000, query='
             header = False
 
     if ext in PANDAS_EXTS:
-        write_pandas(fileout, data, fileindex, mode=mode, header=header, query=query)
+        write_pandas(fileout, data, fileindex, mode=mode, header=header, query=query, comp=comp)
     if ext in FITS_EXTS:
-        write_fitsio(fileout, data, desc, fileindex, mode=mode, query=query)
+        write_fitsio(fileout, data, desc, fileindex, mode=mode, query=query, comp=comp)
 
     return fileindex
 
 
-def write_pandas(filename, df, fileindex, mode='w', header=True, query=''):
+def write_pandas(filename, df, fileindex, mode='w', header=True, query='', comp=False):
     """
     Write a pandas DataFrame to a file. Accepted file extension are
     defined by 'PANDAS_EXTS'.
@@ -229,21 +240,43 @@ def write_pandas(filename, df, fileindex, mode='w', header=True, query=''):
     --------
     None
     """
-    base, ext = os.path.splitext(filename)
-    check_filetype(filename, PANDAS_EXTS)
-
+    base, ext = os.path.splitext(filename.replace('.gz',''))
+    check_filetype(filename.replace('.gz',''), PANDAS_EXTS)
     if ext == '.csv':
-        df.to_csv(filename, index=False, float_format='%.8f', sep=',',
-                  mode=mode, header=header, encoding='utf-8')
+        if comp:
+            df.to_csv(filename, index=False, float_format='%.8f', sep=',',
+                      mode=mode, header=header,compression='gzip')
+        else:
+            df.to_csv(filename, index=False, float_format='%.8f', sep=',',
+                      mode=mode, header=header, encoding='utf-8')
     if ext == '.tab':
-        df.to_csv(filename, index=False, float_format='%.8f', sep=' ',
-                  mode=mode, header=header, encoding='utf-8')
+        if comp:
+            df.to_csv(filename, index=False, float_format='%.8f', sep=' ',
+                      mode=mode, header=header,compression='gzip')
+        else:
+            df.to_csv(filename, index=False, float_format='%.8f', sep=' ',
+                      mode=mode, header=header, encoding='utf-8')
     if ext == '.h5':
-        df.to_hdf(filename, 'data', mode=mode, index=False,
-                  header=header)  # , complevel=9,complib='bzip2'
+        if mode == 'w':
+            append = False
+        else:
+            append = True
+        # get current index
+        with pd.HDFStore(filename) as storage:
+            try:
+                nrows = storage.get_storer('data').nrows
+            except:
+                nrows = 0
+        df.index = pd.Series(df.index) + nrows
+        if comp:
+            df.to_hdf(filename, 'data', mode=mode, format='t', append=append,
+                      data_columns=True, complevel=9, complib='bzip2')
+        else:
+            df.to_hdf(filename, 'data', mode=mode, format='t', append=append,
+                      data_columns=True)
 
 
-def write_fitsio(filename, df, desc, fileindex, mode='w', query=''):
+def write_fitsio(filename, df, desc, fileindex, mode='w', query='', comp=False):
     """
     Write a pandas DataFrame to a FITS binary table using fitsio.
 
@@ -257,13 +290,14 @@ def write_fitsio(filename, df, desc, fileindex, mode='w', query=''):
     desc :     Oracle descriptor object
     fileindex: Index of this file (modifies filename based on maxfilesize)
     mode :     Write mode: 'w'=write, 'a'=append
+    query :    Query used to create file
+    comp :     Compression 
 
     Returns:
     --------
     None
     """
-    check_filetype(filename, FITS_EXTS)
-
+    check_filetype(filename.replace('.gz',''), FITS_EXTS)
     # Create the proper recarray dtypes
     dtypes = []
     for d in desc:

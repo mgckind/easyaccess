@@ -4,6 +4,9 @@
 ## v1.4.4
 #### 2017-XXX-XX
 - Add desdr database
+- Fix HDF5 output files, (see #140)
+- Add compression option to configuration, gzip is applied to .csv,.tab,.fits (latter only for 1 DB trip), bzip2 for hdf5
+  fits can be opened in append mode when they are compressed, workaround is to increase prefetch
 
 ## v1.4.3
 #### 2017-AUG-15

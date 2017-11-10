@@ -44,7 +44,7 @@ options_def = eafile.FILE_DEFS
 options_config = ['all', 'database', 'editor', 'prefetch', 'histcache', 'timeout',
                   'outfile_max_mb', 'max_rows', 'max_columns',
                   'width', 'max_colwidth', 'color_terminal', 'loading_bar', 'filepath', 'nullvalue',
-                  'autocommit', 'trim_whitespace', 'desdm_coldefs']
+                  'autocommit', 'compression', 'trim_whitespace', 'desdm_coldefs']
 options_config2 = ['show', 'set']
 options_app = ['check', 'submit', 'explain']
 
