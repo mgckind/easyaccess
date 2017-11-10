@@ -148,6 +148,7 @@ Connected as {user} to {db}.
         self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
         self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
         self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
+        self.compression = self.config.getboolean('easyaccess', 'compression')
         self.desdm_coldefs = self.config.getboolean('easyaccess', 'desdm_coldefs')
         self.trim_whitespace = self.config.getboolean('easyaccess', 'trim_whitespace')
         self.dbname = db
@@ -898,7 +899,7 @@ Connected as {user} to {db}.
 
                         fileindex = eafile.write_file(fileout, data, info2, fileindex,
                                                       mode_write,
-                                                      max_mb=self.outfile_max_mb, query=query)
+                                                      max_mb=self.outfile_max_mb, query=query, comp=self.compression)
 
                         if first:
                             mode_write = 'a'
@@ -1222,6 +1223,9 @@ Connected as {user} to {db}.
                                 Doesn't apply to output files
             nullvalue         : value to replace Null entries when writing a file (default = -9999)
             outfile_max_mb    : Max size of each fits file in MB
+            compression       : yes/no toggles compressed output files (bzip2 for h5, gzip for rest).
+                                default(no). It is slower but yields smaller files, fits doesn't support 
+                                append on compressed files, workaround is to increase prefetch
             autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
             trim_whitespace   : Trim whitespace from strings when uploading data to the DB
                                 (default yes)
@@ -1272,7 +1276,7 @@ Connected as {user} to {db}.
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
                     if key in ['loading_bar', 'color_terminal', 'autocommit', 'trim_whitespace',
-                               'desdm_coldefs']:
+                               'desdm_coldefs', 'compression']:
                         val = val.lower()
                         temp = True if val in positive else False if val in negative else 'error'
                         if temp == 'error':
@@ -1311,6 +1315,8 @@ Connected as {user} to {db}.
                 self.nullvalue = self.config.getint('easyaccess', 'nullvalue')
             if key == 'outfile_max_mb':
                 self.outfile_max_mb = self.config.getint('easyaccess', 'outfile_max_mb')
+            if key == 'compression':
+                self.compression = self.config.getboolean('easyaccess', 'compression')
             if key == 'autocommit':
                 self.autocommit = self.config.getboolean('easyaccess', 'autocommit')
             if key == 'trim_whitespace':

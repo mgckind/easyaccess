@@ -34,6 +34,7 @@ configcomment = """#
 #                   If the results are redirected to a file there is not a timeout (default 20 min)
 # nullvalue       : The value used to replace null or empty entries when printing into a file
 # outfile_max_mb  : Max size of each fits file in MB (default 1GB)
+# compression     : Toggles compression on output files (default no)
 # autocommit      : Auto commit changes in DB (default yes)
 # trim_whitespace : Trim whitespace from strings when uploading data to the DB (default yes)
 # desdm_coldefs   : Use DESDM DB compatible data types when uploading data (default yes)
@@ -99,6 +100,9 @@ def get_config(configfile):
     if not config.has_option('easyaccess', 'autocommit'):
         configwrite = True
         config.set('easyaccess', 'autocommit', 'yes')
+    if not config.has_option('easyaccess', 'compression'):
+        configwrite = True
+        config.set('easyaccess', 'compression', 'no')
     if not config.has_option('easyaccess', 'trim_whitespace'):
         configwrite = True
         config.set('easyaccess', 'trim_whitespace', 'yes')
