@@ -3,6 +3,7 @@
 
 ## v1.4.4
 #### 2017-XXX-XX
+- Fix bug with Oracle types NUMBER with no scale/digits
 - Add desdr database
 - Fix HDF5 output files, (see #140)
 - Add compression option to configuration, gzip is applied to .csv,.tab,.fits (latter only for 1 DB trip), bzip2 for hdf5

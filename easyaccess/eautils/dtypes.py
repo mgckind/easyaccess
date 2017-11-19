@@ -48,6 +48,9 @@ def oracle2numpy(desc):
     scale = desc[5]
 
     if otype == or_n:
+        # When no scale/digits avaiable, return float
+        if scale is None and digits is None:
+            return "f8"
         if scale == 0 and digits != 0:
             # Nothing after the decimal; integers
             if digits <= 4:
@@ -58,6 +61,8 @@ def oracle2numpy(desc):
             else:
                 return "i8"
         else:
+            if digits is None:
+                return "f8"
             # Otherwise, floats
             if digits <= 6:
                 return "f4"
