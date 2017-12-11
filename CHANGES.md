@@ -3,6 +3,7 @@
 
 ## v1.4.4
 #### 2017-XXX-XX
+- Fix bytes to unicode issue for py3 when writing h5 files
 - Fix bug with Oracle types NUMBER with no scale/digits
 - Add desdr database
 - Fix HDF5 output files, (see #140)
