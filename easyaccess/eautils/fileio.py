@@ -245,7 +245,7 @@ def write_pandas(filename, df, fileindex, mode='w', header=True, query='', comp=
     # convert b to unicode (python 3) for convenience
     for col in df:
         if df[col].dtype == np.object:
-            df[col] = df[col].str.decode('utf-8') 
+            df[col] = df[col].str.decode('ascii') 
     if ext == '.csv':
         if comp:
             df.to_csv(filename, index=False, float_format='%.8f', sep=',',
