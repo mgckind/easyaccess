@@ -242,6 +242,10 @@ def write_pandas(filename, df, fileindex, mode='w', header=True, query='', comp=
     """
     base, ext = os.path.splitext(filename.replace('.gz',''))
     check_filetype(filename.replace('.gz',''), PANDAS_EXTS)
+    # convert b to unicode (python 3) for convenience
+    for col in df:
+        if df[col].dtype == np.object:
+            df[col] = df[col].str.decode('utf-8') 
     if ext == '.csv':
         if comp:
             df.to_csv(filename, index=False, float_format='%.8f', sep=',',
