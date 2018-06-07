@@ -202,6 +202,8 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             kwargs = {'host': server_n, 'port': port_n, 'service_name': 'desoper'}
         elif db == 'db-desdr':
             kwargs = {'host': server_3, 'port': port_n, 'service_name': 'desdr'}
+        elif db == 'db-destest':
+            kwargs = {'host': server_2, 'port': port_n, 'service_name': 'desoper'}
         elif db == 'db-desoper':
             kwargs = {'host': server_2, 'port': port_n, 'service_name': 'desoper'}
         else:
