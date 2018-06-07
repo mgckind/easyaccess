@@ -209,17 +209,22 @@ def numpy2desdm(desc):
     elif name in ['QUICK_OBJECT_ID']:
         return "NUMBER(15,0)"
     # Floating point values
-    elif name.startswith(("CLASS_STAR",)):
-        return "NUMBER(5,4)"
+    elif name.strip('WAVG_').startswith(("CLASS_STAR", "SPREAD_", "SPREADERR_")):
+        return 'BINARY_FLOAT'
     elif name.strip('WAVG_').startswith(("MAG_", "MAGERR_", "CALIB_MAG_")):
-        # I think MAGERR should be (6,4), though often defined as (5,4)
-        return "NUMBER(6,4)"
+        return 'BINARY_FLOAT'
+    # ADW: Y3A2 tables currently implement as doubles for no apparent reason.
+    #elif name.strip('MOF_').startswith(("CM_MAG_","PSF_MAG_")):
+    #    return 'BINARY_FLOAT'
+    #elif name.strip('SOF_').startswith(("CM_MAG_","PSF_MAG_")):
+    #    return 'BINARY_FLOAT'
     elif name.startswith(('SLR_SHIFT', 'DESDM_ZP', 'DESDM_ZPERR')):
+        # DEPRECATED: ADW 2018-06-07
         return "NUMBER(6,4)"
-    elif name.strip('WAVG_').startswith(("SPREAD_", "SPREADERR_")):
-        return "NUMBER(7,5)"
     elif name in ['RA', 'DEC', 'RADEG', 'DECDEG', 'L', 'B']:
         return "NUMBER(9,6)"
+    elif name.startswith(('ALPHAWIN','DELTAWIN')):
+        return "BINARY_DOUBLE"
     # String values
     elif name in ['BAND']:
         # Needs to fit 'VR' and 'block'
@@ -231,6 +236,7 @@ def numpy2desdm(desc):
         return "VARCHAR2(30)"
     elif name in ['FILENAME']:
         # This is VARCHAR2(60) in prod.se_object, but seems like overkill
+        # This is VARCHAR2(100) in Y3A2_COADD_OBJECT_BAND, but seems like overkill
         return "VARCHAR2(50)"
     else:
         return numpy2oracle(dtype)
