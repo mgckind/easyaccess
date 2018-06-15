@@ -940,7 +940,7 @@ Connected as {user} to {db}.
 
     def get_tables_names(self):
 
-        if self.dbname in ('dessci', 'desoper', 'destest', 'oldoper'):
+        if self.dbname in ('dessci', 'desoper', 'destest' ):
             query = """
             select table_name from DES_ADMIN.CACHE_TABLES
             union select table_name from user_tables
@@ -965,7 +965,7 @@ Connected as {user} to {db}.
                           user.upper(), "cyan", self.ct))
             print(tnames)
         else:
-            if self.dbname in ('dessci', 'desoper', 'oldoper'):
+            if self.dbname in ('dessci', 'desoper'):
                 query = """
                     select count(username) as cc  from des_users
                      where upper(username) = upper('%s')""" % user
@@ -983,7 +983,7 @@ Connected as {user} to {db}.
                               user.upper(), 'cyan', self.ct))
 
     def get_userlist(self):
-        if self.dbname in ('dessci', 'desoper', 'oldoper'):
+        if self.dbname in ('dessci', 'desoper'):
             query = 'select distinct username from des_users order by username'
         if self.dbname in ('destest'):
             query = 'select distinct username from dba_users order by username'
@@ -1224,7 +1224,7 @@ Connected as {user} to {db}.
             nullvalue         : value to replace Null entries when writing a file (default = -9999)
             outfile_max_mb    : Max size of each fits file in MB
             compression       : yes/no toggles compressed output files (bzip2 for h5, gzip for rest).
-                                default(no). It is slower but yields smaller files, fits doesn't support 
+                                default(no). It is slower but yields smaller files, fits doesn't support
                                 append on compressed files, workaround is to increase prefetch
             autocommit        : yes/no toggles the autocommit for DB changes (default is yes)
             trim_whitespace   : Trim whitespace from strings when uploading data to the DB
@@ -1451,7 +1451,7 @@ Connected as {user} to {db}.
 
     def do_change_db(self, line):
         """
-        DB: Change to another database, namely dessci, desoper, destest and oldoper
+        DB: Change to another database, namely dessci, desoper, destest
 
          Usage:
             change_db DB     # Changes to DB, it does not refresh metadata, e.g.: change_db desoper
@@ -1461,7 +1461,7 @@ Connected as {user} to {db}.
             return self.do_help('change_db')
         line = " ".join(line.split())
         key_db = line.split()[0]
-        if key_db in ('dessci', 'desoper', 'destest', 'oldoper'):
+        if key_db in ('dessci', 'desoper', 'destest'):
             if key_db == self.dbname:
                 print(colored("Already connected to : %s" % key_db, "green", self.ct))
                 return
@@ -1512,7 +1512,7 @@ Connected as {user} to {db}.
             return
 
     def complete_change_db(self, text, line, start_index, end_index):
-        options_db = ['desoper', 'dessci', 'destest', 'oldoper']
+        options_db = ['desoper', 'dessci', 'destest']
         if text:
             return [option for option in options_db if option.startswith(text.lower())]
         else:
@@ -1527,7 +1527,7 @@ Connected as {user} to {db}.
         # It might be useful to print user roles as well
         # select GRANTED_ROLE from USER_ROLE_PRIVS
 
-        if self.dbname in ('dessci', 'desoper', 'oldoper'):
+        if self.dbname in ('dessci', 'desoper'):
             sql_getUserDetails = """
             select d.username, d.email, d.firstname as first, d.lastname as last,
              trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
@@ -1584,7 +1584,7 @@ Connected as {user} to {db}.
             return self.do_help('find_user')
         line = " ".join(line.split())
         keys = line.split()
-        if self.dbname in ('dessci', 'desoper', 'oldoper'):
+        if self.dbname in ('dessci', 'desoper'):
             query = 'select * from des_users where '
         if self.dbname in ('destest'):
             query = 'select * from dba_users where '

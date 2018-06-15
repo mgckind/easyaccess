@@ -44,8 +44,8 @@ def get_args(config_file):
                         help=" Size of chunk to be read at a time in Mb. Use with --load_table or "
                              "--append_table")
     parser.add_argument("-s", "--db", dest='db',
-                        choices=['dessci', 'desoper', 'destest', 'oldoper' ,'desdr'],
-                        help="Override database name [dessci,desoper,destest,oldoper]")
+                        choices=['dessci', 'desoper', 'destest', 'desdr'],
+                        help="Override database name [dessci,desoper,destest,desdr]")
     parser.add_argument("-q", "--quiet", action="store_true", dest='quiet',
                         help="Silence initialization, no loading bar")
     parser.add_argument("-u", "--user", dest='user')
