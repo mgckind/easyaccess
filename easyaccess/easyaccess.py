@@ -993,7 +993,7 @@ Connected as {user} to {db}.
 
     def get_userlist(self):
         if self.dbname in ('dessci', 'desoper'):
-            query = 'select distinct username from des_users order by username'
+            query = 'select distinct username from dba_users order by username'
         if self.dbname in ('destest'):
             query = 'select distinct username from dba_users order by username'
         if self.dbname in ('desdr'):
