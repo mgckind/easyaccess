@@ -2,7 +2,7 @@
 
 
 ## v1.4.4
-#### 2018-XXX-XX
+#### 2018-JUN-15
 - Improved version to work with public release DB
 - Update dtypes to match Y3 tables (PR #149)
 - Fix bytes to unicode issue for py3 when writing h5 files
