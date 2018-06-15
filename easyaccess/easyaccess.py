@@ -949,7 +949,7 @@ Connected as {user} to {db}.
 
     def get_tables_names(self):
 
-        if self.dbname in ('dessci', 'desoper', 'destest' ):
+        if self.dbname in ('dessci', 'desoper', 'destest', 'desdr'):
             query = """
             select table_name from DES_ADMIN.CACHE_TABLES
             union select table_name from user_tables
@@ -996,6 +996,8 @@ Connected as {user} to {db}.
             query = 'select distinct username from des_users order by username'
         if self.dbname in ('destest'):
             query = 'select distinct username from dba_users order by username'
+        if self.dbname in ('desdr'):
+            return []
         temp = self.cur.execute(query)
         tnames = pd.DataFrame(temp.fetchall())
         user_list = tnames.values.flatten().tolist()
