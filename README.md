@@ -1,4 +1,4 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.3"> <img src="https://img.shields.io/badge/release-v1.4.3-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.4.3"><img src="https://img.shields.io/badge/pypi-v1.4.3-orange.svg" alt="pypi version"/></a><a href="https://anaconda.org/mgckind/easyaccess"> <img src="https://img.shields.io/badge/Anaconda Cloud-v1.4.3-blue.svg" /> </a>
+# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.4"> <img src="https://img.shields.io/badge/release-v1.4.4-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.4.4"><img src="https://img.shields.io/badge/pypi-v1.4.4-orange.svg" alt="pypi version"/></a><a href="https://anaconda.org/mgckind/easyaccess"> <img src="https://img.shields.io/badge/Anaconda Cloud-v1.4.4-blue.svg" /> </a>
 ![help_screen](data/help.gif)
 
 Enhanced command line SQL interpreter client for astronomical databases.
@@ -8,7 +8,7 @@ using cx_Oracle
 
 For a short tutorial check [here](http://matias-ck.com/easyaccess)
 
-**Current version = 1.4.3**
+**Current version = 1.4.4**
 
 ## Requirements
 

@@ -1,9 +1,9 @@
 package:
   name: easyaccess
-  version: "1.4.3"
+  version: "1.4.4"
 
 source:
-  git_rev: 1.4.3
+  git_rev: 1.4.4
   git_url: https://github.com/mgckind/easyaccess.git
 
 build:
