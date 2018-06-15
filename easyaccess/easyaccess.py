@@ -66,6 +66,10 @@ positive = ['yes', 'y', 'true', 't', 'on']
 negative = ['no', 'n', 'false', 'f', 'off']
 input_options = ', '.join([i[0]+'/'+i[1] for i in zip(positive, negative)])
 
+# commands not available in public DB
+NOT_PUBLIC = ['add_comment', 'append_table', 'change_db', 'execproc', 'find_user', 'load_table',
+              'myquota', 'mytables', 'user_tables']
+
 sys.path.insert(0, os.getcwd())
 # For python functions to work
 fun_utils.init_func()
@@ -344,6 +348,9 @@ Connected as {user} to {db}.
                         doc = str(doc)
                         if doc.find('DB:') > -1:
                             doc = doc.replace('DB:', '')
+                        if arg in NOT_PUBLIC and self.dbname == 'desdr':
+                            doc = colored('\n\t* Command not availble in Public Release DB *\n',
+                                          'red', self.ct) + doc
                         self.stdout.write("%s\n" % str(doc))
                         return
                 except AttributeError:
@@ -372,6 +379,8 @@ Connected as {user} to {db}.
                         continue
                     prevname = name
                     cmd = name[3:]
+                    if cmd in NOT_PUBLIC and self.dbname == 'desdr':
+                        continue
                     if cmd in help:
                         cmds_doc.append(cmd)
                         del help[cmd]

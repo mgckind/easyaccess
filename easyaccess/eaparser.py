@@ -29,14 +29,14 @@ def get_args(config_file):
     parser.add_argument("-lt", "--load_table", dest='loadtable',
                         help="Loads data from a csv, tab, or fits formatted file \
                         into a DB table using the filename as the table name or a custom \
-                        name with --tablename MYTABLE")
+                        name with --tablename MYTABLE. Not available in desdr.")
     parser.add_argument("-at", "--append_table", dest='appendtable',
                         help="Appends data from a csv, tab, or fits formatted file \
                         into a DB table using the filename as the table name or a custom \
-                        name with --tablename MYABLE")
+                        name with --tablename MYABLE. Not available in desdr.")
     parser.add_argument("--tablename", dest='tablename',
                         help="Custom table name to be used with --load_table\
-                        or --append_table")
+                        or --append_table. Not available in desdr.")
     parser.add_argument("--chunksize", dest='chunksize', type=int, default=None,
                         help="Number of rows to be inserted at a time. Useful for large files "
                              "that do not fit in memory. Use with --load_table or --append_table")
