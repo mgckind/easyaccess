@@ -6,7 +6,7 @@
 - Update dtypes to match Y3 tables (PR #149)
 - Fix bytes to unicode issue for py3 when writing h5 files
 - Fix bug with Oracle types NUMBER with no scale/digits
-- Add desdr database
+- Add desdr database and remove oldoper
 - Fix HDF5 output files, (see #140)
 - Add compression option to configuration, gzip is applied to .csv,.tab,.fits (latter only for 1 DB trip), bzip2 for hdf5
   fits can be opened in append mode when they are compressed, workaround is to increase prefetch
