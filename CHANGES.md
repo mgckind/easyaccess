@@ -2,7 +2,8 @@
 
 
 ## v1.4.4
-#### 2017-XXX-XX
+#### 2018-XXX-XX
+- Update dtypes to match Y3 tables (PR #149)
 - Fix bytes to unicode issue for py3 when writing h5 files
 - Fix bug with Oracle types NUMBER with no scale/digits
 - Add desdr database
