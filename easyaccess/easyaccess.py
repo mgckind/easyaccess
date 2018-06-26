@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # TODO: save new password in .desservice
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-import cmd
+from __future__ import division #bring division module functionality into the file so it can be used by Python 2.6+ 
+from __future__ import print_function #bring print_function module functionality into the file so it can be used by Python 2.6+ 
+from __future__ import absolute_import #bring absolute_import module functionality into the file so it can be used by Python 2.6+ 
+import cmd #import statements 
 import os
 import sys
 import cx_Oracle
@@ -11,79 +11,80 @@ import shutil
 import stat
 import re
 import getpass
-from multiprocessing import Process
-from easyaccess.version import __version__
-from easyaccess.version import last_pip_version
-import easyaccess.config_ea as config_mod
-from easyaccess.eautils import des_logo as dl
-import easyaccess.eautils.dtypes as eatypes
+from multiprocessing import Process 
+from easyaccess.version import __version__ 
+from easyaccess.version import last_pip_version 
+import easyaccess.config_ea as config_mod 
+from easyaccess.eautils import des_logo as dl 
+import easyaccess.eautils.dtypes as eatypes 
 import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.fun_utils as fun_utils
 import easyaccess.eaparser as eaparser
 from easyaccess.eautils.import_utils import Import
 from easyaccess.eautils.ea_utils import *
-import threading
+import threading 
 import time
 import pandas as pd
 import webbrowser
 import signal
 import warnings
-warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore") #ignore python warnings 
 # For compatibility with old python
-try:
-    from builtins import input, str, range
-except ImportError:
+try: #try importing built indentifers from Python 
+    from builtins import input, str, range 
+except ImportError: #If you can't import from builtins, import identifers from __builtin__ 
     from __builtin__ import input, str, range
 
-__author__ = 'Matias Carrasco Kind'
+__author__ = 'Matias Carrasco Kind' #set author for use by foobar 
 
 
-def without_color(line, color, mode=0):
-    return line
+def without_color(line, color, mode=0): #function without_color returns input "line"
+    return line 
 
 
-try:
+try: #try from termcolor import colored as with_color 
     from termcolor import colored as with_color
 
-    def colored(line, color, mode=0):
+    def colored(line, color, mode=0): #function colored, if "mode" == 1, return line with color by using with_color 
         if mode == 1:
             return with_color(line, color)
         else:
-            return line
-except ImportError:
+            return line #if "mode" not 1, just return the inputted line without color 
+except ImportError: #if import error, default is without color 
     colored = without_color
-try:
+try: #try import readline, readline_present = True 
     import readline
     readline_present = True
-    try:
+    try: #try import gnureadline as readline 
         import gnureadline as readline
-    except ImportError:
+    except ImportError: #if import error, pass 
         pass
-except ImportError:
+except ImportError: #except import error, readline_present = False 
     readline_present = False
 
-positive = ['yes', 'y', 'true', 't', 'on']
-negative = ['no', 'n', 'false', 'f', 'off']
-input_options = ', '.join([i[0]+'/'+i[1] for i in zip(positive, negative)])
+positive = ['yes', 'y', 'true', 't', 'on'] #set what values can be "yes" 
+negative = ['no', 'n', 'false', 'f', 'off'] #set what values can be "no" 
+input_options = ', '.join([i[0]+'/'+i[1] for i in zip(positive, negative)]) #define input options by combining yes and no lists into one list 
 
 # commands not available in public DB
 NOT_PUBLIC = ['add_comment', 'append_table', 'change_db', 'execproc', 'find_user', 'load_table',
               'myquota', 'mytables', 'user_tables']
 
-sys.path.insert(0, os.getcwd())
-# For python functions to work
-fun_utils.init_func()
-pid = os.getpid()
+sys.path.insert(0, os.getcwd()) #specifies the path relative to this script in order to search for functions 
+# For python functions to work  
+fun_utils.init_func() #creates empty global dictionary called ea_func_dictionary
+pid = os.getpid() #Return the current process id and set it to the varible "pid".
 
 # FILES
-ea_path = os.path.join(os.environ["HOME"], ".easyaccess/")
-if not os.path.exists(ea_path):
+ea_path = os.path.join(os.environ["HOME"], ".easyaccess/") #varible ea_path is equal to where ever the easyaccess directory exists 
+if not os.path.exists(ea_path): #if ea_path doesn't exist, create the directory easyaccess 
     os.makedirs(ea_path)
-history_file = os.path.join(os.environ["HOME"], ".easyaccess/history")
-config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
+history_file = os.path.join(os.environ["HOME"], ".easyaccess/history") #history_file varible is equal to location of history directory within easyaccess directory 
+config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")#config_file varible is equal to location of config.ini file within easyaccess directory 
 
 
-# check if old path is there
+# check if old path is there 
+# We need to check for the old path due to a mispelling in earlier versions of easyaccess 
 ea_path_old = os.path.join(os.environ["HOME"], ".easyacess/")
 if os.path.exists(ea_path_old) and os.path.isdir(ea_path_old):
     if not os.path.exists(history_file):
@@ -110,16 +111,21 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only
 
 
-class easy_or(cmd.Cmd, Import, object):
+#create class easy_or        
+class easy_or(cmd.Cmd, Import, object): 
     """Easy cx_Oracle interpreter for DESDM."""
-
-    def set_messages(self):
+     
+    #create function set_messages    
+    def set_messages(self): 
+        #db_user = username from config file 
         db_user = self.desconfig.get('db-' + self.dbname, 'user')
+        #set intro_keys dictionary with db, user, and version info 
         intro_keys = {
             'db': colored(self.dbname, "green", self.ct),
             'user': colored(db_user, "green", self.ct),
             'ea_version': colored("easyaccess " + __version__, "cyan", self.ct)
             }
+        #set property intro to colored intro text 
         self.intro = colored(
 
             """
@@ -135,6 +141,7 @@ Connected as {user} to {db}.
         self.docdb_header = colored(
             '\n *DB Commands*', "cyan", self.ct) + '      (type help <command>):'
 
+    #init method     
     def __init__(self, conf, desconf, db, interactive=True,
                  quiet=False, refresh=True, pymod=False):
         cmd.Cmd.__init__(self)
@@ -169,6 +176,7 @@ Connected as {user} to {db}.
         kwargs = {'host': self.dbhost, 'port': self.port, 'service_name': self.service_name}
         self.dsn = cx_Oracle.makedsn(**kwargs)
         ora_code = 0
+        #if self.quiet is False, connect to DB 
         if not self.quiet:
             print('Connecting to DB ** %s ** ...' % self.dbname)
         connected = False
@@ -189,17 +197,20 @@ Connected as {user} to {db}.
                               lasterr, "red", self.ct))
                 print("\n   Retrying...\n")
                 time.sleep(5)
+        #If oracle code shows that password has expired, create new password, else exit easyaccess        
         if ora_code == 28001:
             print(colored("ORA-28001: the password has expired "
                   "or cannot be the default one", "red", self.ct))
             print(colored("Need to create a new password\n", "red", self.ct))
             pw1 = getpass.getpass(prompt='Enter new password:')
+            #if password contains whitespace, reenter password, else exit easyaccess
             if re.search('\W', pw1):
                 print(colored("\nPassword contains whitespace, not set\n", "red", self.ct))
                 if pymod:
                     raise Exception('Not connected to the DB')
                 else:
                     os._exit(0)
+            #if password empty, reenter password, else exit easyaccess 
             if not pw1:
                 print(colored("\nPassword cannot be blank\n", "red", self.ct))
                 if pymod:
@@ -208,12 +219,14 @@ Connected as {user} to {db}.
                     os._exit(0)
             pw2 = getpass.getpass(prompt='Re-Enter new password:')
             print()
+            #if while creating a new password you reenter the new one wrong the second time, reset password again, else exit easyaccess
             if pw1 != pw2:
                 print(colored("Passwords don't match, not set\n", "red", self.ct))
                 if pymod:
                     raise Exception('Not connected to the DB')
                 else:
                     os._exit(0)
+            #try connecting to database w/ new password and save password in config file 
             try:
                 self.con = cx_Oracle.connect(self.user, self.password,
                                              dsn=self.dsn, newpassword=pw1)
@@ -223,10 +236,12 @@ Connected as {user} to {db}.
                 connected = True
                 self.desconfig.set('db-'+self.dbname, 'passwd', pw1)
                 config_mod.write_desconfig(desfile, self.desconfig)
+            #If database is down, print error message 
             except Exception as e:
                 lasterr = str(e).strip()
                 print(colored("Error when trying to connect to database: %s" %
                               lasterr, "red", self.ct))
+        #if cannot connect, print error message and exit easyaccess         
         if not connected:
             print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
             if pymod:
@@ -236,10 +251,11 @@ Connected as {user} to {db}.
         self.cur = self.con.cursor()
         self.cur.arraysize = int(self.prefetch)
         msg = self.last_pass_changed()
+        #if password chamged, print message that password has been changed s
         if msg and not self.quiet:
             print(msg)
         self.set_messages()
-
+    #function to kill a job in progress
     def handler(self, signum, frame):
         """
         Executed with ^Z (Ctrl+Z) is pressed.
@@ -258,7 +274,7 @@ Connected as {user} to {db}.
             pass
 
     # ## OVERRIDE CMD METHODS
-
+    #see documentation
     def cmdloop(self, intro=None):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
@@ -332,7 +348,7 @@ Connected as {user} to {db}.
                     readline.set_completer(self.old_completer)
                 except ImportError:
                     pass
-
+    #see documentation
     def do_help(self, arg):
         """
         List available commands with "help" or detailed help with "help cmd".
@@ -414,6 +430,7 @@ Connected as {user} to {db}.
             print()
             print("* To access an online tutorial type: online_tutorial ")
 
+    #print topics 
     def print_topics(self, header, cmds, maxcol):
         if header is not None:
             if cmds:
@@ -422,7 +439,7 @@ Connected as {user} to {db}.
                     self.stdout.write("%s\n" % str(self.ruler * maxcol))
                 self.columnize(cmds, maxcol - 1)
                 self.stdout.write("\n")
-
+    #see documentation
     def preloop(self):
         """
         Initialization before prompting user for commands.
@@ -452,7 +469,7 @@ Connected as {user} to {db}.
             self._hist.append(lines.strip())
         self._locals = {}  # # Initialize execution namespace for user
         self._globals = {}
-
+    #see documentation
     def precmd(self, line):
         """ This method is called after the line has been input but before
              it has been interpreted. If you want to modify the input line
@@ -521,7 +538,7 @@ Connected as {user} to {db}.
 
         self._hist += [line.strip()]
         return line
-
+    #see documentation
     def emptyline(self):
         pass
 
@@ -564,7 +581,7 @@ Connected as {user} to {db}.
             return self.completion_matches[state]
         except IndexError:
             return None
-
+    #see documentation
     def default(self, line):
         """
         Default function called for line execution.
