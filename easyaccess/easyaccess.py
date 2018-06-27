@@ -251,7 +251,7 @@ Connected as {user} to {db}.
         self.cur = self.con.cursor()
         self.cur.arraysize = int(self.prefetch)
         msg = self.last_pass_changed()
-        #if password chamged, print message that password has been changed s
+        #if password chamged, print message that password has been changed
         if msg and not self.quiet:
             print(msg)
         self.set_messages()
