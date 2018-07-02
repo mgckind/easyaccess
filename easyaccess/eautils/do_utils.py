@@ -1,2 +1,2 @@
-class Do_Func(object):
+#class Do_Func(object):
     

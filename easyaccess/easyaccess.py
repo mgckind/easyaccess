@@ -21,7 +21,7 @@ import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.fun_utils as fun_utils
 import easyaccess.eaparser as eaparser
 from easyaccess.eautils.import_utils import Import
-from easyaccess.eautils.do_utils import Do_Func
+#from easyaccess.eautils.do_utils import Do_Func
 from easyaccess.eautils.ea_utils import *
 import threading 
 import time
@@ -113,7 +113,7 @@ if os.path.exists(desfile):
 
 
 #create class easy_or        
-class easy_or(cmd.Cmd, Do_Func, Import, object): 
+class easy_or(cmd.Cmd, Import, object): 
     """Easy cx_Oracle interpreter for DESDM."""
      
     #create function set_messages    
@@ -146,7 +146,7 @@ Connected as {user} to {db}.
     def __init__(self, conf, desconf, db, interactive=True,
                  quiet=False, refresh=True, pymod=False):
         cmd.Cmd.__init__(self)
-        Do_Func.__init__(self)
+        #Do_Func.__init__(self)
         self.config = conf
         self.ct = int(self.config.getboolean('display', 'color_terminal'))
         self.writeconfig = False
