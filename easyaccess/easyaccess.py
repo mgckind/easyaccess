@@ -1100,94 +1100,97 @@ Connected as {user} to {db}.
 #             #    line = self.precmd(line)
 #             #    self.onecmd(line)
 
-    def do_shell(self, line):
-        """
-        Execute shell commands, ex. shell pwd
-        You can also use !<command> like !ls, or !pwd to access the shell
+#move do_shell() to class Do_Func in do_utils file 
+#     def do_shell(self, line):
+#         """
+#         Execute shell commands, ex. shell pwd
+#         You can also use !<command> like !ls, or !pwd to access the shell
 
-        Uses autocompletion after first command
-        """
-        os.system(line)
+#         Uses autocompletion after first command
+#         """
+#         os.system(line)
 
     def complete_shell(self, text, line, start_idx, end_idx):
         if line:
             line = ' '.join(line.split()[1:])
             return complete_path(line)
 
-    def do_edit(self, line):
-        """
-        Opens a buffer file to edit a sql statement and then it reads it
-        and executes the statement. By default it will show the current
-        statement in buffer (or empty)
+#move do_edit() to class Do_Func in do_utils file         
+#     def do_edit(self, line):
+#         """
+#         Opens a buffer file to edit a sql statement and then it reads it
+#         and executes the statement. By default it will show the current
+#         statement in buffer (or empty)
 
-        Usage:
-            - edit   : opens the editor (default from $EDITOR or nano)
-            - edit set_editor <editor> : sets editor to <editor>, ex: edit set_editor vi
-        """
+#         Usage:
+#             - edit   : opens the editor (default from $EDITOR or nano)
+#             - edit set_editor <editor> : sets editor to <editor>, ex: edit set_editor vi
+#         """
 
-        line = "".join(line.split())
-        if line.find('show') > -1:
-            print('\nEditor  = {:}\n'.format(self.editor))
-        elif line.find('set_editor') > -1:
-            val = line.split('set_editor')[-1]
-            if val != '':
-                self.editor = val
-                self.config.set('easyaccess', 'editor', val)
-                self.writeconfig = True
-        else:
-            os.system(self.editor + ' easy.buf')
-            if os.path.exists('easy.buf'):
-                newquery = read_buf('easy.buf')
-                if newquery == "":
-                    return
-                print()
-                print(newquery)
-                print()
-                if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
-                    self.default(newquery)
+#         line = "".join(line.split())
+#         if line.find('show') > -1:
+#             print('\nEditor  = {:}\n'.format(self.editor))
+#         elif line.find('set_editor') > -1:
+#             val = line.split('set_editor')[-1]
+#             if val != '':
+#                 self.editor = val
+#                 self.config.set('easyaccess', 'editor', val)
+#                 self.writeconfig = True
+#         else:
+#             os.system(self.editor + ' easy.buf')
+#             if os.path.exists('easy.buf'):
+#                 newquery = read_buf('easy.buf')
+#                 if newquery == "":
+#                     return
+#                 print()
+#                 print(newquery)
+#                 print()
+#                 if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
+#                     self.default(newquery)
 
     def complete_edit(self, text, line, start_index, end_index):
         if text:
             return [option for option in options_edit if option.startswith(text)]
         else:
             return options_edit
+        
+#move do_loadsql() to class Do_Func in do_utils file         
+#     def do_loadsql(self, line):
+#         """
+#         DB:Loads a sql file with a query and ask whether it should be run
+#         There is a shortcut using @, ex : @test.sql  (or @test.sql > myfile.csv
+#         to override output file)
 
-    def do_loadsql(self, line):
-        """
-        DB:Loads a sql file with a query and ask whether it should be run
-        There is a shortcut using @, ex : @test.sql  (or @test.sql > myfile.csv
-        to override output file)
+#         Usage: loadsql <filename with sql statement>   (use autocompletion)
 
-        Usage: loadsql <filename with sql statement>   (use autocompletion)
+#         Optional: loadsql <filename with sql statement> > <output_file> to
+#         write to a file, not to the screen
+#         """
+#         line = line.replace(';', '')
+#         if line.find('>') > -1:
+#             try:
+#                 line = "".join(line.split())
+#                 newq = read_buf(line.split('>')[0])
+#                 if newq.find(';') > -1:
+#                     newq = newq.split(';')[0]
+#                 outputfile = line.split('>')[1]
+#                 newq = newq + '; > ' + outputfile
+#             except:
+#                 outputfile = ''
 
-        Optional: loadsql <filename with sql statement> > <output_file> to
-        write to a file, not to the screen
-        """
-        line = line.replace(';', '')
-        if line.find('>') > -1:
-            try:
-                line = "".join(line.split())
-                newq = read_buf(line.split('>')[0])
-                if newq.find(';') > -1:
-                    newq = newq.split(';')[0]
-                outputfile = line.split('>')[1]
-                newq = newq + '; > ' + outputfile
-            except:
-                outputfile = ''
+#         else:
+#             newq = read_buf(line)
 
-        else:
-            newq = read_buf(line)
-
-        if newq == "":
-            return
-        if self.interactive:
-            print()
-            print(newq)
-            print()
-            if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
-                self.default(newq)
-        else:
-            self.default(newq)
+#         if newq == "":
+#             return
+#         if self.interactive:
+#             print()
+#             print(newq)
+#             print()
+#             if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
+#                 self.default(newq)
+#         else:
+#             self.default(newq)
 
     def complete_loadsql(self, text, line, start_idx, end_idx):
         return complete_path(line)
@@ -1832,7 +1835,7 @@ Connected as {user} to {db}.
             extra = 'To select from a table use owner.table_name' \
                     ' except for DESADMIN where only table_name is enough'
         if arg == '':
-            return do_help('find_tables')
+            return self.do_help('find_tables')
         arg = arg.replace(';', '')
         query = "SELECT owner,table_name from all_tables  WHERE upper(table_name) LIKE '%s' " % (
             arg.upper())
@@ -1851,7 +1854,7 @@ Connected as {user} to {db}.
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG
         """
         if arg == '':
-            return do_help('find_tables_with_column')
+            return self.do_help('find_tables_with_column')
         query = """
            SELECT t.owner || '.' || t.table_name as table_name, t.column_name
            FROM all_tab_cols t, DES_ADMIN.CACHE_TABLES d
@@ -1874,7 +1877,7 @@ Connected as {user} to {db}.
         """
 
         if arg == '':
-            return do_help('show_index')
+            return self.do_help('show_index')
         arg = arg.replace(';', '')
         arg = " ".join(arg.split())
         tablename = arg.split()[0]
@@ -2091,10 +2094,10 @@ Connected as {user} to {db}.
         try:
             load_args = load_parser.parse_args(line.split())
         except SystemExit:
-            do_help('load_table')
+            self.do_help('load_table')
             return
         if load_args.help:
-            do_help('load_table')
+            self.do_help('load_table')
             return
         filename = eafile.get_filename(load_args.filename)
         table = load_args.tablename
@@ -2288,10 +2291,10 @@ Connected as {user} to {db}.
         try:
             append_args = append_parser.parse_args(line.split())
         except SystemExit:
-            do_help('append_table')
+            self.do_help('append_table')
             return
         if append_args.help:
-            do_help('append_table')
+            self.do_help('append_table')
             return
         filename = eafile.get_filename(append_args.filename)
         table = append_args.tablename
@@ -2465,7 +2468,7 @@ Connected as {user} to {db}.
             self.query_and_print(qcom, print_time=False, suc_arg=message)
         else:
             print(colored('\nMissing arguments\n', "red", self.ct))
-            do_help('add_comment')
+            self.do_help('add_comment')
 
     def complete_add_comment(self, text, line, begidx, lastidx):
         if line:
@@ -2666,7 +2669,7 @@ class connect(easy_or):
         """
 
         if help:
-            do_help_function('all')
+            self.do_help_function('all')
             return True
         if import_line != '':
             self.do_import(' ' + import_line)
