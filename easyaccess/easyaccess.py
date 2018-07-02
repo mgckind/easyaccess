@@ -21,8 +21,8 @@ import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.fun_utils as fun_utils
 import easyaccess.eaparser as eaparser
 from easyaccess.eautils.import_utils import Import
-from easyaccess.eautils.ea_utils import *
 from easyaccess.eautils.do_utils import Do_Func
+from easyaccess.eautils.ea_utils import *
 import threading 
 import time
 import pandas as pd
@@ -350,87 +350,87 @@ Connected as {user} to {db}.
                     readline.set_completer(self.old_completer)
                 except ImportError:
                     pass
-    #see documentation
-#     def do_help(self, arg):
-#         """
-#         List available commands with "help" or detailed help with "help cmd".
-#         """
-#         if arg:
-#             # TODO check arg syntax
-#             try:
-#                 func = getattr(self, 'help_' + arg)
-#             except AttributeError:
-#                 try:
-#                     doc = getattr(self, 'do_' + arg).__doc__
-#                     if doc:
-#                         doc = str(doc)
-#                         if doc.find('DB:') > -1:
-#                             doc = doc.replace('DB:', '')
-#                         if arg in NOT_PUBLIC and self.dbname == 'desdr':
-#                             doc = colored('\n\t* Command not availble in Public Release DB *\n',
-#                                           'red', self.ct) + doc
-#                         self.stdout.write("%s\n" % str(doc))
-#                         return
-#                 except AttributeError:
-#                     pass
-#                 self.stdout.write("%s\n" % str(self.nohelp % (arg,)))
-#                 return
-#             func()
-#         else:
-#             self.do_clear(True)
-#             dl.print_deslogo(self.ct)
-#             self.stdout.write(str(self.intro) + "\n")
-#             names = self.get_names()
-#             cmds_doc = []
-#             cmds_undoc = []
-#             cmds_db = []
-#             help = {}
-#             for name in names:
-#                 if name[:5] == 'help_':
-#                     help[name[5:]] = 1
-#             names.sort()
-#             # There can be duplicates if routines overridden
-#             prevname = ''
-#             for name in names:
-#                 if name[:3] == 'do_':
-#                     if name == prevname:
-#                         continue
-#                     prevname = name
-#                     cmd = name[3:]
-#                     if cmd in NOT_PUBLIC and self.dbname == 'desdr':
-#                         continue
-#                     if cmd in help:
-#                         cmds_doc.append(cmd)
-#                         del help[cmd]
-#                     elif getattr(self, name).__doc__:
-#                         doc = getattr(self, name).__doc__
-#                         if doc.find('DB:') > -1:
-#                             cmds_db.append(cmd)
-#                         else:
-#                             cmds_doc.append(cmd)
-#                     else:
-#                         cmds_undoc.append(cmd)
-#             self.stdout.write("%s\n" % str(self.doc_leader))
-#             self.print_topics(self.doc_header, cmds_doc, 80)
-#             self.print_topics(self.docdb_header, cmds_db, 80)
-#             self.print_topics(self.misc_header, list(help.keys()), 80)
-#             self.print_topics(self.undoc_header, cmds_undoc, 80)
+#     see documentation
+    def do_help(self, arg):
+        """
+        List available commands with "help" or detailed help with "help cmd".
+        """
+        if arg:
+            # TODO check arg syntax
+            try:
+                func = getattr(self, 'help_' + arg)
+            except AttributeError:
+                try:
+                    doc = getattr(self, 'do_' + arg).__doc__
+                    if doc:
+                        doc = str(doc)
+                        if doc.find('DB:') > -1:
+                            doc = doc.replace('DB:', '')
+                        if arg in NOT_PUBLIC and self.dbname == 'desdr':
+                            doc = colored('\n\t* Command not availble in Public Release DB *\n',
+                                          'red', self.ct) + doc
+                        self.stdout.write("%s\n" % str(doc))
+                        return
+                except AttributeError:
+                    pass
+                self.stdout.write("%s\n" % str(self.nohelp % (arg,)))
+                return
+            func()
+        else:
+            self.do_clear(True)
+            dl.print_deslogo(self.ct)
+            self.stdout.write(str(self.intro) + "\n")
+            names = self.get_names()
+            cmds_doc = []
+            cmds_undoc = []
+            cmds_db = []
+            help = {}
+            for name in names:
+                if name[:5] == 'help_':
+                    help[name[5:]] = 1
+            names.sort()
+            # There can be duplicates if routines overridden
+            prevname = ''
+            for name in names:
+                if name[:3] == 'do_':
+                    if name == prevname:
+                        continue
+                    prevname = name
+                    cmd = name[3:]
+                    if cmd in NOT_PUBLIC and self.dbname == 'desdr':
+                        continue
+                    if cmd in help:
+                        cmds_doc.append(cmd)
+                        del help[cmd]
+                    elif getattr(self, name).__doc__:
+                        doc = getattr(self, name).__doc__
+                        if doc.find('DB:') > -1:
+                            cmds_db.append(cmd)
+                        else:
+                            cmds_doc.append(cmd)
+                    else:
+                        cmds_undoc.append(cmd)
+            self.stdout.write("%s\n" % str(self.doc_leader))
+            self.print_topics(self.doc_header, cmds_doc, 80)
+            self.print_topics(self.docdb_header, cmds_db, 80)
+            self.print_topics(self.misc_header, list(help.keys()), 80)
+            self.print_topics(self.undoc_header, cmds_undoc, 80)
 
-#             print(colored(' *Default Input*', 'cyan', self.ct))
-#             print(self.ruler * 80)
-#             print("* To run SQL queries just add ; at the end of query")
-#             print("* To write to a file  : select ... from ... "
-#                   "where ... ; > filename")
-#             print(colored(
-#                 "* Supported file formats (.csv, .tab., .fits, .h5) ",
-#                 "green", self.ct))
-#             print("* To check SQL syntax : select ... from ... "
-#                   "where ... ; < check")
-#             print(
-#                 "* To see the Oracle execution plan  : select ... "
-#                 "from ... where ... ; < explain")
-#             print()
-#             print("* To access an online tutorial type: online_tutorial ")
+            print(colored(' *Default Input*', 'cyan', self.ct))
+            print(self.ruler * 80)
+            print("* To run SQL queries just add ; at the end of query")
+            print("* To write to a file  : select ... from ... "
+                  "where ... ; > filename")
+            print(colored(
+                "* Supported file formats (.csv, .tab., .fits, .h5) ",
+                "green", self.ct))
+            print("* To check SQL syntax : select ... from ... "
+                  "where ... ; < check")
+            print(
+                "* To see the Oracle execution plan  : select ... "
+                "from ... where ... ; < explain")
+            print()
+            print("* To access an online tutorial type: online_tutorial ")
 
     #print topics 
     def print_topics(self, header, cmds, maxcol):
@@ -980,7 +980,7 @@ Connected as {user} to {db}.
 
     def get_tables_names_user(self, user):
         if user == "":
-            return Do_Func.do_help('tables_names_user')
+            return do_help('tables_names_user')
         user = user.replace(";", "")
         query = """
             select distinct table_name from all_tables
@@ -1274,7 +1274,7 @@ Connected as {user} to {db}.
         """
         global load_bar
         if line == '':
-            return Do_Func.do_help('config')
+            return do_help('config')
         oneline = "".join(line.split())
         if oneline.find('show') > -1:
             key = oneline.split('show')[0]
@@ -1298,11 +1298,11 @@ Connected as {user} to {db}.
             print('\n config file path = %s\n' % config_file)
         elif oneline.find('set') > -1:
             if oneline.find('all') > -1:
-                return Do_Func.do_help('config')
+                return do_help('config')
             key = oneline.split('set')[0]
             val = oneline.split('set')[1]
             if val == '':
-                return Do_Func.do_help('config')
+                return do_help('config')
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
                     if key in ['loading_bar', 'color_terminal', 'autocommit', 'trim_whitespace',
@@ -1356,7 +1356,7 @@ Connected as {user} to {db}.
 
             return
         else:
-            return Do_Func.do_help('config')
+            return do_help('config')
 
     def complete_config(self, text, line, start_index, end_index):
         line2 = ' '.join(line.split())
@@ -1385,7 +1385,7 @@ Connected as {user} to {db}.
             execproc PROCEDURE() describe
         """
         if line == '':
-            return Do_Func.do_help('execproc')
+            return do_help('execproc')
         line = line.replace(';', '')
         line = "".join(line.split())
         proc_name = line[0:line.index('(')]
@@ -1488,7 +1488,7 @@ Connected as {user} to {db}.
 
         """
         if line == '':
-            return Do_Func.do_help('change_db')
+            return do_help('change_db')
         line = " ".join(line.split())
         key_db = line.split()[0]
         if key_db in ('dessci', 'desoper', 'destest'):
@@ -1611,7 +1611,7 @@ Connected as {user} to {db}.
 
         """
         if line == '':
-            return Do_Func.do_help('find_user')
+            return do_help('find_user')
         line = " ".join(line.split())
         keys = line.split()
         if self.dbname in ('dessci', 'desoper'):
@@ -1638,7 +1638,7 @@ Connected as {user} to {db}.
         Usage: user_tables <username>
         """
         if arg == "":
-            return Do_Func.do_help('user_tables')
+            return do_help('user_tables')
         return self.get_tables_names_user(arg)
 
     def complete_user_tables(self, text, line, start_index, end_index):
@@ -1726,7 +1726,7 @@ Connected as {user} to {db}.
         will describe only columns starting with MAG in that table
         """
         if arg == '':
-            return Do_Func.do_help('describe_table')
+            return do_help('describe_table')
         arg = arg.replace(';', '')
         arg = " ".join(arg.split())
         tablename = arg.split()[0]
@@ -1832,7 +1832,7 @@ Connected as {user} to {db}.
             extra = 'To select from a table use owner.table_name' \
                     ' except for DESADMIN where only table_name is enough'
         if arg == '':
-            return Do_Func.do_help('find_tables')
+            return do_help('find_tables')
         arg = arg.replace(';', '')
         query = "SELECT owner,table_name from all_tables  WHERE upper(table_name) LIKE '%s' " % (
             arg.upper())
@@ -1851,7 +1851,7 @@ Connected as {user} to {db}.
         Example: find_tables_with_column %MAG%  # hunt for columns with MAG
         """
         if arg == '':
-            return Do_Func.do_help('find_tables_with_column')
+            return do_help('find_tables_with_column')
         query = """
            SELECT t.owner || '.' || t.table_name as table_name, t.column_name
            FROM all_tab_cols t, DES_ADMIN.CACHE_TABLES d
@@ -1874,7 +1874,7 @@ Connected as {user} to {db}.
         """
 
         if arg == '':
-            return Do_Func.do_help('show_index')
+            return do_help('show_index')
         arg = arg.replace(';', '')
         arg = " ".join(arg.split())
         tablename = arg.split()[0]
@@ -2091,10 +2091,10 @@ Connected as {user} to {db}.
         try:
             load_args = load_parser.parse_args(line.split())
         except SystemExit:
-            Do_Func.do_help('load_table')
+            do_help('load_table')
             return
         if load_args.help:
-            Do_Func.do_help('load_table')
+            do_help('load_table')
             return
         filename = eafile.get_filename(load_args.filename)
         table = load_args.tablename
@@ -2288,10 +2288,10 @@ Connected as {user} to {db}.
         try:
             append_args = append_parser.parse_args(line.split())
         except SystemExit:
-            Do_Func.do_help('append_table')
+            do_help('append_table')
             return
         if append_args.help:
-            Do_Func.do_help('append_table')
+            do_help('append_table')
             return
         filename = eafile.get_filename(append_args.filename)
         table = append_args.tablename
@@ -2465,7 +2465,7 @@ Connected as {user} to {db}.
             self.query_and_print(qcom, print_time=False, suc_arg=message)
         else:
             print(colored('\nMissing arguments\n', "red", self.ct))
-            Do_Func.do_help('add_comment')
+            do_help('add_comment')
 
     def complete_add_comment(self, text, line, begidx, lastidx):
         if line:
@@ -2666,7 +2666,7 @@ class connect(easy_or):
         """
 
         if help:
-            Do_Func.do_help_function('all')
+            do_help_function('all')
             return True
         if import_line != '':
             self.do_import(' ' + import_line)
