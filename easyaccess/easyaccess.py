@@ -21,7 +21,7 @@ import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.fun_utils as fun_utils
 import easyaccess.eaparser as eaparser
 from easyaccess.eautils.import_utils import Import
-#from easyaccess.eautils.do_utils import Do_Func
+from easyaccess.eautils.do_utils import Do_Func
 from easyaccess.eautils.ea_utils import *
 import threading 
 import time
@@ -113,7 +113,7 @@ if os.path.exists(desfile):
 
 
 #create class easy_or        
-class easy_or(cmd.Cmd, Import, object): 
+class easy_or(cmd.Cmd, Do_Func, Import, object): 
     """Easy cx_Oracle interpreter for DESDM."""
      
     #create function set_messages    
@@ -1079,26 +1079,26 @@ Connected as {user} to {db}.
             return [option for option in options_prefetch if option.startswith(text)]
         else:
             return options_prefetch
+#move do_history() to class Do_Func in do_utils file 
+#     def do_history(self, arg):
+#         """
+#         Print the history buffer to the screen, oldest to most recent.
+#         IF argument n is present print the most recent N items.
 
-    def do_history(self, arg):
-        """
-        Print the history buffer to the screen, oldest to most recent.
-        IF argument n is present print the most recent N items.
-
-        Usage: history [n]
-        """
-        if readline_present:
-            nall = readline.get_current_history_length()
-            firstprint = 0
-            if arg.strip():
-                firstprint = max(nall - int(arg), 0)
-            for index in range(firstprint, nall):
-                print(index, readline.get_history_item(index))
-            # if arg.strip():
-            #    self.do_clear(None)
-            #    line = readline.get_history_item(int(arg))
-            #    line = self.precmd(line)
-            #    self.onecmd(line)
+#         Usage: history [n]
+#         """
+#         if readline_present:
+#             nall = readline.get_current_history_length()
+#             firstprint = 0
+#             if arg.strip():
+#                 firstprint = max(nall - int(arg), 0)
+#             for index in range(firstprint, nall):
+#                 print(index, readline.get_history_item(index))
+#             # if arg.strip():
+#             #    self.do_clear(None)
+#             #    line = readline.get_history_item(int(arg))
+#             #    line = self.precmd(line)
+#             #    self.onecmd(line)
 
     def do_shell(self, line):
         """
