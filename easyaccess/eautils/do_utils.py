@@ -1,4 +1,6 @@
 from easyaccess.eautils.ea_utils import * 
+from easyaccess.version import last_pip_version 
+from easyaccess.version import __version__ 
 import os 
 import sys 
 import getpass
@@ -922,4 +924,76 @@ class Do_Func(object):
         print(colored('\n ** Table %s appended '
                       'successfully with %d rows.' % (table.upper(), total_rows), "green", self.ct))
 
+        
+    def do_add_comment(self, line):
+        """
+        DB:Add comments to table and/or columns inside tables
+
+        Usage:
+            - add_comment table <TABLE> 'Comments on table'
+            - add_comment column <TABLE.COLUMN> 'Comments on columns'
+
+        Ex:  add_comment table MY_TABLE 'This table contains info'
+             add_comment columns MY_TABLE.ID 'Id for my objects'
+
+        This command supports smart-autocompletion. No `;` is
+        necessary (and it will be inserted into comment if used).
+
+        """
+
+        line = " ".join(line.split())
+        keys = line.split()
+        oneline = "".join(keys)
+        if oneline.find('table') > -1:
+            if len(keys) == 1:
+                print(colored('\nMissing table name\n', "red", self.ct))
+                return
+            table = keys[1]
+            if len(keys) == 2:
+                print(colored('\nMissing comment for table %s\n' %
+                              table, "red", self.ct))
+                return
+            comm = " ".join(keys[2:])
+            if comm[0] == "'":
+                comm = comm[1:-1]
+            qcom = """comment on table %s is '%s'""" % (table, comm)
+            message = "Comment added to table: %s" % table
+            self.query_and_print(qcom, print_time=False, suc_arg=message)
+        elif oneline.find('column') > -1:
+            if len(keys) == 1:
+                print(colored('\nMissing column name (TABLE.COLUMN)\n', "red", self.ct))
+                return
+            col = keys[1]
+            if len(keys) == 2:
+                print(colored('\nMissing comment for column %s\n' %
+                              col, "red", self.ct))
+                return
+            if len(keys) > 2 and col.find('.') == -1:
+                print(colored('\nMissing column name for table %s\n',
+                              "red", self.ct) % col)
+                return
+            comm = " ".join(keys[2:])
+            if comm[0] == "'":
+                comm = comm[1:-1]
+            qcom = """comment on column  %s is '%s'""" % (col, comm)
+            message = "Comment added to column: %s in table %s" % (
+                col.split('.')[1], col.split('.')[0])
+            self.query_and_print(qcom, print_time=False, suc_arg=message)
+        else:
+            print(colored('\nMissing arguments\n', "red", self.ct))
+            self.do_help('add_comment')
+
+            
+    def do_version(self, line):
+        """
+        Print current  and latest pip version of easyacccess
+        """
+        last_version = last_pip_version()
+        print()
+        print(colored("Current version  : easyaccess {}".format(
+            __version__), "green", self.ct))
+        print(colored("Last pip version : easyaccess {}".format(
+            last_version), "green", self.ct))
+        print()
+        return
 
