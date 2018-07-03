@@ -1,11 +1,33 @@
 from easyaccess.eautils.ea_utils import * 
 from easyaccess.version import last_pip_version 
 from easyaccess.version import __version__ 
+import easyaccess.config_ea as config_mod 
 import os 
-import sys 
+import stat
+import sys
+import cmd
 import getpass
 import re 
 import cx_Oracle
+
+try: #try import readline, readline_present = True 
+    import readline
+    readline_present = True
+    try: #try import gnureadline as readline 
+        import gnureadline as readline
+    except ImportError: #if import error, pass 
+        pass
+except ImportError: #except import error, readline_present = False 
+    readline_present = False
+
+desfile = os.getenv("DES_SERVICES")
+if not desfile:
+    desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
+if os.path.exists(desfile):
+    amode = stat.S_IMODE(os.stat(desfile).st_mode)
+    if amode != 2 ** 8 + 2 ** 7:
+        print('Changing permissions to des_service file to read/write by user')
+        os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only    
 
 #class that contains most of the "do" functions used in easyaccess 
 class Do_Func(object):
@@ -194,7 +216,7 @@ class Do_Func(object):
             self.desconfig.set('db-'+self.dbname, 'passwd', pw1)
             config_mod.write_desconfig(desfile, self.desconfig)
         except:
-            confirm = 'Password could not be changed in %s\n' % db.upper()
+            confirm = 'Password could not be changed in %s\n' % self.dbname.upper()
             print(colored(confirm, "red", self.ct))
             print(sys.exc_info())  
             
