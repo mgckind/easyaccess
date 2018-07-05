@@ -85,5 +85,41 @@ class DB_Func(object):
         if text:
             return [option for option in options_users if option.startswith(text.lower())]
         else:
-            return options_users     
+            return options_users
+        
+    def complete_describe_table(self, text, line, start_index, end_index):
+        return self._complete_tables(text)
+    
+    def complete_find_tables(self, text, line, start_index, end_index):
+        return self._complete_tables(text)
+    
+    def complete_find_tables_with_column(self, text, line, begidx, lastidx):
+        return self._complete_colnames(text)
+    
+    def complete_show_index(self, text, line, begidx, lastidx):
+        return self._complete_tables(text)
+
+    def complete_load_table(self, text, line, start_idx, end_idx):
+        return complete_path(line)
+    
+    def complete_append_table(self, text, line, start_idx, end_idx):
+        return complete_path(line)
+    
+    def complete_add_comment(self, text, line, begidx, lastidx):
+        if line:
+            oneline = "".join(line.strip())
+            if oneline.find('table') > -1:
+                return self._complete_tables(text)
+            elif oneline.find('column') > -1:
+                if oneline.find('.') > -1:
+                    colname = text.split('.')[-1]
+                    tablename = text.split('.')[0]
+                    return [tablename + '.' + cn for cn in
+                            self._complete_colnames(colname) if cn.startswith(colname)]
+                else:
+                    return self._complete_tables(text)
+            else:
+                return [option for option in options_add_comment if option.startswith(text)]
+        else:
+            return options_add_comment
     

@@ -1864,8 +1864,11 @@ Connected as {user} to {db}.
 #             return df
 #         return
 
-    def complete_describe_table(self, text, line, start_index, end_index):
-        return self._complete_tables(text)
+
+#move complete_describe_tables() to dbdo_utils()
+#     def complete_describe_table(self, text, line, start_index, end_index):
+#         return self._complete_tables(text)
+
 
 #move do_find_tables() to class Do_Func in do_utils file             
 #     def do_find_tables(self, arg, extra=None, return_df=False):
@@ -1886,8 +1889,10 @@ Connected as {user} to {db}.
 #         if return_df:
 #             return df
 
-    def complete_find_tables(self, text, line, start_index, end_index):
-        return self._complete_tables(text)
+
+#move complete_find_tables() to dbdo_utils file       
+#     def complete_find_tables(self, text, line, start_index, end_index):
+#         return self._complete_tables(text)
 
     
 #move do_find_tables_with_column() to class Do_Func in do_utils file       
@@ -1910,8 +1915,10 @@ Connected as {user} to {db}.
 #         self.query_and_print(query)
 #         return
 
-    def complete_find_tables_with_column(self, text, line, begidx, lastidx):
-        return self._complete_colnames(text)
+
+#move complete_find_tables_with_columns() to dbdo_utils file
+#     def complete_find_tables_with_column(self, text, line, begidx, lastidx):
+#         return self._complete_colnames(text)
 
 #move do_show_index() to class Do_Func in do_utils file    
 #     def do_show_index(self, arg):
@@ -1952,8 +1959,10 @@ Connected as {user} to {db}.
 #         nresults = self.query_and_print(query)
 #         return
 
-    def complete_show_index(self, text, line, begidx, lastidx):
-        return self._complete_tables(text)
+
+#move complete_show_index() to dbdo_utils file 
+#     def complete_show_index(self, text, line, begidx, lastidx):
+#         return self._complete_tables(text)
 
     def check_table_exists(self, table):
         # check table first
@@ -2292,8 +2301,11 @@ Connected as {user} to {db}.
 #                       table.upper(), "blue", self.ct), '\n')
 #         return
 
-    def complete_load_table(self, text, line, start_idx, end_idx):
-        return complete_path(line)
+
+#move complete_load_tables() to dbdo_utils file 
+#     def complete_load_table(self, text, line, start_idx, end_idx):
+#         return complete_path(line)
+
 
 #move do_append_table() to class Do_Func in do_utils file                
 #     def do_append_table(self, line, name=None, chunksize=None, memsize=None):
@@ -2458,8 +2470,10 @@ Connected as {user} to {db}.
 #         print(colored('\n ** Table %s appended '
 #                       'successfully with %d rows.' % (table.upper(), total_rows), "green", self.ct))
 
-    def complete_append_table(self, text, line, start_idx, end_idx):
-        return complete_path(line)
+
+#move complete_append_table() to dbdo_utils file 
+#     def complete_append_table(self, text, line, start_idx, end_idx):
+#         return complete_path(line)
 
     
 #move do_add_comment() to class Do_Func in do_utils file     
@@ -2521,23 +2535,25 @@ Connected as {user} to {db}.
 #             print(colored('\nMissing arguments\n', "red", self.ct))
 #             self.do_help('add_comment')
 
-    def complete_add_comment(self, text, line, begidx, lastidx):
-        if line:
-            oneline = "".join(line.strip())
-            if oneline.find('table') > -1:
-                return self._complete_tables(text)
-            elif oneline.find('column') > -1:
-                if oneline.find('.') > -1:
-                    colname = text.split('.')[-1]
-                    tablename = text.split('.')[0]
-                    return [tablename + '.' + cn for cn in
-                            self._complete_colnames(colname) if cn.startswith(colname)]
-                else:
-                    return self._complete_tables(text)
-            else:
-                return [option for option in options_add_comment if option.startswith(text)]
-        else:
-            return options_add_comment
+
+#move complete_add_comment() to dbdo_utils 
+#     def complete_add_comment(self, text, line, begidx, lastidx):
+#         if line:
+#             oneline = "".join(line.strip())
+#             if oneline.find('table') > -1:
+#                 return self._complete_tables(text)
+#             elif oneline.find('column') > -1:
+#                 if oneline.find('.') > -1:
+#                     colname = text.split('.')[-1]
+#                     tablename = text.split('.')[0]
+#                     return [tablename + '.' + cn for cn in
+#                             self._complete_colnames(colname) if cn.startswith(colname)]
+#                 else:
+#                     return self._complete_tables(text)
+#             else:
+#                 return [option for option in options_add_comment if option.startswith(text)]
+#         else:
+#             return options_add_comment
 
         
 #move do_version() to class Do_Func in do_utils file             
