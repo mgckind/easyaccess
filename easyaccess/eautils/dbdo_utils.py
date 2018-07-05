@@ -1,15 +1,14 @@
 from easyaccess.eautils.ea_utils import *
 
 
-
-try: #try import readline, readline_present = True 
+try: 
     import readline
     readline_present = True
-    try: #try import gnureadline as readline 
+    try: 
         import gnureadline as readline
-    except ImportError: #if import error, pass 
+    except ImportError: 
         pass
-except ImportError: #except import error, readline_present = False 
+except ImportError: 
     readline_present = False
 
 class DB_Func(object): 

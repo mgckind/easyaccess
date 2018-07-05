@@ -11,14 +11,14 @@ import re
 import cx_Oracle
 import webbrowser
 
-try: #try import readline, readline_present = True 
+try: 
     import readline
     readline_present = True
-    try: #try import gnureadline as readline 
+    try: 
         import gnureadline as readline
-    except ImportError: #if import error, pass 
+    except ImportError: 
         pass
-except ImportError: #except import error, readline_present = False 
+except ImportError: 
     readline_present = False
 
 desfile = os.getenv("DES_SERVICES")
@@ -30,10 +30,8 @@ if os.path.exists(desfile):
         print('Changing permissions to des_service file to read/write by user')
         os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only    
 
-#class that contains most of the "do" functions used in easyaccess 
+
 class Do_Func(object):
-    #problem with importing do_history is that it references readline_present, a variable created in easyaccess.py 
-    #This reference problem will need to be addressed 
     def do_history(self, arg):
         """
         Print the history buffer to the screen, oldest to most recent.
