@@ -37,5 +37,53 @@ class DB_Func(object):
         if line:
             line = ' '.join(line.split()[1:])
             return complete_path(line)
+        
+    def complete_edit(self, text, line, start_index, end_index):
+        if text:
+            return [option for option in options_edit if option.startswith(text)]
+        else:
+            return options_edit   
+   
 
+    def complete_loadsql(self, text, line, start_idx, end_idx):
+        return complete_path(line)
+    
+    
+    def complete_change_db(self, text, line, start_index, end_index):
+        options_db = ['desoper', 'dessci', 'destest']
+        if text:
+            return [option for option in options_db if option.startswith(text.lower())]
+        else:
+            return options_db
+
+        
+    def complete_config(self, text, line, start_index, end_index):
+        line2 = ' '.join(line.split())
+        args = line2.split()
+        if text:
+            if len(args) > 2:
+                return [option for option in options_config2 if option.startswith(text)]
+            else:
+                return [option for option in options_config if option.startswith(text)]
+        else:
+            if len(args) > 1:
+                return options_config2
+            else:
+                return options_config  
+            
+            
+    def complete_find_user(self, text, line, start_index, end_index):
+        options_users = self.cache_usernames
+        if text:
+            return [option for option in options_users if option.startswith(text.lower())]
+        else:
+            return options_users 
+        
+        
+    def complete_user_tables(self, text, line, start_index, end_index):
+        options_users = self.cache_usernames
+        if text:
+            return [option for option in options_users if option.startswith(text.lower())]
+        else:
+            return options_users     
     

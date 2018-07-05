@@ -1158,12 +1158,15 @@ Connected as {user} to {db}.
 #                 if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
 #                     self.default(newquery)
 
-    def complete_edit(self, text, line, start_index, end_index):
-        if text:
-            return [option for option in options_edit if option.startswith(text)]
-        else:
-            return options_edit
+
+#move complete_edit() to dbdo_utils file 
+#     def complete_edit(self, text, line, start_index, end_index):
+#         if text:
+#             return [option for option in options_edit if option.startswith(text)]
+#         else:
+#             return options_edit
         
+    
 #move do_loadsql() to class Do_Func in do_utils file         
 #     def do_loadsql(self, line):
 #         """
@@ -1202,8 +1205,10 @@ Connected as {user} to {db}.
 #         else:
 #             self.default(newq)
 
-    def complete_loadsql(self, text, line, start_idx, end_idx):
-        return complete_path(line)
+#move complete_loadsql() to dbdo_utils file 
+#     def complete_loadsql(self, text, line, start_idx, end_idx):
+#         return complete_path(line)
+
 
     def do_exit(self, line):
         """
@@ -1229,6 +1234,7 @@ Connected as {user} to {db}.
             self.config.set('display', 'loading_bar', 'yes' if load_bar else 'no')
             config_mod.write_config(config_file, self.config)
         os._exit(0)
+
 
 #move do_clear() to class Do_Func in do_utils file                 
 #     def do_clear(self, line):
@@ -1372,19 +1378,20 @@ Connected as {user} to {db}.
         else:
             return do_help('config')
 
-    def complete_config(self, text, line, start_index, end_index):
-        line2 = ' '.join(line.split())
-        args = line2.split()
-        if text:
-            if len(args) > 2:
-                return [option for option in options_config2 if option.startswith(text)]
-            else:
-                return [option for option in options_config if option.startswith(text)]
-        else:
-            if len(args) > 1:
-                return options_config2
-            else:
-                return options_config
+#move complete_config() to dbdo_utils file         
+#     def complete_config(self, text, line, start_index, end_index):
+#         line2 = ' '.join(line.split())
+#         args = line2.split()
+#         if text:
+#             if len(args) > 2:
+#                 return [option for option in options_config2 if option.startswith(text)]
+#             else:
+#                 return [option for option in options_config if option.startswith(text)]
+#         else:
+#             if len(args) > 1:
+#                 return options_config2
+#             else:
+#                 return options_config
 
     # DO METHODS FOR DB
 
@@ -1562,12 +1569,15 @@ Connected as {user} to {db}.
 #                 key_db), "red", self.ct))
 #             return
 
-    def complete_change_db(self, text, line, start_index, end_index):
-        options_db = ['desoper', 'dessci', 'destest']
-        if text:
-            return [option for option in options_db if option.startswith(text.lower())]
-        else:
-            return options_db
+
+#move complete_change_db() to dbdo_utils file 
+#     def complete_change_db(self, text, line, start_index, end_index):
+#         options_db = ['desoper', 'dessci', 'destest']
+#         if text:
+#             return [option for option in options_db if option.startswith(text.lower())]
+#         else:
+#             return options_db
+
         
 #move do_whoami() to class Do_Func in do_utils file       
 #     def do_whoami(self, arg):
@@ -1652,12 +1662,15 @@ Connected as {user} to {db}.
 #             query += 'upper(username) like upper (\'' + keys[0] + '\')'
 #         self.query_and_print(query, print_time=False, clear=True)
 
-    def complete_find_user(self, text, line, start_index, end_index):
-        options_users = self.cache_usernames
-        if text:
-            return [option for option in options_users if option.startswith(text.lower())]
-        else:
-            return options_users
+
+#move complete_find_user() to dbdo_utils
+#     def complete_find_user(self, text, line, start_index, end_index):
+#         options_users = self.cache_usernames
+#         if text:
+#             return [option for option in options_users if option.startswith(text.lower())]
+#         else:
+#             return options_users
+
 
 #move do_user_tables() to class Do_Func in do_utils file        
 #     def do_user_tables(self, arg):
@@ -1670,12 +1683,14 @@ Connected as {user} to {db}.
 #             return do_help('user_tables')
 #         return self.get_tables_names_user(arg)
 
-    def complete_user_tables(self, text, line, start_index, end_index):
-        options_users = self.cache_usernames
-        if text:
-            return [option for option in options_users if option.startswith(text.lower())]
-        else:
-            return options_users
+
+#move complete_user_tables() to dbdo_utils file
+#     def complete_user_tables(self, text, line, start_index, end_index):
+#         options_users = self.cache_usernames
+#         if text:
+#             return [option for option in options_users if option.startswith(text.lower())]
+#         else:
+#             return options_users
 
     def get_tablename_tuple(self, tablename):
         """
