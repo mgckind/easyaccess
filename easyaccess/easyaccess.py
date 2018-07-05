@@ -2572,28 +2572,29 @@ Connected as {user} to {db}.
 
     # UNDOCUMENTED DO METHODS
 
-    def do_EOF(self, line):
-        # Exit program on ^D (Ctrl+D)
-        print()  # For some reason this is missing...
-        self.do_exit(line)
+#Move ALL undocumented DO methods to do_utils file     
+#     def do_EOF(self, line):
+#         # Exit program on ^D (Ctrl+D)
+#         print()  # For some reason this is missing...
+#         self.do_exit(line)
 
-    def do_quit(self, line):
-        self.do_exit(line)
+#     def do_quit(self, line):
+#         self.do_exit(line)
 
-    def do_select(self, line):
-        self.default('select ' + line)
+#     def do_select(self, line):
+#         self.default('select ' + line)
 
-    def do_SELECT(self, line):
-        self.default('SELECT ' + line)
+#     def do_SELECT(self, line):
+#         self.default('SELECT ' + line)
 
-    def do_clear_history(self, line):
-        if readline_present:
-            readline.clear_history()
+#     def do_clear_history(self, line):
+#         if readline_present:
+#             readline.clear_history()
 
-    def do_online_tutorial(self, line):
-        tut = webbrowser.open_new_tab(
-            'http://matias-ck.com/easyaccess/')
-        del tut
+#     def do_online_tutorial(self, line):
+#         tut = webbrowser.open_new_tab(
+#             'http://matias-ck.com/easyaccess/')
+#         del tut
 
 
 # ############## PYTOHN API ###############################

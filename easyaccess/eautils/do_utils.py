@@ -9,6 +9,7 @@ import cmd
 import getpass
 import re 
 import cx_Oracle
+import webbrowser
 
 try: #try import readline, readline_present = True 
     import readline
@@ -1049,5 +1050,28 @@ class Do_Func(object):
         else:
             print('\nPrefetch value = {:}\n'.format(self.prefetch))
             
+            
+    def do_EOF(self, line):
+    # Exit program on ^D (Ctrl+D)
+        print()  # For some reason this is missing...
+        self.do_exit(line)
+
+    def do_quit(self, line):
+        self.do_exit(line)
+
+    def do_select(self, line):
+        self.default('select ' + line)
+
+    def do_SELECT(self, line):
+        self.default('SELECT ' + line)
+
+    def do_clear_history(self, line):
+        if readline_present:
+            readline.clear_history()
+
+    def do_online_tutorial(self, line):
+        tut = webbrowser.open_new_tab(
+            'http://matias-ck.com/easyaccess/')
+        del tut       
         
         
