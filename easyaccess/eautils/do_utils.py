@@ -1018,4 +1018,34 @@ class Do_Func(object):
             last_version), "green", self.ct))
         print()
         return
+    
+    def do_prefetch(self, line):
+        """
+        Shows, sets or sets to default the number of prefetch rows from Oracle
+        The default is 10000, increasing this number uses more memory but return
+        data faster. Decreasing this number reduce memory but increases
+        communication trips with database thus slowing the process.
 
+        Usage:
+           - prefetch show         : Shows current value
+           - prefetch set <number> : Sets the prefetch to <number>
+           - prefetch default      : Sets value to 10000
+        """
+        line = "".join(line.split())
+        if line.find('show') > -1:
+            print('\nPrefetch value = {:}\n'.format(self.prefetch))
+        elif line.find('set') > -1:
+            val = line.split('set')[-1]
+            if val != '':
+                self.prefetch = int(val)
+                self.config.set('easyaccess', 'prefetch', str(val))
+                self.writeconfig = True
+                print('\nPrefetch value set to  {:}\n'.format(self.prefetch))
+        elif line.find('default') > -1:
+            self.prefetch = 30000
+            self.config.set('easyaccess', 'prefetch', '30000')
+            self.writeconfig = True
+            print('\nPrefetch value set to default (30000) \n')
+        else:
+            print('\nPrefetch value = {:}\n'.format(self.prefetch))
+    

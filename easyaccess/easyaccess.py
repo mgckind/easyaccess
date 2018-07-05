@@ -22,6 +22,7 @@ import easyaccess.eautils.fun_utils as fun_utils
 import easyaccess.eaparser as eaparser
 from easyaccess.eautils.import_utils import Import
 from easyaccess.eautils.do_utils import Do_Func
+from easyaccess.eautils.dbdo_utils import DB_Func
 from easyaccess.eautils.ea_utils import *
 import threading 
 import time
@@ -113,7 +114,7 @@ if os.path.exists(desfile):
 
 
 #create class easy_or        
-class easy_or(cmd.Cmd, Do_Func, Import, object): 
+class easy_or(cmd.Cmd, Do_Func, DB_Func, Import, object): 
     """Easy cx_Oracle interpreter for DESDM."""
      
     #create function set_messages    
@@ -1021,20 +1022,21 @@ Connected as {user} to {db}.
         tnames = pd.DataFrame(temp.fetchall())
         user_list = tnames.values.flatten().tolist()
         return user_list
+    
+#move both functions to dbdo_utils file 
+#     def _complete_tables(self, text):
+#         options_tables = self.cache_table_names
+#         if text:
+#             return [option for option in options_tables if option.startswith(text.upper())]
+#         else:
+#             return options_tables
 
-    def _complete_tables(self, text):
-        options_tables = self.cache_table_names
-        if text:
-            return [option for option in options_tables if option.startswith(text.upper())]
-        else:
-            return options_tables
-
-    def _complete_colnames(self, text):
-        options_colnames = self.cache_column_names
-        if text:
-            return [option for option in options_colnames if option.startswith(text.upper())]
-        else:
-            return options_colnames
+#     def _complete_colnames(self, text):
+#         options_colnames = self.cache_column_names
+#         if text:
+#             return [option for option in options_colnames if option.startswith(text.upper())]
+#         else:
+#             return options_colnames
 
     def get_columnlist(self):
         query = """SELECT column_name from DES_ADMIN.CACHE_COLUMNS"""
@@ -1044,41 +1046,47 @@ Connected as {user} to {db}.
         return col_list
 
     # # DO METHODS
-    def do_prefetch(self, line):
-        """
-        Shows, sets or sets to default the number of prefetch rows from Oracle
-        The default is 10000, increasing this number uses more memory but return
-        data faster. Decreasing this number reduce memory but increases
-        communication trips with database thus slowing the process.
+#move do_prefetch() to do_utils file     
+#     def do_prefetch(self, line):
+#         """
+#         Shows, sets or sets to default the number of prefetch rows from Oracle
+#         The default is 10000, increasing this number uses more memory but return
+#         data faster. Decreasing this number reduce memory but increases
+#         communication trips with database thus slowing the process.
 
-        Usage:
-           - prefetch show         : Shows current value
-           - prefetch set <number> : Sets the prefetch to <number>
-           - prefetch default      : Sets value to 10000
-        """
-        line = "".join(line.split())
-        if line.find('show') > -1:
-            print('\nPrefetch value = {:}\n'.format(self.prefetch))
-        elif line.find('set') > -1:
-            val = line.split('set')[-1]
-            if val != '':
-                self.prefetch = int(val)
-                self.config.set('easyaccess', 'prefetch', str(val))
-                self.writeconfig = True
-                print('\nPrefetch value set to  {:}\n'.format(self.prefetch))
-        elif line.find('default') > -1:
-            self.prefetch = 30000
-            self.config.set('easyaccess', 'prefetch', '30000')
-            self.writeconfig = True
-            print('\nPrefetch value set to default (30000) \n')
-        else:
-            print('\nPrefetch value = {:}\n'.format(self.prefetch))
+#         Usage:
+#            - prefetch show         : Shows current value
+#            - prefetch set <number> : Sets the prefetch to <number>
+#            - prefetch default      : Sets value to 10000
+#         """
+#         line = "".join(line.split())
+#         if line.find('show') > -1:
+#             print('\nPrefetch value = {:}\n'.format(self.prefetch))
+#         elif line.find('set') > -1:
+#             val = line.split('set')[-1]
+#             if val != '':
+#                 self.prefetch = int(val)
+#                 self.config.set('easyaccess', 'prefetch', str(val))
+#                 self.writeconfig = True
+#                 print('\nPrefetch value set to  {:}\n'.format(self.prefetch))
+#         elif line.find('default') > -1:
+#             self.prefetch = 30000
+#             self.config.set('easyaccess', 'prefetch', '30000')
+#             self.writeconfig = True
+#             print('\nPrefetch value set to default (30000) \n')
+#         else:
+#             print('\nPrefetch value = {:}\n'.format(self.prefetch))
 
-    def complete_prefetch(self, text, line, start_index, end_index):
-        if text:
-            return [option for option in options_prefetch if option.startswith(text)]
-        else:
-            return options_prefetch
+
+#move complete_prefetch() to dbdo_utils file 
+#     def complete_prefetch(self, text, line, start_index, end_index):
+#         if text:
+#             return [option for option in options_prefetch if option.startswith(text)]
+#         else:
+#             return options_prefetch
+
+
+
 #move do_history() to class Do_Func in do_utils file 
 #     def do_history(self, arg):
 #         """
@@ -1110,10 +1118,12 @@ Connected as {user} to {db}.
 #         """
 #         os.system(line)
 
-    def complete_shell(self, text, line, start_idx, end_idx):
-        if line:
-            line = ' '.join(line.split()[1:])
-            return complete_path(line)
+#move complete_shell() to dbdo_utils file 
+#     def complete_shell(self, text, line, start_idx, end_idx):
+#         if line:
+#             line = ' '.join(line.split()[1:])
+#             return complete_path(line)
+
 
 #move do_edit() to class Do_Func in do_utils file         
 #     def do_edit(self, line):
