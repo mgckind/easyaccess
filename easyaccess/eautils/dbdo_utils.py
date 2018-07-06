@@ -749,3 +749,213 @@ class DB_Func(object):
                 print(colored('\nMissing arguments\n', "red", self.ct))
                 self.do_help('add_comment')
 
+                
+    def do_edit(self, line):
+        """
+        Opens a buffer file to edit a sql statement and then it reads it
+        and executes the statement. By default it will show the current
+        statement in buffer (or empty)
+
+        Usage:
+            - edit   : opens the editor (default from $EDITOR or nano)
+            - edit set_editor <editor> : sets editor to <editor>, ex: edit set_editor vi
+        """
+
+        line = "".join(line.split())
+        if line.find('show') > -1:
+            print('\nEditor  = {:}\n'.format(self.editor))
+        elif line.find('set_editor') > -1:
+            val = line.split('set_editor')[-1]
+            if val != '':
+                self.editor = val
+                self.config.set('easyaccess', 'editor', val)
+                self.writeconfig = True
+        else:
+            os.system(self.editor + ' easy.buf')
+            if os.path.exists('easy.buf'):
+                newquery = read_buf('easy.buf')
+                if newquery == "":
+                    return
+                print()
+                print(newquery)
+                print()
+                if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
+                    self.default(newquery)   
+
+    def do_loadsql(self, line):
+        """
+        DB:Loads a sql file with a query and ask whether it should be run
+        There is a shortcut using @, ex : @test.sql  (or @test.sql > myfile.csv
+        to override output file)
+
+        Usage: loadsql <filename with sql statement>   (use autocompletion)
+
+        Optional: loadsql <filename with sql statement> > <output_file> to
+        write to a file, not to the screen
+        """
+        line = line.replace(';', '')
+        if line.find('>') > -1:
+            try:
+                line = "".join(line.split())
+                newq = read_buf(line.split('>')[0])
+                if newq.find(';') > -1:
+                    newq = newq.split(';')[0]
+                outputfile = line.split('>')[1]
+                newq = newq + '; > ' + outputfile
+            except:
+                outputfile = ''
+
+        else:
+            newq = read_buf(line)
+
+        if newq == "":
+            return
+        if self.interactive:
+            print()
+            print(newq)
+            print()
+            if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
+                self.default(newq)
+        else:
+            self.default(newq)
+            
+            
+    def do_refresh_metadata_cache(self, arg):
+        """
+        DB:Refreshes meta data cache for auto-completion of table
+        names and column names .
+        """
+        verb = True
+        try:
+            if verb:
+                print('Loading metadata into cache...')
+            self.cache_table_names = self.get_tables_names()
+            self.cache_usernames = self.get_userlist()
+            self.cache_column_names = self.get_columnlist()
+        except:
+            if verb:
+                print(
+                    colored("There was an error when refreshing the metadata", "red", self.ct))
+        try:
+            self.cur.execute('create table FGOTTENMETADATA (ID int)')
+        except:
+            pass
+        
+
+    def do_show_db(self, arg):
+        """
+        DB:Shows database connection information
+        """
+        lines = "user: %s\ndb  : %s\nhost: %s\n" % (
+            self.user.upper(), self.dbname.upper(), self.dbhost.upper())
+        lines = lines + "\nPersonal links:"
+        query = """
+        SELECT owner, db_link, username, host, created
+        FROM all_db_links where OWNER = '%s'
+        """ % (self.user.upper())
+        self.query_and_print(query, print_time=False, extra=lines, clear=True) 
+        
+        
+    def do_whoami(self, arg):
+        """
+        DB:Print information about the user's details.
+
+        Usage: whoami
+        """
+        # It might be useful to print user roles as well
+        # select GRANTED_ROLE from USER_ROLE_PRIVS
+
+        if self.dbname in ('dessci', 'desoper'):
+            sql_getUserDetails = """
+            select d.username, d.email, d.firstname as first, d.lastname as last,
+             trunc(sysdate-t.ptime,0)||' days ago' last_passwd_change,
+            trunc(sysdate-t.ctime,0)||' days ago' created
+            from des_users d, sys.user$ t  where
+             d.username = '""" + self.user + """' and t.name=upper(d.username)"""
+        if self.dbname in ('destest'):
+            print(
+                colored('\nThis function is not implemented in destest\n', 'red', self.ct))
+            sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
+        self.query_and_print(sql_getUserDetails, print_time=False, clear=True)
+        
+    def do_myquota(self, arg):
+        """
+        DB:Print information about quota status.
+
+        Usage: myquota
+        """
+        query = """
+        SELECT tablespace_name, mbytes_used/1024 as GBYTES_USED,
+        mbytes_left/1024 as GBYTES_LEFT from myquota
+        """
+        self.query_and_print(query, print_time=False, clear=True)
+        
+    def do_mytables(self, arg, return_df=False, extra="List of my tables"):
+        """
+        DB:Lists tables you have made in your user schema.
+
+        Usage: mytables
+        """
+        # query = "SELECT table_name FROM user_tables"
+        query = """
+        SELECT t.table_name, s.bytes/1024/1024/1024 SIZE_GBYTES
+        FROM user_segments s, user_tables t
+        WHERE s.segment_name = t.table_name order by t.table_name
+        """
+
+        df = self.query_and_print(
+            query, print_time=False, extra=extra, clear=True, return_df=return_df)
+        if return_df:
+            return df
+                
+    def do_user_tables(self, arg):
+        """
+        DB:List tables from given user
+
+        Usage: user_tables <username>
+        """
+        if arg == "":
+            return self.do_help('user_tables')
+        return self.get_tables_names_user(arg)   
+    
+    def do_show_index(self, arg):
+        """
+        DB:Describes the indices  in <table-name> as
+          column_name, oracle_Type, date_length, comments
+
+         Usage: describe_index <table_name>
+        """
+
+        if arg == '':
+            return self.do_help('show_index')
+        arg = arg.replace(';', '')
+        arg = " ".join(arg.split())
+        tablename = arg.split()[0]
+        tablename = tablename.upper()
+
+        try:
+            schema, table, link = self.get_tablename_tuple(tablename)
+            link = "@" + link if link else ""
+        except:
+            print(colored("Table not found.", "red", self.ct))
+            return
+
+        # Parse tablename for simple name or owner.tablename.
+        # If owner present, then add owner where clause.
+
+        params = dict(schema=schema, table=table, link=link)
+        query = """
+        SELECT UNIQUE tab.table_name,icol.column_name,
+        idx.index_type,idx.index_name
+        FROM all_tables%(link)s tab
+        JOIN all_indexes%(link)s idx on idx.table_name = tab.table_name
+        JOIN all_ind_columns%(link)s icol on idx.index_name = icol.index_name
+        WHERE tab.table_name='%(table)s' and tab.owner = '%(schema)s'
+        ORDER BY icol.column_name,idx.index_name
+        """ % params
+        nresults = self.query_and_print(query)
+        return
+
+        
+                
+            
