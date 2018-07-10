@@ -128,7 +128,7 @@ Connected as {user} to {db}.
 ** Type 'help' or '?' to list commands. **
             """.format(**intro_keys), "cyan", self.ct)
         self.savePrompt = colored(
-            '_________', 'magenta', self.ct) + '\nDESDB ~> '
+            '_________', 'magenta', self.ct) + '\n%s ~> '%(self.dbname.upper())
         self.prompt = self.savePrompt
         self.doc_header = colored(
             ' *General Commands*', "cyan", self.ct) + ' (type help <command>):'
