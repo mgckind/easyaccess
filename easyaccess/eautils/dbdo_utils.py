@@ -2,6 +2,7 @@ from easyaccess.eautils.ea_utils import *
 from easyaccess.version import last_pip_version 
 from easyaccess.version import __version__ 
 import easyaccess.config_ea as config_mod 
+import pandas as pd
 import os 
 import stat
 import sys
@@ -955,7 +956,100 @@ class DB_Func(object):
         """ % params
         nresults = self.query_and_print(query)
         return
+    
 
-        
+    def get_tables_names_user(self, user):
+        if user == "":
+            return do_help('tables_names_user')
+        user = user.replace(";", "")
+        query = """
+            select distinct table_name from all_tables
+             where owner=\'%s\' order by table_name""" % user.upper()
+        temp = self.cur.execute(query)
+        tnames = pd.DataFrame(temp.fetchall())
+        self.do_clear(None)
+        if len(tnames) > 0:
+            print(colored('\nPublic tables from %s' %
+                          user.upper(), "cyan", self.ct))
+            print(tnames)
+        else:
+            if self.dbname in ('dessci', 'desoper'):
+                query = """
+                    select count(username) as cc  from des_users
+                     where upper(username) = upper('%s')""" % user
+            if self.dbname in ('destest'):
+                query = """
+                    select count(username) as cc from dba_users
+                     where upper(username) = upper('%s')""" % user
+            temp = self.cur.execute(query)
+            tnames = temp.fetchall()
+            if tnames[0][0] == 0:
+                print(colored('User %s does not exist in DB' %
+                              user.upper(), 'red', self.ct))
+            else:
+                print(colored('User %s has no tables' %
+                              user.upper(), 'cyan', self.ct))
+
+                
+    def get_tablename_tuple(self, tablename):
+        """
+        Return the tuple (schema,table,link) that can be used to
+        locate the fundamental definition of the table requested.
+        """
+        table = tablename
+        schema = self.user.upper()  # default --- Mine
+        link = ""  # default no link
+
+        if "." in table:
+            (schema, table) = table.split(".")
+        if "@" in table:
+            (table, link) = table.split("@")
+
+        # Loop until we find a fundamental definition OR determine there is
+        # no reachable fundamental definition, follow links and resolve
+        # schema names. Rely on how the DES database is constructed we log
+        # into our own schema, and rely on synonyms for a "simple" view of
+        # common schema.
+
+        while (1):
+            # check for fundamental definition  e.g. schema.table@link
+            q = """
+            select count(*) from ALL_TAB_COLUMNS%s
+            where OWNER = '%s' and TABLE_NAME = '%s'
+            """ % ("@" + link if link else "", schema, table)
+            ans = self.query_results(q)
+            if ans[0][0] > 0:
+                # found real definition return the tuple
+                return (schema, table, link)
+
+            # check if we are indirect by synonym of user
+            q = """
+            select TABLE_OWNER, TABLE_NAME, DB_LINK from USER_SYNONYMS%s
+            where SYNONYM_NAME = '%s'
+            """ % ("@" + link if link else "", table)
+            ans = self.query_results(q)
+            if len(ans) == 1:
+                # resolved one step closer to fundamental definition
+                (schema, table, link) = ans[0]
+                continue
+
+            # check if we are indirect by a public synonym
+            q = """
+            select TABLE_OWNER, TABLE_NAME, DB_LINK from ALL_SYNONYMS%s
+            where SYNONYM_NAME = '%s' AND OWNER = 'PUBLIC'
+            """ % ("@" + link if link else "", table)
+            ans = self.query_results(q)
+            if len(ans) == 1:
+                # resolved one step closer to fundamental definition
+                (schema, table, link) = ans[0]
+                continue
+
+            # failed to find the reference to the table
+            # no such table accessible by user
+            break
+
+        msg = "No table found for: %s" % tablename
+        raise Exception(msg)
+    
                 
             
