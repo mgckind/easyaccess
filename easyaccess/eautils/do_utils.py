@@ -12,6 +12,11 @@ import cx_Oracle
 import webbrowser
 
 try: 
+    from builtins import input, str, range 
+except ImportError: 
+    from __builtin__ import input, str, range
+    
+try: 
     import readline
     readline_present = True
     try: 

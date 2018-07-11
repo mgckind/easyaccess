@@ -11,6 +11,11 @@ import getpass
 import re 
 import cx_Oracle
 
+try: 
+    from builtins import input, str, range 
+except ImportError: 
+    from __builtin__ import input, str, range
+
 desfile = os.getenv("DES_SERVICES")
 if not desfile:
     desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
