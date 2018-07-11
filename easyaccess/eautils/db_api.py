@@ -9,9 +9,10 @@ import stat
 import getpass
 import requests
 import time
-import easyaccess
+#import easyaccess
+from easyaccess.eautils.python_api import connect 
 
-DESFILE = os.getenv("DES_SERVICES")
+DESFILE = os.getenv("DES_SERVICES")t
 if not DESFILE:
     DESFILE = os.path.join(os.getenv("HOME"), ".desservices.ini")
 if os.path.exists(DESFILE):
@@ -480,7 +481,7 @@ class DesSingleExposure(object):
         inputs = dict(expnum=expnum, ccd=ccd, tag=tag)
         self.base_query = self.base_query.format(**inputs)
         print(self.base_query)
-        con = easyaccess.connect(self._db, user=self.user, passwd=self._passwd)
+        con = connect(self._db, user=self.user, passwd=self._passwd)
         self.data = con.query_to_pandas(self.base_query)
         print(self.data)
         for j in range(len(self.data)):
