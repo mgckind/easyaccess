@@ -1,6 +1,7 @@
 from __future__ import print_function
 import unittest
 import easyaccess as ea
+from easyaccess.eautils.python_api import connect 
 import numpy as np
 import pandas as pd
 import os
@@ -17,7 +18,7 @@ def create_test_data():
 
 class TestApi(unittest.TestCase):
 
-    con = ea.connect(quiet=True)
+    con = connect(quiet=True)
     tablename = 'testtable'
     nrows = 10000
     prefetch = 4000
