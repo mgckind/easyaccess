@@ -12,7 +12,7 @@ import time
 #import easyaccess
 from easyaccess.eautils.python_api import connect 
 
-DESFILE = os.getenv("DES_SERVICES")t
+DESFILE = os.getenv("DES_SERVICES")
 if not DESFILE:
     DESFILE = os.path.join(os.getenv("HOME"), ".desservices.ini")
 if os.path.exists(DESFILE):
