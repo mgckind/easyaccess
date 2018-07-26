@@ -1044,7 +1044,7 @@ Connected as {user} to {db}.
         """
         global load_bar
         if line == '':
-            return do_help('config')
+            return self.do_help('config')
         oneline = "".join(line.split())
         if oneline.find('show') > -1:
             key = oneline.split('show')[0]
@@ -1068,11 +1068,11 @@ Connected as {user} to {db}.
             print('\n config file path = %s\n' % config_file)
         elif oneline.find('set') > -1:
             if oneline.find('all') > -1:
-                return do_help('config')
+                return self.do_help('config')
             key = oneline.split('set')[0]
             val = oneline.split('set')[1]
             if val == '':
-                return do_help('config')
+                return self.do_help('config')
             for section in (self.config.sections()):
                 if self.config.has_option(section, key):
                     if key in ['loading_bar', 'color_terminal', 'autocommit', 'trim_whitespace',
@@ -1126,7 +1126,7 @@ Connected as {user} to {db}.
 
             return
         else:
-            return do_help('config')
+            return self.do_help('config')
 
 
     def check_table_exists(self, table):
