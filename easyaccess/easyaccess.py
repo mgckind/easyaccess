@@ -21,8 +21,8 @@ import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.fun_utils as fun_utils
 import easyaccess.eaparser as eaparser
 from easyaccess.eautils.import_utils import Import
-from easyaccess.eautils.do_utils import Do_Func
-from easyaccess.eautils.dbdo_utils import DB_Func
+from easyaccess.eautils.cli_utils import CommandActions
+from easyaccess.eautils.db_utils import DatabaseActions
 from easyaccess.eautils.ea_utils import *
 import threading 
 import time
@@ -110,7 +110,7 @@ if os.path.exists(desfile):
 
 
 
-class easy_or(cmd.Cmd, Do_Func, DB_Func, Import, object): 
+class easy_or(cmd.Cmd, CommandActions, DatabaseActions, Import, object): 
     """Easy cx_Oracle interpreter for DESDM."""
      
     def set_messages(self): 
