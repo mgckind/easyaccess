@@ -176,7 +176,7 @@ class CommandActions(object):
     def complete_loadsql(self, text, line, start_idx, end_idx):
         return complete_path(line)
     
-    
+#DES QUERY    
     def complete_change_db(self, text, line, start_index, end_index):
         options_db = ['desoper', 'dessci', 'destest']
         if text:

@@ -23,6 +23,7 @@ import easyaccess.eaparser as eaparser
 from easyaccess.eautils.import_utils import Import
 from easyaccess.eautils.cli_utils import CommandActions
 from easyaccess.eautils.db_utils import DatabaseActions
+from easyaccess.eautils.des_utils import DesActions
 from easyaccess.eautils.ea_utils import *
 import threading 
 import time
@@ -110,7 +111,7 @@ if os.path.exists(desfile):
 
 
 
-class easy_or(cmd.Cmd, CommandActions, DatabaseActions, Import, object): 
+class easy_or(cmd.Cmd, CommandActions, DatabaseActions, DesActions, Import, object): 
     """Easy cx_Oracle interpreter for DESDM."""
      
     def set_messages(self): 
