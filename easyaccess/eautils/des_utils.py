@@ -131,6 +131,13 @@ class DesActions(object):
                 key_db), "red", self.ct))
             return          
         
+    def complete_change_db(self, text, line, start_index, end_index):
+        options_db = ['desoper', 'dessci', 'destest']
+        if text:
+            return [option for option in options_db if option.startswith(text.lower())]
+        else:
+            return options_db
+    
         
     def do_find_user(self, line):
         """
@@ -156,6 +163,14 @@ class DesActions(object):
             query += 'upper(username) like upper (\'' + keys[0] + '\')'
         self.query_and_print(query, print_time=False, clear=True)
         
+    def complete_find_user(self, text, line, start_index, end_index):
+        options_users = self.cache_usernames
+        if text:
+            return [option for option in options_users if option.startswith(text.lower())]
+        else:
+            return options_users 
+            
+        
     def do_find_tables_with_column(self, arg):
         """
         DB:Finds tables having a column name matching column-name-string.
@@ -174,6 +189,9 @@ class DesActions(object):
 
         self.query_and_print(query)
         return     
+    
+    def complete_find_tables_with_column(self, text, line, begidx, lastidx):
+        return self._complete_colnames(text)
     
     def do_whoami(self, arg):
         """
@@ -230,6 +248,13 @@ class DesActions(object):
                 print(colored('User %s has no tables' %
                               user.upper(), 'cyan', self.ct))
 
+                
+    def complete_user_tables(self, text, line, start_index, end_index):
+        options_users = self.cache_usernames
+        if text:
+            return [option for option in options_users if option.startswith(text.lower())]
+        else:
+            return options_users
      
         
                 

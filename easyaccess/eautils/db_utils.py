@@ -307,6 +307,9 @@ class DatabaseActions(object):
             return df
         return  
     
+    def complete_describe_table(self, text, line, start_index, end_index):
+        return self._complete_tables(text)
+    
     def do_find_tables(self, arg, extra=None, return_df=False):
         """
         DB:Lists tables and views matching an oracle pattern  e.g %SVA%,
@@ -324,6 +327,9 @@ class DatabaseActions(object):
         df = self.query_and_print(query, extra=extra, return_df=return_df)
         if return_df:
             return df
+        
+    def complete_find_tables(self, text, line, start_index, end_index):
+        return self._complete_tables(text)    
     
 #DES QUERY    
 #     def do_find_tables_with_column(self, arg):
@@ -539,6 +545,8 @@ class DatabaseActions(object):
                       table.upper(), "blue", self.ct), '\n')
         return
     
+    def complete_load_table(self, text, line, start_idx, end_idx):
+        return complete_path(line)
     
     def do_append_table(self, line, name=None, chunksize=None, memsize=None):
         """
@@ -702,6 +710,11 @@ class DatabaseActions(object):
         print(colored('\n ** Table %s appended '
                       'successfully with %d rows.' % (table.upper(), total_rows), "green", self.ct))
 
+        
+    def complete_append_table(self, text, line, start_idx, end_idx):
+        return complete_path(line)
+    
+        
     def do_add_comment(self, line):
             """
             DB:Add comments to table and/or columns inside tables
@@ -760,6 +773,24 @@ class DatabaseActions(object):
                 print(colored('\nMissing arguments\n', "red", self.ct))
                 self.do_help('add_comment')
 
+    def complete_add_comment(self, text, line, begidx, lastidx):
+        if line:
+            oneline = "".join(line.strip())
+            if oneline.find('table') > -1:
+                return self._complete_tables(text)
+            elif oneline.find('column') > -1:
+                if oneline.find('.') > -1:
+                    colname = text.split('.')[-1]
+                    tablename = text.split('.')[0]
+                    return [tablename + '.' + cn for cn in
+                            self._complete_colnames(colname) if cn.startswith(colname)]
+                else:
+                    return self._complete_tables(text)
+            else:
+                return [option for option in options_add_comment if option.startswith(text)]
+        else:
+            return options_add_comment        
+                    
                 
     def do_edit(self, line):
         """
@@ -791,7 +822,14 @@ class DatabaseActions(object):
                 print(newquery)
                 print()
                 if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
-                    self.default(newquery)   
+                    self.default(newquery)  
+                    
+    def complete_edit(self, text, line, start_index, end_index):
+        if text:
+            return [option for option in options_edit if option.startswith(text)]
+        else:
+            return options_edit   
+                   
 
     def do_loadsql(self, line):
         """
@@ -829,6 +867,9 @@ class DatabaseActions(object):
                 self.default(newq)
         else:
             self.default(newq)
+            
+    def complete_loadsql(self, text, line, start_idx, end_idx):
+        return complete_path(line)        
             
             
     def do_refresh_metadata_cache(self, arg):
@@ -966,6 +1007,9 @@ class DatabaseActions(object):
         """ % params
         nresults = self.query_and_print(query)
         return
+    
+    def complete_show_index(self, text, line, begidx, lastidx):
+        return self._complete_tables(text)
     
 #DES QUERY
 #     def get_tables_names_user(self, user):
