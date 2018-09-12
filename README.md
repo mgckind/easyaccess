@@ -27,22 +27,20 @@ For a short tutorial check [here](http://matias-ck.com/easyaccess)
 - [requests](http://docs.python-requests.org/en/master/)
 - [gnureadline](https://github.com/ludwigschwardt/python-gnureadline) (optional, for better console behavior in OS X)
 - importlib (This is only needed if running python 2.6)
-- **Note that you need to install python-future for python2/3 compatibility**
 
 
 ## Some *nice* features
 - Nice output format (using pandas)
 - Very flexible configuration
-- Smart tab completion for commands, table names, column names and file paths accordingly
-- write output results to csv, tab, fits files or HDF5 files
-- load tables from csv, fits or hdf5 directly into DB (memory friendly by using number of rows or memory limit)
-- intrinsic db commands to describe tables, own schema, quota and more
-- It can be imported as module from python, complete python API
-- Can run command directly from command line
-- Load sql query from file and/or from editor
-- Show the execution plan of a query if required
-- Can  run python functions inline query
-- Many more
+- Smart tab autocompletion for commands, table names, column names, and file paths
+- Write output results to CSV, TAB, FITS, or HDF5 files
+- Load tables from CSV, FITS or HDF5 files directly into DB (memory friendly by using number of rows or memory limit)
+- Intrinsic DB commands to describe tables, schema, quota, and more
+- Easyaccess can be imported as module from Python with a complete Python API
+- Run commands directly from command line
+- Load SQL queries from a file and/or from the editor
+- Show the execution plan of a query if needed
+- Python functions can be run inline a query
 
 ## Conda installation
 Now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box!
