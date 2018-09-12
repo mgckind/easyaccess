@@ -105,7 +105,7 @@ and to see any particular option (e.g., timeout):
 
         DESDB ~> config timeout show
 
-## Command-line usage
+## Command line usage
 
 Much of the functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the ```--help``` option
 
