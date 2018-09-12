@@ -40,7 +40,7 @@ For a short tutorial check [here](http://matias-ck.com/easyaccess)
 - Run commands directly from command line
 - Load SQL queries from a file and/or from the editor
 - Show the execution plan of a query if needed
-- Python functions can be run inline a query
+- Python functions can be run in a inline query
 
 ## Conda installation
 Now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box!
