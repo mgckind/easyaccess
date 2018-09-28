@@ -11,31 +11,34 @@ build:
   preserve_egg_dir: True
   no_link:
     - bin/*
-  script: python setup.py install
+  script: python setup.py install --single-version-externally-managed --record=record.txt
  #noarch_python: True
 
 
 requirements:
   build:
     - python
-    - setuptools
-    - future
+    - future >=0.15.0
     - requests
     - termcolor >=1.1.0
     - fitsio >=0.9.11
     - pandas >=0.14
     - oracle-instantclient ==11.2.0.4.0
-    - cx_oracle >=5.3
+    - cx_oracle ==5.3
+    - numpy
+    - python-dateutil
 
   run:
     - python
-    - future
+    - future >=0.15.0
     - requests
     - termcolor >=1.1.0
     - fitsio >=0.9.11
     - pandas >=0.14
     - oracle-instantclient ==11.2.0.4.0
-    - cx_oracle >=5.3
+    - cx_oracle ==5.3
+    - numpy
+    - python-dateutil
 
 test:
   # Python imports
