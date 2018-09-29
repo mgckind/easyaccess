@@ -35,7 +35,7 @@ Visit [https://github.com/mgckind/easyaccess](https://github.com/mgckind/easyacc
 
 # Dark Energy Survey
 
-The Dark Energy Survey (DES) [@DES2005; @DES2016] is an international, collaborative effort of over 500 scientists from 26 institutions in seven countries. The primary goals of DES are reveal the nature of the mysterious dark matter and dark energy by mapping hundreds of millions of galaxies, detecting thousands of supernovae, and finding patterns in the large-scale structure of the Universe. Survey operations began on on August 31, 2013 and will conclude in early 2019. For about 500 nights, DES has been taking thousands of deep images of southern sky, which are transferred and processed at the National Center for Supercomputing Applications ([NCSA](http://www.ncsa.illinois.edu/)). The images are processed to produce catalogs of astronomical sources with hundreds of millions of entries (billions in the case of individual detections), describing the sources found within the images and other relevant metadata.
+The Dark Energy Survey (DES) [@DES2005; @DES2016] is an international, collaborative effort of over 500 scientists from 26 institutions in seven countries. The primary goals of DES are reveal the nature of the mysterious dark energy and dark matter by mapping hundreds of millions of galaxies, detecting thousands of supernovae, and finding patterns in the large-scale structure of the Universe. Survey operations began on on August 31, 2013 and will conclude in early 2019. For about 500 nights, DES has been taking thousands of deep images of southern sky, which are transferred and processed at the National Center for Supercomputing Applications ([NCSA](http://www.ncsa.illinois.edu/)). The images are processed to produce catalogs of astronomical sources with hundreds of millions of entries (billions in the case of individual detections), describing the sources found within the images and other relevant metadata.
 A significant subset of the DES data was recently [made  public](https://des.ncsa.illinois.edu/releases/dr1) [@DR1] and can be accessed through several mechanisms including `easyaccess` and [web interfaces](https://des.ncsa.illinois.edu/easyweb/) that run `easyaccess` as a backend. This public release includes information for almost 400 million astrophysical sources and complementary tables to allow scientific analysis.
 
 ## DES users
@@ -69,11 +69,12 @@ We have included a simplified UML diagram describing the architecture and depend
 
 ## Installation
 
-To download easyaccess you can follow the provided options or clone the source code from the GitHub repository at [https://github.com/mgckind/easyaccess](https://github.com/mgckind/easyaccess).  We also provide other means to install `easyaccess` using the standard channels as described below.
+To download easyaccess you can clone the source code from GitHub at [https://github.com/mgckind/easyaccess](https://github.com/mgckind/easyaccess) or follow any of the standard installation channels described below.
 
 - From source
 
     `python setup.py install`
+
 - [conda](https://conda.io/docs/)
 
     `conda install easyaccess -c mgckind`
@@ -89,6 +90,6 @@ To download easyaccess you can follow the provided options or clone the source c
 
 # Acknowledgments
 
-The DES Data Management System is supported by the National Science Foundation under Grant NSF AST 07-15036 and NSF AST 08-13543
+The DES Data Management System is supported by the National Science Foundation under Grant NSF AST 07-15036 and NSF AST 08-13543. 
 
 # References
