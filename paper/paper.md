@@ -40,7 +40,7 @@ A significant subset of the DES data was recently [made  public](https://des.ncs
 
 ## DES users
 
-The first release of `easyaccess` was on February 17th, 2015 and since then, over 300 DES Collaborators have used it to access the DES databases (Figure 1). We note that the number of DES accounts is almost 800, but this is considering all users that had an account including those before the first released version. In August 2018 (version 1.4.4), we added support for the public DES data release, and since then we have increased the number of public users.
+The first release of `easyaccess` was on February 17th, 2015 and since then, over 300 DES Collaborators have used it to access the DES databases (Figure 1). We note that roughly 800 DES accounts exist, but this includes all database users including those that created accounts before the release of `easyaccess`. In August 2018 (version 1.4.4), we added support for the public DES data release, and since then we have increased the number of public users.
 
 ![Number of user since first version](easyaccess_users.png)
 
@@ -63,7 +63,7 @@ Users can also use `easyaccess` to submit and request cutouts around specific po
 
 ## Architecture
 
-We have included a simplified UML diagram describing the architecture and dependencies of `easyaccess` (Figure 3). Figure 3 shows only the different methods for a given class and the name of the file hosting a given class. The main class `easy_or()` inherits all methods from all different subclasses, making this model flexible and extendable to other surveys or databases. These methods are then converted to command line commands and functions that can be called inside `easyaccess`. Given that there are some DES specific functions, we have moved DES methods into a separate class `DesActions()`.
+We have included a simplified UML diagram describing the architecture and dependencies of `easyaccess` (Figure 3). Figure 3 shows only the different methods for a given class and the name of the file hosting a given class. The main class, `easy_or()`, inherits all methods from all different subclasses, making this model flexible and extendable to other surveys or databases. These methods are then converted to command line commands and functions that can be called inside `easyaccess`. Given that there are some DES specific functions, we have moved DES methods into a separate class `DesActions()`.
 
 ![`easyaccess` architecture diagram](classes_simple.png)
 
@@ -71,7 +71,7 @@ We have included a simplified UML diagram describing the architecture and depend
 
 To download easyaccess you can clone the source code from GitHub at [https://github.com/mgckind/easyaccess](https://github.com/mgckind/easyaccess) or follow any of the standard installation channels described below.
 
-- From source
+- From [source](https://github.com/mgckind/easyaccess)
 
     `python setup.py install`
 
