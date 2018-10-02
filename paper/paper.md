@@ -1,5 +1,6 @@
 ---
 title: 'easyaccess: Enhanced SQL command line interpreter for astronomical surveys'
+pubnumber: FERMILAB-PUB-18-520-AE
 tags:
   - Python
   - Astronomy
