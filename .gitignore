@@ -8,3 +8,11 @@ HELP
 RELEASE_NOTES
 .cache/
 dist/
+paper/Makefile
+paper/dotfiles/
+paper/joss-logo.png
+paper/latex.template
+.ipynb_checkpoints/
+Untitled.ipynb
+install_oracleclient.py
+easyaccess/other_files/
