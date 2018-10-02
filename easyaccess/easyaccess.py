@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-# TODO: save new password in .desservice
-from __future__ import division 
-from __future__ import print_function 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
-import cmd 
+import cmd
 import os
 import sys
 import cx_Oracle
@@ -11,12 +10,11 @@ import shutil
 import stat
 import re
 import getpass
-from multiprocessing import Process 
-from easyaccess.version import __version__ 
-from easyaccess.version import last_pip_version 
-import easyaccess.config_ea as config_mod 
-from easyaccess.eautils import des_logo as dl 
-import easyaccess.eautils.dtypes as eatypes 
+from multiprocessing import Process
+from easyaccess.version import __version__
+import easyaccess.config_ea as config_mod
+from easyaccess.eautils import des_logo as dl
+import easyaccess.eautils.dtypes as eatypes
 import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.fun_utils as fun_utils
 import easyaccess.eaparser as eaparser
@@ -24,67 +22,65 @@ from easyaccess.eautils.import_utils import Import
 from easyaccess.eautils.cli_utils import CommandActions
 from easyaccess.eautils.db_utils import DatabaseActions
 from easyaccess.eautils.des_utils import DesActions
-from easyaccess.eautils.ea_utils import *
-import threading 
+import threading
 import time
 import pandas as pd
-import webbrowser
 import signal
 import warnings
-warnings.filterwarnings("ignore") 
-try: 
-    from builtins import input, str, range 
-except ImportError: 
+warnings.filterwarnings("ignore")
+try:
+    from builtins import input, str, range
+except ImportError:
     from __builtin__ import input, str, range
 
-__author__ = 'Matias Carrasco Kind' 
+__author__ = 'Matias Carrasco Kind'
 
 
-def without_color(line, color, mode=0): 
-    return line 
+def without_color(line, color, mode=0):
+    return line
 
 
-try: 
+try:
     from termcolor import colored as with_color
 
-    def colored(line, color, mode=0): 
+    def colored(line, color, mode=0):
         if mode == 1:
             return with_color(line, color)
         else:
-            return line 
-except ImportError: 
+            return line
+except ImportError:
     colored = without_color
-try: 
+try:
     import readline
     readline_present = True
-    try: 
+    try:
         import gnureadline as readline
-    except ImportError: 
+    except ImportError:
         pass
-except ImportError: 
+except ImportError:
     readline_present = False
 
-positive = ['yes', 'y', 'true', 't', 'on'] 
-negative = ['no', 'n', 'false', 'f', 'off'] 
-input_options = ', '.join([i[0]+'/'+i[1] for i in zip(positive, negative)]) 
+positive = ['yes', 'y', 'true', 't', 'on']
+negative = ['no', 'n', 'false', 'f', 'off']
+input_options = ', '.join([i[0]+'/'+i[1] for i in zip(positive, negative)])
 
 # commands not available in public DB
 NOT_PUBLIC = ['add_comment', 'append_table', 'change_db', 'execproc', 'find_user', 'load_table',
               'myquota', 'mytables', 'user_tables']
 
-sys.path.insert(0, os.getcwd()) 
-fun_utils.init_func() 
-pid = os.getpid() 
+sys.path.insert(0, os.getcwd())
+fun_utils.init_func()
+pid = os.getpid()
 
 # FILES
-ea_path = os.path.join(os.environ["HOME"], ".easyaccess/") 
-if not os.path.exists(ea_path): 
+ea_path = os.path.join(os.environ["HOME"], ".easyaccess/")
+if not os.path.exists(ea_path):
     os.makedirs(ea_path)
-history_file = os.path.join(os.environ["HOME"], ".easyaccess/history") 
+history_file = os.path.join(os.environ["HOME"], ".easyaccess/history")
 config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
 
 
-# check if old path is there 
+# check if old path is there
 ea_path_old = os.path.join(os.environ["HOME"], ".easyacess/")
 if os.path.exists(ea_path_old) and os.path.isdir(ea_path_old):
     if not os.path.exists(history_file):
@@ -110,11 +106,10 @@ if os.path.exists(desfile):
         os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only
 
 
-
-class easy_or(cmd.Cmd, CommandActions, DatabaseActions, DesActions, Import, object): 
+class easy_or(cmd.Cmd, CommandActions, DatabaseActions, DesActions, Import, object):
     """Easy cx_Oracle interpreter for DESDM."""
-     
-    def set_messages(self): 
+
+    def set_messages(self):
         db_user = self.desconfig.get('db-' + self.dbname, 'user')
         intro_keys = {
             'db': colored(self.dbname, "green", self.ct),
@@ -129,7 +124,7 @@ Connected as {user} to {db}.
 ** Type 'help' or '?' to list commands. **
             """.format(**intro_keys), "cyan", self.ct)
         self.savePrompt = colored(
-            '_________', 'magenta', self.ct) + '\n%s ~> '%(self.dbname.upper())
+            '_________', 'magenta', self.ct) + '\n%s ~> ' % (self.dbname.upper())
         self.prompt = self.savePrompt
         self.doc_header = colored(
             ' *General Commands*', "cyan", self.ct) + ' (type help <command>):'
@@ -188,7 +183,7 @@ Connected as {user} to {db}.
                 print(colored("Error when trying to connect to database: %s" %
                               lasterr, "red", self.ct))
                 print("\n   Retrying...\n")
-                time.sleep(5)  
+                time.sleep(5)
         if ora_code == 28001:
             print(colored("ORA-28001: the password has expired "
                   "or cannot be the default one", "red", self.ct))
@@ -226,7 +221,7 @@ Connected as {user} to {db}.
             except Exception as e:
                 lasterr = str(e).strip()
                 print(colored("Error when trying to connect to database: %s" %
-                              lasterr, "red", self.ct))  
+                              lasterr, "red", self.ct))
         if not connected:
             print('\n ** Could not successfully connect to DB. Try again later. Aborting. ** \n')
             if pymod:
@@ -239,6 +234,7 @@ Connected as {user} to {db}.
         if msg and not self.quiet:
             print(msg)
         self.set_messages()
+
     def handler(self, signum, frame):
         """
         Executed with ^Z (Ctrl+Z) is pressed.
@@ -412,7 +408,7 @@ Connected as {user} to {db}.
             print()
             print("* To access an online tutorial type: online_tutorial ")
 
-    #print topics 
+    # print topics
     def print_topics(self, header, cmds, maxcol):
         if header is not None:
             if cmds:
@@ -421,7 +417,7 @@ Connected as {user} to {db}.
                     self.stdout.write("%s\n" % str(self.ruler * maxcol))
                 self.columnize(cmds, maxcol - 1)
                 self.stdout.write("\n")
-    
+
     def preloop(self):
         """
         Initialization before prompting user for commands.
@@ -451,7 +447,7 @@ Connected as {user} to {db}.
             self._hist.append(lines.strip())
         self._locals = {}  # # Initialize execution namespace for user
         self._globals = {}
-    
+
     def precmd(self, line):
         """ This method is called after the line has been input but before
              it has been interpreted. If you want to modify the input line
@@ -520,7 +516,7 @@ Connected as {user} to {db}.
 
         self._hist += [line.strip()]
         return line
-    
+
     def emptyline(self):
         pass
 
@@ -563,7 +559,7 @@ Connected as {user} to {db}.
             return self.completion_matches[state]
         except IndexError:
             return None
-    
+
     def default(self, line):
         """
         Default function called for line execution.
@@ -970,7 +966,7 @@ Connected as {user} to {db}.
         tnames = pd.DataFrame(temp.fetchall())
         user_list = tnames.values.flatten().tolist()
         return user_list
-    
+
     def get_columnlist(self):
         query = """SELECT column_name from DES_ADMIN.CACHE_COLUMNS"""
         temp = self.cur.execute(query)
@@ -1129,7 +1125,6 @@ Connected as {user} to {db}.
         else:
             return self.do_help('config')
 
-
     def check_table_exists(self, table):
         # check table first
         self.cur.execute(
@@ -1271,8 +1266,6 @@ Connected as {user} to {db}.
         print(colored(
             '\n [Iter: %d] Inserted %d rows and %d columns into table %s in %.2f seconds' % (
                 niter + 1, len(values), len(columns), table.upper(), t2 - t1), "green", self.ct))
-
-        
 
 # ############## PYTOHN API ###############################
 
