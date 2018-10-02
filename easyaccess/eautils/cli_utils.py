@@ -1,30 +1,25 @@
-from easyaccess.eautils.ea_utils import * 
-from easyaccess.version import last_pip_version 
-from easyaccess.version import __version__ 
-import easyaccess.config_ea as config_mod 
-import os 
-import stat
+from easyaccess.eautils.ea_utils import *
+from easyaccess.version import last_pip_version
+from easyaccess.version import __version__
+import os
 import sys
-import cmd
-import getpass
-import re 
-import cx_Oracle
 import webbrowser
 
-try: 
-    from builtins import input, str, range 
-except ImportError: 
+try:
+    from builtins import input, str, range
+except ImportError:
     from __builtin__ import input, str, range
-    
-try: 
+
+try:
     import readline
     readline_present = True
-    try: 
+    try:
         import gnureadline as readline
-    except ImportError: 
+    except ImportError:
         pass
-except ImportError: 
+except ImportError:
     readline_present = False
+
 
 class CommandActions(object):
     def do_history(self, arg):
@@ -46,7 +41,7 @@ class CommandActions(object):
             #    line = readline.get_history_item(int(arg))
             #    line = self.precmd(line)
             #    self.onecmd(line)
-            
+
     def do_shell(self, line):
         """
         Execute shell commands, ex. shell pwd
@@ -55,8 +50,7 @@ class CommandActions(object):
         Uses autocompletion after first command
         """
         os.system(line)
-        
-    
+
     def do_clear(self, line):
         """
         Clear screen. There is a shortcut by typing . on the interpreter
@@ -72,8 +66,8 @@ class CommandActions(object):
             try:
                 tmp = os.system('cls')
             except:
-                pass           
-            
+                pass
+
     def do_version(self, line):
         """
         Print current  and latest pip version of easyacccess
@@ -86,7 +80,7 @@ class CommandActions(object):
             last_version), "green", self.ct))
         print()
         return
-    
+
     def do_prefetch(self, line):
         """
         Shows, sets or sets to default the number of prefetch rows from Oracle
@@ -116,10 +110,10 @@ class CommandActions(object):
             print('\nPrefetch value set to default (30000) \n')
         else:
             print('\nPrefetch value = {:}\n'.format(self.prefetch))
-            
-            
+
+
     def do_EOF(self, line):
-    # Exit program on ^D (Ctrl+D)
+        # Exit program on ^D (Ctrl+D)
         print()  # For some reason this is missing...
         self.do_exit(line)
 
@@ -139,8 +133,8 @@ class CommandActions(object):
     def do_online_tutorial(self, line):
         tut = webbrowser.open_new_tab(
             'http://matias-ck.com/easyaccess/')
-        del tut   
-        
+        del tut
+
     def _complete_tables(self, text):
             options_tables = self.cache_table_names
             if text:
@@ -154,19 +148,19 @@ class CommandActions(object):
             return [option for option in options_colnames if option.startswith(text.upper())]
         else:
             return options_colnames
-        
+
     def complete_prefetch(self, text, line, start_index, end_index):
         if text:
             return [option for option in options_prefetch if option.startswith(text)]
         else:
-            return options_prefetch  
-   
+            return options_prefetch
+
     def complete_shell(self, text, line, start_idx, end_idx):
         if line:
             line = ' '.join(line.split()[1:])
             return complete_path(line)
 
-        
+
     def complete_config(self, text, line, start_index, end_index):
         line2 = ' '.join(line.split())
         args = line2.split()
@@ -179,5 +173,4 @@ class CommandActions(object):
             if len(args) > 1:
                 return options_config2
             else:
-                return options_config  
-            
+                return options_config

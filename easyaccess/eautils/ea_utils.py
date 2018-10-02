@@ -5,6 +5,7 @@ import sys
 import os
 import time
 import signal
+import stat
 import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.dircache as dircache
 
@@ -24,6 +25,15 @@ try:
 except ImportError:
     colored = without_color
 
+desfile = os.getenv("DES_SERVICES")
+if not desfile:
+    desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
+if os.path.exists(desfile):
+    amode = stat.S_IMODE(os.stat(desfile).st_mode)
+    if amode != 2 ** 8 + 2 ** 7:
+        print('Changing permissions to des_service file to read/write by user')
+        os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only
+
 
 def print_exception(pload=None, mode=1):
     (type, value, traceback) = sys.exc_info()
@@ -35,6 +45,7 @@ def print_exception(pload=None, mode=1):
     print()
 
 
+config_file = os.path.join(os.environ["HOME"], ".easyaccess/config.ini")
 options_prefetch = ['show', 'set', 'default']
 options_add_comment = ['table', 'column']
 options_edit = ['show', 'set_editor']
@@ -79,7 +90,6 @@ def loading():
     if sys.stdout.encoding != 'UTF-8':
         char_s = "o"
     print()
-    cc = 0
     spinner = itertools.cycle(list(range(13)) + list(range(1, 14, 1))[::-1])
     line2 = "  Ctrl-C to abort; "
     try:

@@ -9,8 +9,7 @@ import stat
 import getpass
 import requests
 import time
-#import easyaccess
-from easyaccess.eautils.python_api import connect 
+from easyaccess.eautils.python_api import connect
 
 DESFILE = os.getenv("DES_SERVICES")
 if not DESFILE:

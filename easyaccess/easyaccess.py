@@ -22,6 +22,7 @@ from easyaccess.eautils.import_utils import Import
 from easyaccess.eautils.cli_utils import CommandActions
 from easyaccess.eautils.db_utils import DatabaseActions
 from easyaccess.eautils.des_utils import DesActions
+from easyaccess.eautils.ea_utils import *
 import threading
 import time
 import pandas as pd
@@ -35,21 +36,6 @@ except ImportError:
 
 __author__ = 'Matias Carrasco Kind'
 
-
-def without_color(line, color, mode=0):
-    return line
-
-
-try:
-    from termcolor import colored as with_color
-
-    def colored(line, color, mode=0):
-        if mode == 1:
-            return with_color(line, color)
-        else:
-            return line
-except ImportError:
-    colored = without_color
 try:
     import readline
     readline_present = True
@@ -65,8 +51,8 @@ negative = ['no', 'n', 'false', 'f', 'off']
 input_options = ', '.join([i[0]+'/'+i[1] for i in zip(positive, negative)])
 
 # commands not available in public DB
-NOT_PUBLIC = ['add_comment', 'append_table', 'change_db', 'execproc', 'find_user', 'load_table',
-              'myquota', 'mytables', 'user_tables']
+NOT_PUBLIC = ['add_comment', 'append_table', 'change_db', 'execproc',
+              'find_user', 'load_table', 'myquota', 'mytables', 'user_tables']
 
 sys.path.insert(0, os.getcwd())
 fun_utils.init_func()
@@ -1267,22 +1253,6 @@ Connected as {user} to {db}.
             '\n [Iter: %d] Inserted %d rows and %d columns into table %s in %.2f seconds' % (
                 niter + 1, len(values), len(columns), table.upper(), t2 - t1), "green", self.ct))
 
-# ############## PYTOHN API ###############################
-
-
-def to_pandas(cur):
-    """
-    Returns a pandas DataFrame from a executed query
-    """
-    if cur.description is not None:
-        data = pd.DataFrame(cur.fetchall(), columns=[
-                            rec[0] for rec in cur.description])
-    else:
-        data = ""
-    return data
-
-
-# #################################################
 
 def initial_message(quiet=False, clear=True):
     if not quiet:
