@@ -12,6 +12,10 @@ class TestConnection(unittest.TestCase):
         con = ea.connect('desoper', quiet=True)
         self.assertTrue(con.ping())
 
+    def test_connect_desdr(self):
+        con = ea.connect('desdr', quiet=True)
+        self.assertTrue(con.ping())
+
     @unittest.skip("remove destest from tests")
     def test_connect_destest(self):
         con = ea.connect('destest', quiet=True)
