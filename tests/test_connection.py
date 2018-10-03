@@ -1,19 +1,20 @@
 import unittest
 import easyaccess as ea
-from easyaccess.eautils.python_api import connect 
+
 
 class TestConnection(unittest.TestCase):
 
     def test_connect_dessci(self):
-        con = connect('dessci', quiet=True)
+        con = ea.connect('dessci', quiet=True)
         self.assertTrue(con.ping())
 
     def test_connect_desoper(self):
-        con = connect('desoper', quiet=True)
+        con = ea.connect('desoper', quiet=True)
         self.assertTrue(con.ping())
 
+    @unittest.skip("remove destest from tests")
     def test_connect_destest(self):
-        con = connect('destest', quiet=True)
+        con = ea.connect('destest', quiet=True)
         self.assertTrue(con.ping())
 
     # @unittest.skip("Not implemented yet")

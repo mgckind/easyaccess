@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import fitsio
 import easyaccess as ea
-from easyaccess.eautils.python_api import connect 
 
 BASENAME = 'load_table_test'
 BASENAME2 = BASENAME + '2'
@@ -74,7 +73,7 @@ if __name__ == "__main__":
 
     # Try loading through the python interface
     # NOTE: This requires a desservice.ini file
-    conn = connect()
+    conn = ea.connect()
 
     query = 'select * from %s' % BASENAME
 

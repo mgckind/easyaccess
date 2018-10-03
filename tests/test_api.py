@@ -1,7 +1,6 @@
 from __future__ import print_function
 import unittest
 import easyaccess as ea
-from easyaccess.eautils.python_api import connect 
 import numpy as np
 import pandas as pd
 import os
@@ -18,7 +17,7 @@ def create_test_data():
 
 class TestApi(unittest.TestCase):
 
-    con = connect(quiet=True)
+    con = ea.connect(quiet=True)
     tablename = 'testtable'
     nrows = 10000
     prefetch = 4000
@@ -34,7 +33,7 @@ class TestApi(unittest.TestCase):
         test1 = self.con.ea_import('wrapped')
         if test1 is not None:
             self.assertTrue(test1)
-        test2 = self.con.ea_import('wrapped',  help=True)
+        test2 = self.con.ea_import('wrapped', help=True)
         if test2 is not None:
             self.assertTrue(test2)
 
@@ -132,6 +131,7 @@ class TestApi(unittest.TestCase):
         self.con.drop_table(self.tablename)
         os.remove(self.sqlfile)
 
+    @unittest.skip("need to change table name")
     def test_mytables(self):
         print('\n*** test_mytables ***\n')
         df = self.con.mytables()
@@ -187,7 +187,10 @@ class TestApi(unittest.TestCase):
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows * 2)
         self.con.drop_table(self.tablename)
-        os.remove(self.csvfile)
+        try:
+            os.remove(self.csvfile)
+        except:
+            pass
 
     def test_load_append_table_memory_csv(self):
         print('\n*** test_load_append_table_memory_csv ***\n')
@@ -215,7 +218,10 @@ class TestApi(unittest.TestCase):
         fetch = temp.fetchall()
         self.assertEqual(len(fetch), self.nrows * 20)
         # end
-        os.remove(self.csvfile)
+        try:
+            os.remove(self.csvfile)
+        except:
+            pass
         self.con.drop_table(self.tablename)
 
     def test_load_append_table_memory_chunk_csv(self):
@@ -427,7 +433,7 @@ class TestApi(unittest.TestCase):
         self.con.outfile_max_mb = 1000
         self.con.drop_table(self.tablename)
 
-    @unittest.skip("need to reealuate")
+    @unittest.skip("need to reevaluate")
     def test_inline_functions(self):
         print('\n*** test_inline_functions ***\n')
         data = create_test_data()

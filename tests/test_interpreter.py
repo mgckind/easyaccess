@@ -1,7 +1,6 @@
 from __future__ import print_function
 import unittest
 import easyaccess as ea
-from easyaccess.eautils.python_api import connect 
 import numpy as np
 import pandas as pd
 import os
@@ -23,7 +22,7 @@ class TestInterpreter(unittest.TestCase):
     db = conf.get('easyaccess', 'database')
     desconf = ea.config_mod.get_desconfig(ea.desfile, db)
     con = ea.easy_or(conf, desconf, db, interactive=False, quiet=True, refresh=False)
-    con2 = connect(quiet=True)
+    con2 = ea.connect(quiet=True)
     tablename = 'testtable'
     nrows = 10000
     prefetch = 4000
