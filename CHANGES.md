@@ -1,5 +1,12 @@
 # Changes
 
+## v1.4.5
+#### 2018-OCT-04
+- Restructuring code structure (PR #151)
+- Add paper reference
+- Minor fixes in unitests
+- Update documentation 
+- Fix conda issues
 
 ## v1.4.4
 #### 2018-JUN-15
