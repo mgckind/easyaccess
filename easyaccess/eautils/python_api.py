@@ -1,25 +1,15 @@
 from easyaccess.easyaccess import easy_or
-import easyaccess.config_ea as config_mod 
+import easyaccess.config_ea as config_mod
 import easyaccess.eautils.fileio as eafile
 import easyaccess.eautils.fun_utils as fun_utils
+from easyaccess.eautils.ea_utils import desfile, config_file, colored, read_buf
 import pandas as pd
-import os 
-import stat
 import getpass
 
-try: 
-    from builtins import input, str, range 
-except ImportError: 
+try:
+    from builtins import input, str, range
+except ImportError:
     from __builtin__ import input, str, range
-
-desfile = os.getenv("DES_SERVICES")
-if not desfile:
-    desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
-if os.path.exists(desfile):
-    amode = stat.S_IMODE(os.stat(desfile).st_mode)
-    if amode != 2 ** 8 + 2 ** 7:
-        print('Changing permissions to des_service file to read/write by user')
-        os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only    
 
 
 class IterData(object):
@@ -57,7 +47,19 @@ class IterData(object):
         else:
             self.cursor.close()
             raise StopIteration('No more data in the DB')
-            
+
+
+def to_pandas(cur):
+    """
+    Returns a pandas DataFrame from a executed query
+    """
+    if cur.description is not None:
+        data = pd.DataFrame(cur.fetchall(), columns=[
+                            rec[0] for rec in cur.description])
+    else:
+        data = ""
+    return data
+
 
 class connect(easy_or):
     def __init__(self, section='', user=None, passwd=None, quiet=False, refresh=False):

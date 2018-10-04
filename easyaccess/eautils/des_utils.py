@@ -1,43 +1,31 @@
 from easyaccess.eautils.ea_utils import *
-from easyaccess.version import last_pip_version 
-from easyaccess.version import __version__ 
-import easyaccess.config_ea as config_mod 
+import easyaccess.config_ea as config_mod
 import pandas as pd
-import os 
-import stat
+import os
 import sys
-import cmd
 import getpass
-import re 
+import re
 import cx_Oracle
 
 
-try: 
-    from builtins import input, str, range 
-except ImportError: 
+try:
+    from builtins import input, str, range
+except ImportError:
     from __builtin__ import input, str, range
 
-desfile = os.getenv("DES_SERVICES")
-if not desfile:
-    desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
-if os.path.exists(desfile):
-    amode = stat.S_IMODE(os.stat(desfile).st_mode)
-    if amode != 2 ** 8 + 2 ** 7:
-        print('Changing permissions to des_service file to read/write by user')
-        os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only    
 
-
-try: 
+try:
     import readline
     readline_present = True
-    try: 
+    try:
         import gnureadline as readline
-    except ImportError: 
+    except ImportError:
         pass
-except ImportError: 
+except ImportError:
     readline_present = False
-    
-class DesActions(object): 
+
+
+class DesActions(object):
     def do_set_password(self, arg):
         """
         DB:Set a new password on this DES instance
@@ -67,8 +55,8 @@ class DesActions(object):
         except:
             confirm = 'Password could not be changed in %s\n' % self.dbname.upper()
             print(colored(confirm, "red", self.ct))
-            print(sys.exc_info()) 
-            
+            print(sys.exc_info())
+
     def do_change_db(self, line):
         """
         DB: Change to another database, namely dessci, desoper, destest
@@ -129,16 +117,15 @@ class DesActions(object):
         else:
             print(colored("DB {} does not exist or you don't have access to it".format(
                 key_db), "red", self.ct))
-            return          
-        
+            return
+
     def complete_change_db(self, text, line, start_index, end_index):
         options_db = ['desoper', 'dessci', 'destest']
         if text:
             return [option for option in options_db if option.startswith(text.lower())]
         else:
             return options_db
-    
-        
+
     def do_find_user(self, line):
         """
         DB:Finds users given 1 criteria (either first name or last name)
@@ -162,15 +149,14 @@ class DesActions(object):
             query += 'upper(lastname) like upper(\'' + keys[0] + '\') or '
             query += 'upper(username) like upper (\'' + keys[0] + '\')'
         self.query_and_print(query, print_time=False, clear=True)
-        
+
     def complete_find_user(self, text, line, start_index, end_index):
         options_users = self.cache_usernames
         if text:
             return [option for option in options_users if option.startswith(text.lower())]
         else:
-            return options_users 
-            
-        
+            return options_users
+
     def do_find_tables_with_column(self, arg):
         """
         DB:Finds tables having a column name matching column-name-string.
@@ -188,11 +174,11 @@ class DesActions(object):
            """ % (arg.upper())
 
         self.query_and_print(query)
-        return     
-    
+        return
+
     def complete_find_tables_with_column(self, text, line, begidx, lastidx):
         return self._complete_colnames(text)
-    
+
     def do_whoami(self, arg):
         """
         DB:Print information about the user's details.
@@ -214,8 +200,8 @@ class DesActions(object):
                 colored('\nThis function is not implemented in destest\n', 'red', self.ct))
             sql_getUserDetails = "select * from dba_users where username = '" + self.user + "'"
         self.query_and_print(sql_getUserDetails, print_time=False, clear=True)
-        
-        
+
+
     def get_tables_names_user(self, user):
         if user == "":
             return do_help('tables_names_user')
@@ -248,13 +234,10 @@ class DesActions(object):
                 print(colored('User %s has no tables' %
                               user.upper(), 'cyan', self.ct))
 
-                
+
     def complete_user_tables(self, text, line, start_index, end_index):
         options_users = self.cache_usernames
         if text:
             return [option for option in options_users if option.startswith(text.lower())]
         else:
             return options_users
-     
-        
-                

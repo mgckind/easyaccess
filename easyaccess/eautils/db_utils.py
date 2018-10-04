@@ -1,42 +1,24 @@
 from easyaccess.eautils.ea_utils import *
-from easyaccess.version import last_pip_version 
-from easyaccess.version import __version__ 
-import easyaccess.config_ea as config_mod 
-import pandas as pd
-import os 
+import os
 import stat
-import sys
-import cmd
-import getpass
-import re 
-import cx_Oracle
 
-try: 
-    from builtins import input, str, range 
-except ImportError: 
+try:
+    from builtins import input, str, range
+except ImportError:
     from __builtin__ import input, str, range
 
-desfile = os.getenv("DES_SERVICES")
-if not desfile:
-    desfile = os.path.join(os.getenv("HOME"), ".desservices.ini")
-if os.path.exists(desfile):
-    amode = stat.S_IMODE(os.stat(desfile).st_mode)
-    if amode != 2 ** 8 + 2 ** 7:
-        print('Changing permissions to des_service file to read/write by user')
-        os.chmod(desfile, 2 ** 8 + 2 ** 7)  # rw by user owner only    
 
-
-try: 
+try:
     import readline
     readline_present = True
-    try: 
+    try:
         import gnureadline as readline
-    except ImportError: 
+    except ImportError:
         pass
-except ImportError: 
+except ImportError:
     readline_present = False
 
-class DatabaseActions(object): 
+class DatabaseActions(object):
     def do_execproc(self, line):
         """
         DB:Execute procedures in the DB, arguments can be floating numbers or strings
@@ -76,8 +58,8 @@ class DatabaseActions(object):
             print(colored('Done!', "green", self.ct))
         except:
             print_exception(mode=self.ct)
-            
-        
+
+
     def do_describe_table(self, arg, clear=True, extra=None, return_df=False):
         """
         DB:This tool is useful for noting the lack of documentation
@@ -187,11 +169,11 @@ class DatabaseActions(object):
                                   err_arg=err_msg, extra=extra, clear=clear, return_df=return_df)
         if return_df:
             return df
-        return  
-    
+        return
+
     def complete_describe_table(self, text, line, start_index, end_index):
         return self._complete_tables(text)
-    
+
     def do_find_tables(self, arg, extra=None, return_df=False):
         """
         DB:Lists tables and views matching an oracle pattern  e.g %SVA%,
@@ -209,10 +191,10 @@ class DatabaseActions(object):
         df = self.query_and_print(query, extra=extra, return_df=return_df)
         if return_df:
             return df
-        
+
     def complete_find_tables(self, text, line, start_index, end_index):
-        return self._complete_tables(text)    
-    
+        return self._complete_tables(text)
+
 
     def do_load_table(self, line, name=None, chunksize=None, memsize=None):
         """
@@ -406,10 +388,10 @@ class DatabaseActions(object):
         print(colored(' DESDB ~> grant select on %s to DES_READER;' %
                       table.upper(), "blue", self.ct), '\n')
         return
-    
+
     def complete_load_table(self, text, line, start_idx, end_idx):
         return complete_path(line)
-    
+
     def do_append_table(self, line, name=None, chunksize=None, memsize=None):
         """
         DB:Appends a table from a file (csv or fits) taking its name from filename
@@ -572,11 +554,11 @@ class DatabaseActions(object):
         print(colored('\n ** Table %s appended '
                       'successfully with %d rows.' % (table.upper(), total_rows), "green", self.ct))
 
-        
+
     def complete_append_table(self, text, line, start_idx, end_idx):
         return complete_path(line)
-    
-        
+
+
     def do_add_comment(self, line):
             """
             DB:Add comments to table and/or columns inside tables
@@ -651,9 +633,9 @@ class DatabaseActions(object):
             else:
                 return [option for option in options_add_comment if option.startswith(text)]
         else:
-            return options_add_comment        
-                    
-                
+            return options_add_comment
+
+
     def do_edit(self, line):
         """
         Opens a buffer file to edit a sql statement and then it reads it
@@ -684,14 +666,14 @@ class DatabaseActions(object):
                 print(newquery)
                 print()
                 if (input('submit query? (Y/N): ') in ['Y', 'y', 'yes']):
-                    self.default(newquery)  
-                    
+                    self.default(newquery)
+
     def complete_edit(self, text, line, start_index, end_index):
         if text:
             return [option for option in options_edit if option.startswith(text)]
         else:
-            return options_edit   
-                   
+            return options_edit
+
 
     def do_loadsql(self, line):
         """
@@ -729,11 +711,11 @@ class DatabaseActions(object):
                 self.default(newq)
         else:
             self.default(newq)
-            
+
     def complete_loadsql(self, text, line, start_idx, end_idx):
-        return complete_path(line)        
-            
-            
+        return complete_path(line)
+
+
     def do_refresh_metadata_cache(self, arg):
         """
         DB:Refreshes meta data cache for auto-completion of table
@@ -754,7 +736,7 @@ class DatabaseActions(object):
             self.cur.execute('create table FGOTTENMETADATA (ID int)')
         except:
             pass
-        
+
 
     def do_show_db(self, arg):
         """
@@ -767,8 +749,8 @@ class DatabaseActions(object):
         SELECT owner, db_link, username, host, created
         FROM all_db_links where OWNER = '%s'
         """ % (self.user.upper())
-        self.query_and_print(query, print_time=False, extra=lines, clear=True) 
-        
+        self.query_and_print(query, print_time=False, extra=lines, clear=True)
+
 
     def do_myquota(self, arg):
         """
@@ -781,7 +763,7 @@ class DatabaseActions(object):
         mbytes_left/1024 as GBYTES_LEFT from myquota
         """
         self.query_and_print(query, print_time=False, clear=True)
-        
+
     def do_mytables(self, arg, return_df=False, extra="List of my tables"):
         """
         DB:Lists tables you have made in your user schema.
@@ -799,7 +781,7 @@ class DatabaseActions(object):
             query, print_time=False, extra=extra, clear=True, return_df=return_df)
         if return_df:
             return df
-                
+
     def do_user_tables(self, arg):
         """
         DB:List tables from given user
@@ -808,8 +790,8 @@ class DatabaseActions(object):
         """
         if arg == "":
             return self.do_help('user_tables')
-        return self.get_tables_names_user(arg)   
-    
+        return self.get_tables_names_user(arg)
+
     def do_show_index(self, arg):
         """
         DB:Describes the indices  in <table-name> as
@@ -847,11 +829,11 @@ class DatabaseActions(object):
         """ % params
         nresults = self.query_and_print(query)
         return
-    
+
     def complete_show_index(self, text, line, begidx, lastidx):
         return self._complete_tables(text)
 
-                
+
     def get_tablename_tuple(self, tablename):
         """
         Return the tuple (schema,table,link) that can be used to
@@ -911,6 +893,3 @@ class DatabaseActions(object):
 
         msg = "No table found for: %s" % tablename
         raise Exception(msg)
-    
-                
-            
