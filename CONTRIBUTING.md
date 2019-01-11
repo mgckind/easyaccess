@@ -2,7 +2,7 @@
 
 
 When contributing to this repository, please first discuss the change you wish to make via [issues](https://github.com/mgckind/easyaccess/issues),
-[email](mgckind@gmail.com), or any other method with the owners of this repository before making a change.
+[email](mailto:mgckind@gmail.com), or any other method with the owners of this repository before making a change.
 
 Please note we have a code of conduct below in this file, please follow it in all your interactions with the project.
 
@@ -22,8 +22,6 @@ When creating a bug or an issue please include as many details as possible. Crea
 
 All kind of contributions are welcome, from fixing bugs, resolving issues or suggesting features. Look at the [current issues](https://github.com/mgckind/easyaccess/issues) to see how you can contribute and provide help.
 
-
-
 ## Pull Request Process
 
 1. Ensure any install or build dependencies are removed before the end of the layer when doing a
@@ -34,6 +32,11 @@ All kind of contributions are welcome, from fixing bugs, resolving issues or sug
    Pull Request would represent. The versioning scheme we use is [SemVer](http://semver.org/).
 4. You may merge the Pull Request in once you have the sign-off of two other developers, or if you
    do not have permission to do that, you may request the second reviewer to merge it for you.
+
+## Authors
+
+Please see our [list of contributors](Authors.md), if you feel you have contributed to the project and we have neglected adding you to the list please accept our apologizes and [let us know](mailto:mgckind@gmail.com) to correct it.
+
 
 # Code of Conduct
 
