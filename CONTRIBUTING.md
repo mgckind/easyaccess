@@ -35,7 +35,7 @@ All kind of contributions are welcome, from fixing bugs, resolving issues or sug
 
 ## Authors
 
-Please see our [list of contributors](Authors.md), if you feel you have contributed to the project and we have neglected adding you to the list please accept our apologizes and [let us know](mailto:mgckind@gmail.com) to correct it.
+Please see our [list of contributors](AUTHORS.md), if you feel you have contributed to the project and we have neglected adding you to the list please accept our apologizes and [let us know](mailto:mgckind@gmail.com) to correct it.
 
 
 # Code of Conduct
