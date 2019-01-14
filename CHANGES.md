@@ -1,11 +1,22 @@
 # Changes
 
+## v1.4.6
+#### 2019-JAN-14
+- No minor changes to the code, just the general documentation
+- Adding Contribution guidelines and Coda of Conduct
+- Adding Authors
+- Adding FAQ
+- Updating Readme and Installation instructions
+- Reformatting code
+- Update paper and references
+
+
 ## v1.4.5
 #### 2018-OCT-04
 - Restructuring code structure (PR #151)
 - Add paper reference
 - Minor fixes in unitests
-- Update documentation 
+- Update documentation
 - Fix conda issues
 
 ## v1.4.4
