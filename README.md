@@ -1,15 +1,16 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.6"> <img src="https://img.shields.io/badge/release-v1.4.6-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.4.6"><img src="https://img.shields.io/badge/pypi-v1.4.6-orange.svg" alt="pypi version"/></a>![](https://img.shields.io/conda/v/mgckind/easyaccess.svg)
+# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.6"> <img src="https://img.shields.io/badge/release-v1.4.6-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.4.6"><img src="https://img.shields.io/badge/pypi-v1.4.6-orange.svg" alt="pypi version"/></a> ![](https://img.shields.io/conda/v/mgckind/easyaccess.svg) ![](https://img.shields.io/conda/pn/mgckind/easyaccess.svg) ![](https://img.shields.io/badge/python-2.7%7C3.6-blue.svg)
+
+Enhanced command line SQL interpreter client for astronomical surveys.
 ![help_screen](data/help.gif)
 
-Enhanced command line SQL interpreter client for astronomical databases.
-
-Python Command Line Interpreter to access Oracle DES DB
-using cx_Oracle
+## Description
+`easyaccess` is an enhanced command line interpreter and Python package created to facilitate access to astronomical catalogs stored in SQL Databases. It provides a custom interface with custom commands and was specifically designed to access data from the Dark Energy Survey Oracle database, including autocompletion of tables, columns, users and commands, simple ways to upload and download tables using csv, fits and HDF5 formats, iterators, search and description of tables among others. It can easily be extended to another surveys or SQL databases. The package was completely written in Python and support customized addition of commands and functionalities.
 
 For a short tutorial check [here](http://matias-ck.com/easyaccess)
 
-**Current version = 1.4.5**
+**Current version = 1.4.6**
 
+#### DES DR1 users
 For DES public data release, you can start `easyaccess` with:
 
     easyaccess -s desdr
@@ -18,24 +19,89 @@ To create an account click [here](https://des.ncsa.illinois.edu/easyweb/signup/)
 
 ## Requirements
 
-- Oracle Client > 11g.2 (External library, no python)
-  Check [here](https://opensource.ncsa.illinois.edu/confluence/display/DESDM/Instructions+for+installing+Oracle+client+and+easyaccess+without+EUPS) for instructions on how to install these libraries
-- [cx_Oracle](https://bitbucket.org/anthony_tuininga/cx_oracle)
-
-  Note that cx_Oracle needs libaio on some Linux systems (e.g., #98)
-
-  Note that cx_Oracle needs libbz2 on some Linux systems
+- [Oracle Client](https://www.oracle.com/technetwork/database/database-technologies/instant-client/overview/index.html) > 11g.2 (External library, no python)
+  Check [here](https://www.oracle.com/technetwork/database/database-technologies/instant-client/overview/index.html) for instructions on how to install these libraries
+- [cx_Oracle](https://cx-oracle.readthedocs.io/en/latest/index.html)
+  - Note that cx_Oracle needs libaio on some Linux systems
+  - Note that cx_Oracle needs libbz2 on some Linux systems
 - [fitsio](https://github.com/esheldon/fitsio) >= 0.9.6
 - [pandas](http://pandas.pydata.org/) >= 0.14
+- [numpy](https://docs.scipy.org/doc/numpy-1.15.1/reference/index.html)
 - [termcolor](https://pypi.python.org/pypi/termcolor)
 - [PyTables](http://pytables.github.io/) (optional, for hdf5 output)
 - [future](http://python-future.org/) (for python 2/3 compatibility)
 - [requests](http://docs.python-requests.org/en/master/)
 - [gnureadline](https://github.com/ludwigschwardt/python-gnureadline) (optional, for better console behavior in OS X)
-- importlib (This is only needed if running python 2.6)
+
+## Installation
+
+Installing `easyaccess` can be a little bit tricky given the external libraries required, in particular the Oracle libraries which are free to use. `easyaccess` is based heavily on the Oracle python client `cx_Oracle`, you can follow the installation instructions from [here](https://cx-oracle.readthedocs.io/en/latest/installation.html#quick-start-cx-oracle-installation). For `cx_Oracle` to work, you will need the Oracle Instant Client packages which can be obtained from [here](https://www.oracle.com/technetwork/database/database-technologies/instant-client/overview/index.html).
+
+Make sure you have these libraries installed before proceeding to the installation of easyaccess, you can try by opening a Python interpreter and type:
+
+    import cx_Oracle
+
+If you have issues, please check the [Troubleshooting page](https://cx-oracle.readthedocs.io/en/latest/installation.html#troubleshooting) or our [FAQ page](FAQ.md).
+
+#### Source Installation
+
+You can clone this repository and install `easyaccess` with:
+
+    python setup.py install
+
+#### Pip installation
+`easyaccess` can also be installed using `pip` but it'd require the installation of the oracle instant client first as described above
+
+    pip install easyaccess==1.4.6
+
+or directly from github:
+
+    pip install git+https://github.com/mgckind/easyaccess.git
+
+#### Conda installation
+For Collaborators, now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box!
+
+    conda install easyaccess==1.4.6 -c mgckind -c anaconda
+
+#### Docker
+For collaborators, We have a Docker image with easyaccess pre-installed which you can obtained from:
+
+    docker pull mgckind/easyaccess
+
+## FAQ
+We have a running list of [FAQ](FAQ.md) which we will constantly update, please check [here](FAQ.md).
+
+#### Contributing
+Please take a look st our [Code of Conduct](CODE_OF_CONDUCT.md) and or [contribution guide](CONTRIBUTING.md).
 
 
-## Some *nice* features
+## Citation
+If you use `easyaccess` in your work we would encourage to use this reference [https://arxiv.org/abs/1810.02721](https://arxiv.org/abs/1810.02721) or copy/paste this BibTeX:
+```
+@ARTICLE{2018arXiv181002721C,
+       author = {{Carrasco Kind}, M. and {Drlica-Wagner}, A. and {Koziol}, A.~M.~G. and
+        {Petravick}, D.},
+        title = "{easyaccess: Enhanced SQL command line interpreter for astronomical surveys}",
+      journal = {arXiv e-prints},
+     keywords = {Astrophysics - Instrumentation and Methods for Astrophysics},
+         year = 2018,
+        month = Oct,
+          eid = {arXiv:1810.02721},
+        pages = {arXiv:1810.02721},
+archivePrefix = {arXiv},
+       eprint = {1810.02721},
+ primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/\#abs/2018arXiv181002721C},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+```
+
+
+## Usage
+
+For a short tutorial and documentation see [here](http://matias-ck.com/easyaccess), note that not all the features are available for the public use, i.e., DR1 users.
+
+#### Some *great* features
 - Nice output format (using pandas)
 - Very flexible configuration
 - Smart tab autocompletion for commands, table names, column names, and file paths
@@ -48,23 +114,14 @@ To create an account click [here](https://des.ncsa.illinois.edu/easyweb/signup/)
 - Show the execution plan of a query if needed
 - Python functions can be run in a inline query
 
-## Conda installation
-Now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box!
 
-    conda install easyaccess==1.4.5 -c mgckind
-
-## Pip installation
-easyaccess can also be installed using `pip` but it'd require the installation of the oracle instant client first
-
-    pip install easyaccess==1.4.5
-
-## Interactive interpreter
+#### Interactive interpreter
 
 Assuming that ```easyaccess``` is in your path, you can enter the interactive interpreter by calling ```easyaccess``` without any command line arguments:
 
         easyaccess
 
-### Running SQL commands
+#### Running SQL commands
 Once inside the interpreter run SQL queries by adding a ";" at the end::
 
         DESDB ~> select ... from ... where ... ;
@@ -75,7 +132,7 @@ To save the results into a table add ">" after the end of the query (after ";") 
 
 The file types supported so far are: .csv, .tab, .fits, and .h5. Any other extension is ignored.
 
-### Load tables
+#### Load tables
 To load a table it needs to be in a csv format with columns names in the first row
 the name of the table is taken from filename or with optional argument --tablename
 
@@ -83,7 +140,7 @@ the name of the table is taken from filename or with optional argument --tablena
 
 The --chunsize and --memsize are optional arguments to facilitate uploading big files.
 
-### Load SQL queries
+#### Load SQL queries
 To load SQL queries just run:
 
         DESDB ~> loadsql <filename.sql>
@@ -93,7 +150,7 @@ or
 
 The query format is the same as the interpreter, SQL statement must end with ";" and to write output files the query must be followed by " > <output file>"
 
-### Configuration
+#### Configuration
 
 The configuration file is located at ```$HOME/.easyaccess/config.ini``` but everything can be configured from inside easyaccess type:
 
@@ -111,7 +168,7 @@ and to see any particular option (e.g., timeout):
 
         DESDB ~> config timeout show
 
-## Command line usage
+#### Command line usage
 
 Much of the functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the ```--help``` option
 
