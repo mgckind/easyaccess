@@ -173,3 +173,9 @@ and to see any particular option (e.g., timeout):
 Much of the functionality provided through the interpreter is also available directly from the command line. To see a list of command-line options, use the ```--help``` option
 
         easyaccess --help
+
+## Architecture
+
+We have included a simplified UML diagram describing the architecture and dependencies of `easyaccess` which shows only the different methods for a given class and the name of the file hosting a given class. The main class, `easy_or()`, inherits all methods from all different subclasses, making this model flexible and extendable to other surveys or databases. These methods are then converted to command line commands and functions that can be called inside `easyaccess`. Given that there are some DES specific functions, we have moved DES methods into a separate class `DesActions()`.
+
+![`easyaccess` architecture diagram](paper/classes_simple.png)
