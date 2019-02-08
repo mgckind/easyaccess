@@ -75,7 +75,7 @@ def get_args(config_file):
         "-s",
         "--db",
         dest="db",
-        choices=["dessci", "desoper", "destest", "desdr"],
+        choices=["dessci", "desoper", "destest", "desdr", "decade"],
         help="Override database name [dessci,desoper,destest,desdr]",
     )
     parser.add_argument(

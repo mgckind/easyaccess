@@ -185,7 +185,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
 
     if db not in databases and not config.has_section(db):
         check_db = input(
-            '\nDB entered is not dessci, desoper, destest or desdr '
+            '\nDB entered is not %s'%databases
             'or in DES_SERVICE file, continue anyway [y]/n\n')
         if check_db in ('n', 'N', 'no', 'No', 'NO', 'nO'):
             sys.exit(0)
