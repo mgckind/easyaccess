@@ -181,18 +181,19 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         if verbose:
             print()
 
-    databases = ['db-desoper', 'db-dessci', 'db-destest', 'db-desdr']
+    databases = ['db-dessci', 'db-desdr', 'db-destest', 'db-desoper']
 
     if db not in databases and not config.has_section(db):
-        check_db = input(
-            '\nDB entered is not dessci, desoper, destest or desdr '
-            'or in DES_SERVICE file, continue anyway [y]/n\n')
-        if check_db in ('n', 'N', 'no', 'No', 'NO', 'nO'):
+        msg = '\nDatabase entered is not in %s '%databases
+        msg += 'or in DES_SERVICE file, continue anyway? [y]/n\n'
+        check_db = input(msg)
+        if check_db.lower() in ('n', 'no'):
             sys.exit(0)
 
+    # Add the default databases
     if not config.has_section(db):
         if verbose:
-            print('\nAdding section %s to des_service file\n' % db)
+            print('\nAdding section %s to DES_SERVICES file\n' % db)
         configwrite = True
         if db == 'db-dessci':
             kwargs = {'host': server_desdm, 'port': port_n, 'service_name': 'dessci'}
@@ -242,6 +243,9 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
                     print(value)
                     if value.args[0].code == 1017:
                         pass
+                    if value.args[0].code == 12514:
+                        print("Check that database '%s' exists\n"%db)
+                        sys.exit(0)
                     else:
                         sys.exit(0)
             if good:

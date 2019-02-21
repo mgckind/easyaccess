@@ -49,6 +49,7 @@ except ImportError:
 positive = ['yes', 'y', 'true', 't', 'on']
 negative = ['no', 'n', 'false', 'f', 'off']
 input_options = ', '.join([i[0]+'/'+i[1] for i in zip(positive, negative)])
+dbnames = ('dessci', 'desoper', 'destest', 'desdr')
 
 # commands not available in public DB
 NOT_PUBLIC = ['add_comment', 'append_table', 'change_db', 'execproc',
@@ -930,7 +931,7 @@ Connected as {user} to {db}.
 
     def get_tables_names(self):
 
-        if self.dbname in ('dessci', 'desoper', 'destest', 'desdr'):
+        if self.dbname in dbnames:
             query = """
             select table_name from DES_ADMIN.CACHE_TABLES
             union select table_name from user_tables
