@@ -1,5 +1,11 @@
 # Changes
 
+
+## v1.4.7
+#### 2019-FEB-21
+- Update FAQ (PR #171)
+- Remove DB names restriction to allow other DBs (PR #170)
+
 ## v1.4.6
 #### 2019-JAN-14
 - No minor changes to the code, just the general documentation

@@ -1,4 +1,4 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.6"> <img src="https://img.shields.io/badge/release-v1.4.6-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.4.6"><img src="https://img.shields.io/badge/pypi-v1.4.6-orange.svg" alt="pypi version"/></a> ![](https://img.shields.io/conda/v/mgckind/easyaccess.svg) ![](https://img.shields.io/conda/pn/mgckind/easyaccess.svg) ![](https://img.shields.io/badge/python-2.7%7C3.6-blue.svg) [![DOI](http://joss.theoj.org/papers/10.21105/joss.01022/status.svg)](https://doi.org/10.21105/joss.01022)
+# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.7"> <img src="https://img.shields.io/badge/release-v1.4.7-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.4.7"><img src="https://img.shields.io/badge/pypi-v1.4.7-orange.svg" alt="pypi version"/></a> ![](https://img.shields.io/conda/v/mgckind/easyaccess.svg) ![](https://img.shields.io/conda/pn/mgckind/easyaccess.svg) ![](https://img.shields.io/badge/python-2.7%7C3.6-blue.svg) [![DOI](http://joss.theoj.org/papers/10.21105/joss.01022/status.svg)](https://doi.org/10.21105/joss.01022)
 
 Enhanced command line SQL interpreter client for astronomical surveys.
 ![help_screen](data/help.gif)
@@ -8,7 +8,7 @@ Enhanced command line SQL interpreter client for astronomical surveys.
 
 For a short tutorial check [here](http://matias-ck.com/easyaccess)
 
-**Current version = 1.4.6**
+**Current version = 1.4.7**
 
 #### DES DR1 users
 For DES public data release, you can start `easyaccess` with:
@@ -52,7 +52,7 @@ You can clone this repository and install `easyaccess` with:
 #### Pip installation
 `easyaccess` can also be installed using `pip` but it'd require the installation of the oracle instant client first as described above
 
-    pip install easyaccess==1.4.6
+    pip install easyaccess==1.4.7
 
 or directly from github:
 
@@ -61,7 +61,7 @@ or directly from github:
 #### Conda installation
 For Collaborators, now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box!
 
-    conda install easyaccess==1.4.6 -c mgckind -c anaconda
+    conda install easyaccess==1.4.7 -c mgckind -c anaconda
 
 #### Docker
 For collaborators, We have a Docker image with easyaccess pre-installed which you can obtained from:
