@@ -59,9 +59,17 @@ or directly from github:
     pip install git+https://github.com/mgckind/easyaccess.git
 
 #### Conda installation
-For Collaborators, now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box!
+For Collaborators, now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box! This is supported for versions 2.7 and 3.6
 
     conda install easyaccess==1.4.7 -c mgckind -c anaconda
+    
+You can also create a new environment with:
+
+    conda create -n easy  easyaccess==1.4.7 -c mgckind -c anaconda
+    
+and then:
+
+    source activate easy
 
 #### Docker
 For collaborators, We have a Docker image with easyaccess pre-installed which you can obtained from:
