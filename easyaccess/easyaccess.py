@@ -801,7 +801,25 @@ Connected as {user} to {db}.
                 if self.autocommit:
                     self.con.commit()
             print()
-        except:
+        except cx_Oracle.DatabaseError as exc:
+            # Whenever DatabaseError is raised e.g. by a syntax error in a query
+            # close the connection to the database instead of trying to cancel a transaction.
+            # Otherwise, the connection will hang indefinitely during the next attempt to utilize it.
+            # See also:
+            # * https://community.oracle.com/thread/3612149
+            # * https://community.oracle.com/thread/717738
+            # * https://github.com/mgckind/easyaccess/issues/130
+            print(colored('Your query raised DatabaseError:', "red", self.ct))
+            print(colored(str(exc), "red", self.ct))
+            self.con.close()
+            if self.loading_bar:
+                if self.pload.pid is not None:
+                    os.kill(self.pload.pid, signal.SIGKILL)
+        except Exception as exc:
+            (type, value, traceback) = sys.exc_info()
+            self.con.cancel()
+            t2 = time.time()
+
             (type, value, traceback) = sys.exc_info()
             self.con.cancel()
             t2 = time.time()
@@ -813,6 +831,7 @@ Connected as {user} to {db}.
             print(colored(type, "red", self.ct))
             print(colored(value, "red", self.ct))
             print()
+
             if t2 - t1 > self.timeout:
                 print(colored('Query is taking too long on the interpreter', "red", self.ct))
                 mt = 'Try to output the results to a file\nor increase timeout (now is {} s) using:'
