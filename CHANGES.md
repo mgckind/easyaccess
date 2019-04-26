@@ -1,5 +1,9 @@
 # Changes
 
+## v.1.4.8
+#### XXXX-XXX-XX
+- Fix issues with hanging after a Oracle Error (#PR 173 and issue #130)
+ 
 
 ## v1.4.7
 #### 2019-FEB-21
