@@ -819,10 +819,6 @@ Connected as {user} to {db}.
             (type, value, traceback) = sys.exc_info()
             self.con.cancel()
             t2 = time.time()
-
-            (type, value, traceback) = sys.exc_info()
-            self.con.cancel()
-            t2 = time.time()
             if self.loading_bar:
                 # self.pload.terminate()
                 if self.pload.pid is not None:
