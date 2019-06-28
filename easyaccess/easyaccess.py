@@ -812,6 +812,12 @@ Connected as {user} to {db}.
             print(colored('Your query raised DatabaseError:', "red", self.ct))
             print(colored(str(exc), "red", self.ct))
             self.con.close()
+            self.con = cx_Oracle.connect(
+                self.user, self.password, dsn=self.dsn)
+            if self.autocommit:
+                self.con.autocommit = True
+            self.cur = self.con.cursor()
+            self.cur.arraysize = int(self.prefetch)
             if self.loading_bar:
                 if self.pload.pid is not None:
                     os.kill(self.pload.pid, signal.SIGKILL)
