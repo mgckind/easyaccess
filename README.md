@@ -24,7 +24,7 @@ To create an account click [here](https://des.ncsa.illinois.edu/easyweb/signup/)
 - [cx_Oracle](https://cx-oracle.readthedocs.io/en/latest/index.html)
   - Note that cx_Oracle needs libaio on some Linux systems
   - Note that cx_Oracle needs libbz2 on some Linux systems
-- [fitsio](https://github.com/esheldon/fitsio) >= 0.9.6
+- [fitsio](https://github.com/esheldon/fitsio) == 1.0.5
 - [pandas](http://pandas.pydata.org/) >= 0.14
 - [numpy](https://docs.scipy.org/doc/numpy-1.15.1/reference/index.html)
 - [termcolor](https://pypi.python.org/pypi/termcolor)
@@ -62,11 +62,11 @@ or directly from github:
 For Collaborators, now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box! This is supported for versions 2.7 and 3.6
 
     conda install easyaccess==1.4.7 -c mgckind -c anaconda
-    
+
 You can also create a new environment with:
 
     conda create -n easy  easyaccess==1.4.7 -c mgckind -c anaconda
-    
+
 and then:
 
     source activate easy

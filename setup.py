@@ -43,6 +43,6 @@ setup(
     description='Easy access to the DES DB. Enhanced command line SQL interpreter client for DES',
     long_description=read('README.md'),
     url='https://github.com/mgckind/easyaccess',
-    install_requires=['pandas >= 0.14', 'termcolor', 'fitsio >= 0.9.6', 'setuptools',
+    install_requires=['pandas >= 0.14', 'termcolor', 'fitsio == 1.0.5', 'setuptools',
                       'cx_Oracle', 'numpy', 'future >= 0.15.0', 'requests'],
 )
