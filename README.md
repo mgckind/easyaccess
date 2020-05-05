@@ -35,13 +35,13 @@ To create an account click [here](https://des.ncsa.illinois.edu/easyweb/signup/)
 
 ## Installation
 
-Installing `easyaccess` can be a little bit tricky given the external libraries required, in particular the Oracle libraries which are free to use. `easyaccess` is based heavily on the Oracle python client `cx_Oracle`, you can follow the installation instructions from [here](https://cx-oracle.readthedocs.io/en/latest/installation.html#quick-start-cx-oracle-installation). For `cx_Oracle` to work, you will need the Oracle Instant Client packages which can be obtained from [here](https://www.oracle.com/technetwork/database/database-technologies/instant-client/overview/index.html).
+Installing `easyaccess` can be a little bit tricky given the external libraries required, in particular the Oracle libraries which are free to use. `easyaccess` is based heavily on the Oracle python client `cx_Oracle`, you can follow the installation instructions from [here](https://cx-oracle.readthedocs.io/en/latest/user_guide/installation.html#quick-start-cx-oracle-installation). For `cx_Oracle` to work, you will need the Oracle Instant Client packages which can be obtained from [here](https://www.oracle.com/technetwork/database/database-technologies/instant-client/overview/index.html).
 
 Make sure you have these libraries installed before proceeding to the installation of easyaccess, you can try by opening a Python interpreter and type:
 
     import cx_Oracle
 
-If you have issues, please check the [Troubleshooting page](https://cx-oracle.readthedocs.io/en/latest/installation.html#troubleshooting) or our [FAQ page](FAQ.md).
+If you have issues, please check the [Troubleshooting page](https://cx-oracle.readthedocs.io/en/latest/user_guide/installation.html#troubleshooting) or our [FAQ page](FAQ.md).
 
 #### Source Installation
 
