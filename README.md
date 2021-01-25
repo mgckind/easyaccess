@@ -1,4 +1,4 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.7"> <img src="https://img.shields.io/badge/release-v1.4.7-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.4.7"><img src="https://img.shields.io/badge/pypi-v1.4.7-orange.svg" alt="pypi version"/></a> ![](https://img.shields.io/conda/v/mgckind/easyaccess.svg) ![](https://img.shields.io/conda/pn/mgckind/easyaccess.svg) ![](https://img.shields.io/badge/python-2.7%7C3.6-blue.svg) [![DOI](http://joss.theoj.org/papers/10.21105/joss.01022/status.svg)](https://doi.org/10.21105/joss.01022)
+# easyaccess <a href="https://github.com/des-labs/easyaccess/releases/tag/1.4.7"> <img src="https://img.shields.io/badge/release-v1.4.7-blue.svg" alt="latest release" /></a> <a href="https://github.com/des-labs/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a>  ![](https://img.shields.io/conda/v/mgckind/easyaccess.svg) [![DOI](http://joss.theoj.org/papers/10.21105/joss.01022/status.svg)](https://doi.org/10.21105/joss.01022)
 
 Enhanced command line SQL interpreter client for astronomical surveys.
 ![help_screen](data/help.gif)
@@ -10,7 +10,7 @@ For a short tutorial check [here](http://matias-ck.com/easyaccess)
 
 **Current version = 1.4.7**
 
-#### DES DR1 users
+#### DES DR1/DR2 users
 For DES public data release, you can start `easyaccess` with:
 
     easyaccess -s desdr
@@ -87,28 +87,6 @@ If you have issues, please check the [Troubleshooting page](https://cx-oracle.re
 You can clone this repository and install `easyaccess` with:
 
     python setup.py install
-
-### Pip installation
-`easyaccess` can also be installed using `pip` but it'd require the installation of the oracle instant client first as described above
-
-    pip install easyaccess==1.4.7
-
-or directly from github:
-
-    pip install git+https://github.com/mgckind/easyaccess.git
-
-### Conda installation
-For Collaborators, now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box! This is supported for versions 2.7 and 3.6
-
-    conda install easyaccess==1.4.7 -c mgckind -c anaconda
-
-You can also create a new environment with:
-
-    conda create -n easy  easyaccess==1.4.7 -c mgckind -c anaconda
-
-and then:
-
-    source activate easy
 
 ## FAQ
 We have a running list of [FAQ](FAQ.md) which we will constantly update, please check [here](FAQ.md).
