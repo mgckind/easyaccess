@@ -162,7 +162,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     """
     Loads des config file or create one if it does not exist.
     """
-    server_desdm = 'desdb.ncsa.illinois.edu'
+    server_desdm = 'desdb05.ncsa.illinois.edu'
     server_public = 'desdb-dr.ncsa.illinois.edu'
     port_n = '1521'
 
