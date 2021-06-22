@@ -1,4 +1,4 @@
-# easyaccess <a href="https://github.com/mgckind/easyaccess/releases/tag/1.4.7"> <img src="https://img.shields.io/badge/release-v1.4.7-blue.svg" alt="latest release" /></a> <a href="https://github.com/mgckind/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a> <a href="https://pypi.python.org/pypi/easyaccess/1.4.7"><img src="https://img.shields.io/badge/pypi-v1.4.7-orange.svg" alt="pypi version"/></a> ![](https://img.shields.io/conda/v/mgckind/easyaccess.svg) ![](https://img.shields.io/conda/pn/mgckind/easyaccess.svg) ![](https://img.shields.io/badge/python-2.7%7C3.6-blue.svg) [![DOI](http://joss.theoj.org/papers/10.21105/joss.01022/status.svg)](https://doi.org/10.21105/joss.01022)
+# easyaccess <a href="https://github.com/des-labs/easyaccess/releases/tag/1.4.7"> <img src="https://img.shields.io/badge/release-v1.4.7-blue.svg" alt="latest release" /></a> <a href="https://github.com/des-labs/easyaccess/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/license-NCSA%20License-blue.svg" alt="License" /> </a>  ![](https://img.shields.io/conda/v/mgckind/easyaccess.svg) [![DOI](http://joss.theoj.org/papers/10.21105/joss.01022/status.svg)](https://doi.org/10.21105/joss.01022)
 
 Enhanced command line SQL interpreter client for astronomical surveys.
 ![help_screen](data/help.gif)
@@ -10,7 +10,7 @@ For a short tutorial check [here](http://matias-ck.com/easyaccess)
 
 **Current version = 1.4.7**
 
-#### DES DR1 users
+#### DES DR1/DR2 users
 For DES public data release, you can start `easyaccess` with:
 
     easyaccess -s desdr
@@ -35,7 +35,48 @@ To create an account click [here](https://des.ncsa.illinois.edu/easyweb/signup/)
 
 ## Installation
 
-Installing `easyaccess` can be a little bit tricky given the external libraries required, in particular the Oracle libraries which are free to use. `easyaccess` is based heavily on the Oracle python client `cx_Oracle`, you can follow the installation instructions from [here](https://cx-oracle.readthedocs.io/en/latest/user_guide/installation.html#quick-start-cx-oracle-installation). For `cx_Oracle` to work, you will need the Oracle Instant Client packages which can be obtained from [here](https://www.oracle.com/technetwork/database/database-technologies/instant-client/overview/index.html).
+Installing `easyaccess` can be a little bit tricky given the external libraries required, in particular the Oracle libraries which are free to use. If you are primarily interested in *using* the `easyaccess` client, we recommend building and running the Docker image as described below. 
+
+### Docker
+
+Building and running `easyaccess` in Docker is easy. Run the `docker build` command followed by a `docker run` command as shown here:
+
+```
+$ docker build -t easyaccessclient:latest .
+$ docker run -it --rm easyaccessclient:latest easyaccess -s desdr
+
+Enter username : 
+Enter password : 
+Connecting to DB ** desdr ** ...
+Loading metadata into cache...
+     _______      
+     \      \      
+  // / .    .\    
+ // /   .    _\   
+// /  .     / // 
+\\ \     . / //  
+ \\ \_____/ //   
+  \\_______//    DARK ENERGY SURVEY
+   `-------`     DATA MANAGEMENT
+
+easyaccess 1.4.8-dev. The DESDM Database shell.
+
+_________
+DESDR ~> SELECT RA, DEC, MAG_AUTO_G, TILENAME FROM DR2_MAIN sample(0.001) FETCH FIRST 5 ROWS ONLY ;
+
+
+          RA        DEC  MAG_AUTO_G      TILENAME
+1  13.142238 -43.729656   21.594194  DES0053-4331
+2  13.023884 -58.278531   24.332121  DES0053-5831
+3  13.103845 -62.469223   23.710896  DES0053-6248
+4  13.057452 -18.648209   27.200878  DES0051-1832
+5  13.095345 -38.464359   25.606516  DES0050-3832
+
+```
+
+### Source Installation
+
+`easyaccess` is based heavily on the Oracle python client `cx_Oracle`, you can follow the installation instructions from [here](https://cx-oracle.readthedocs.io/en/latest/user_guide/installation.html#quick-start-cx-oracle-installation). For `cx_Oracle` to work, you will need the Oracle Instant Client packages which can be obtained from [here](https://www.oracle.com/technetwork/database/database-technologies/instant-client/overview/index.html).
 
 Make sure you have these libraries installed before proceeding to the installation of easyaccess, you can try by opening a Python interpreter and type:
 
@@ -43,43 +84,14 @@ Make sure you have these libraries installed before proceeding to the installati
 
 If you have issues, please check the [Troubleshooting page](https://cx-oracle.readthedocs.io/en/latest/user_guide/installation.html#troubleshooting) or our [FAQ page](FAQ.md).
 
-#### Source Installation
-
 You can clone this repository and install `easyaccess` with:
 
     python setup.py install
 
-#### Pip installation
-`easyaccess` can also be installed using `pip` but it'd require the installation of the oracle instant client first as described above
-
-    pip install easyaccess==1.4.7
-
-or directly from github:
-
-    pip install git+https://github.com/mgckind/easyaccess.git
-
-#### Conda installation
-For Collaborators, now easyaccess can be installed using [conda](http://conda.pydata.org/docs/install/quick.html) out of the box! This is supported for versions 2.7 and 3.6
-
-    conda install easyaccess==1.4.7 -c mgckind -c anaconda
-
-You can also create a new environment with:
-
-    conda create -n easy  easyaccess==1.4.7 -c mgckind -c anaconda
-
-and then:
-
-    source activate easy
-
-#### Docker
-For collaborators, We have a Docker image with easyaccess pre-installed which you can obtained from:
-
-    docker pull mgckind/easyaccess
-
 ## FAQ
 We have a running list of [FAQ](FAQ.md) which we will constantly update, please check [here](FAQ.md).
 
-#### Contributing
+## Contributing
 Please take a look st our [Code of Conduct](CODE_OF_CONDUCT.md) and or [contribution guide](CONTRIBUTING.md).
 
 
@@ -109,7 +121,7 @@ archivePrefix = {arXiv},
 
 For a short tutorial and documentation see [here](http://matias-ck.com/easyaccess), note that not all the features are available for the public use, i.e., DR1 users.
 
-#### Some *great* features
+### Some *great* features
 - Nice output format (using pandas)
 - Very flexible configuration
 - Smart tab autocompletion for commands, table names, column names, and file paths

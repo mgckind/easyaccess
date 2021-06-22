@@ -9,3 +9,4 @@ This is an alphabetical list of contributors, if you feel you have contributed t
 - Donald Petravick
 - Eli Rykoff
 - Ignacio Sevilla
+- T. Andrew Manning
