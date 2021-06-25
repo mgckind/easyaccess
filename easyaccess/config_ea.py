@@ -163,6 +163,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     Loads des config file or create one if it does not exist.
     """
     server_desdm = 'desdb05.ncsa.illinois.edu'
+    server_oper = 'desdb02.ncsa.illinois.edu'
     server_public = 'desdb-dr.ncsa.illinois.edu'
     port_n = '1521'
 
@@ -202,7 +203,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         elif db == 'db-destest':
             kwargs = {'host': server_desdm, 'port': port_n, 'service_name': 'destest'}
         elif db == 'db-desoper':
-            kwargs = {'host': server_desdm, 'port': port_n, 'service_name': 'desoper'}
+            kwargs = {'host': server_oper, 'port': port_n, 'service_name': 'desoper'}
         else:
             kwargs = {'host': server_desdm, 'port': port_n, 'service_name': db[3:]}
         dsn = cx_Oracle.makedsn(**kwargs)
@@ -275,7 +276,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             config.set(db, 'name', 'desoper')
             if not config.has_option(db, 'server'):
                 configwrite = True
-                config.set(db, 'server', server_desdm)
+                config.set(db, 'server', server_oper)
     elif db == 'db-desdr':
         if not config.has_option(db, 'name'):
             configwrite = True
