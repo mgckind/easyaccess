@@ -162,8 +162,8 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     """
     Loads des config file or create one if it does not exist.
     """
-    server_desoper = 'desdb02.ncsa.illinois.edu'
-    server_dessci = 'desdb05.ncsa.illinois.edu'
+    server_desoper = 'desdb-oper.ncsa.illinois.edu'
+    server_dessci = 'desdb-sci.ncsa.illinois.edu'
     server_public = 'desdb-dr.ncsa.illinois.edu'
     port_n = '1521'
 
@@ -182,7 +182,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         if verbose:
             print()
 
-    databases = ['db-dessci', 'db-desdr', 'db-destest', 'db-desoper']
+    databases = ['db-dessci', 'db-desdr', 'db-desoper']
 
     if db not in databases and not config.has_section(db):
         msg = '\nDatabase entered is not in %s '%databases
@@ -200,8 +200,6 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             kwargs = {'host': server_dessci, 'port': port_n, 'service_name': 'dessci'}
         elif db == 'db-desdr':
             kwargs = {'host': server_public, 'port': port_n, 'service_name': 'desdr'}
-        elif db == 'db-destest':
-            kwargs = {'host': server_desoper, 'port': port_n, 'service_name': 'destest'}
         elif db == 'db-desoper':
             kwargs = {'host': server_desoper, 'port': port_n, 'service_name': 'desoper'}
         else:
