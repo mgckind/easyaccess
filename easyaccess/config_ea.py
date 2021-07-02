@@ -162,7 +162,8 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
     """
     Loads des config file or create one if it does not exist.
     """
-    server_desdm = 'desdb05.ncsa.illinois.edu'
+    server_desoper = 'desdb-oper.ncsa.illinois.edu'
+    server_dessci = 'desdb-sci.ncsa.illinois.edu'
     server_public = 'desdb-dr.ncsa.illinois.edu'
     port_n = '1521'
 
@@ -181,7 +182,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
         if verbose:
             print()
 
-    databases = ['db-dessci', 'db-desdr', 'db-destest', 'db-desoper']
+    databases = ['db-dessci', 'db-desdr', 'db-desoper']
 
     if db not in databases and not config.has_section(db):
         msg = '\nDatabase entered is not in %s '%databases
@@ -196,15 +197,13 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             print('\nAdding section %s to DES_SERVICES file\n' % db)
         configwrite = True
         if db == 'db-dessci':
-            kwargs = {'host': server_desdm, 'port': port_n, 'service_name': 'dessci'}
+            kwargs = {'host': server_dessci, 'port': port_n, 'service_name': 'dessci'}
         elif db == 'db-desdr':
             kwargs = {'host': server_public, 'port': port_n, 'service_name': 'desdr'}
-        elif db == 'db-destest':
-            kwargs = {'host': server_desdm, 'port': port_n, 'service_name': 'destest'}
         elif db == 'db-desoper':
-            kwargs = {'host': server_desdm, 'port': port_n, 'service_name': 'desoper'}
+            kwargs = {'host': server_desoper, 'port': port_n, 'service_name': 'desoper'}
         else:
-            kwargs = {'host': server_desdm, 'port': port_n, 'service_name': db[3:]}
+            kwargs = {'host': server_desoper, 'port': port_n, 'service_name': db[3:]}
         dsn = cx_Oracle.makedsn(**kwargs)
         good = False
         if user is None:
@@ -268,14 +267,14 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             config.set(db, 'name', 'dessci')
             if not config.has_option(db, 'server'):
                 configwrite = True
-                config.set(db, 'server', server_desdm)
+                config.set(db, 'server', server_dessci)
     elif db == 'db-desoper':
         if not config.has_option(db, 'name'):
             configwrite = True
             config.set(db, 'name', 'desoper')
             if not config.has_option(db, 'server'):
                 configwrite = True
-                config.set(db, 'server', server_desdm)
+                config.set(db, 'server', server_desoper)
     elif db == 'db-desdr':
         if not config.has_option(db, 'name'):
             configwrite = True
@@ -289,7 +288,7 @@ def get_desconfig(desfile, db, verbose=True, user=None, pw1=None):
             config.set(db, 'name', db[3:])
             if not config.has_option(db, 'server'):
                 configwrite = True
-                config.set(db, 'server', server_desdm)
+                config.set(db, 'server', server_desoper)
     if not config.has_option(db, 'port'):
         configwrite = True
         config.set(db, 'port', port_n)
